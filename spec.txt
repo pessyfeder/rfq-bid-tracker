@@ -18,6 +18,8 @@ Phase 1:  Build the app and its display (sample data). Data integration comes af
  6  Municipality    Federal / State / Local.
  7  RFQ doc         Link to the RFQ / solicitation document.
  8  Est. value      Dollar value. DEFAULT SORT: descending. Unpublished values sort last.
+    (under Request) Scope summary line + "Show requirements" toggle that expands a
+                    row listing the key "shall" statements with section/page refs.
  9  Details         Important facts that inform the bid decision:
                     - State / region
                     - Specific instructions, e.g. workers must be TSA-checked,
@@ -50,6 +52,14 @@ Behavior
  g. Which regions/categories does Discover Group serve? Should out-of-area or
     out-of-scope requests be hidden automatically?
  h. Which sources matter first (SAM.gov, NY state portals, NYC city portals, others)?
+ i. "Shall" requirements: the contractor's obligations are written as "shall"
+    statements in the RFQ. DECIDED: show a one-line scope summary under each
+    request title, plus an expandable list of the key "shall" statements
+    (verbatim or near-verbatim, each with its RFQ section/page so it can be
+    checked). Chips in Details stay as quick flags. OPEN: how do we get this data
+    from each RFQ - read by hand, or have Claude extract it from the document?
+    How many "shall" statements are enough (3-5 key ones vs. all)? Data needed
+    per RFQ: scope (text), shall[] (text + section/page ref). See data.js.
 
 
 3. DATA INTEGRATION (LATER)

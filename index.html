@@ -45,6 +45,13 @@
   .left.closed { color: var(--muted); }
   .na { color: var(--muted); }
   a { color: var(--accent); }
+  .scope { margin-top: 4px; color: var(--ink); font-size: 13px; }
+  .toggle { margin-top: 6px; padding: 0; border: 0; background: none; color: var(--accent); font: inherit; font-size: 12px; cursor: pointer; text-decoration: underline; }
+  tr.shall-row td { background: #f8fafc; padding: 10px 12px 14px 36px; }
+  tr.shall-row h4 { margin: 0 0 6px; font-size: 12px; text-transform: uppercase; letter-spacing: .03em; color: var(--muted); }
+  tr.shall-row ul { margin: 0; padding-left: 18px; }
+  tr.shall-row li { margin-bottom: 4px; max-width: 900px; }
+  tr.shall-row .ref { color: var(--muted); font-size: 12px; white-space: nowrap; }
   .empty { padding: 24px; text-align: center; color: var(--muted); }
 </style>
 </head>
@@ -110,6 +117,7 @@
 
   // Default sort: dollar value, descending (unknown values last).
   var sort = { key: "value", dir: -1 };
+  var expanded = {}; // request id -> true when its "shall" list is open
 
   var $ = function (id) { return document.getElementById(id); };
 
@@ -165,8 +173,14 @@
       return (x - y) * sort.dir;
     });
     $("body").innerHTML = list.map(function (r) {
+      var open = expanded[r.id];
+      var shallRow = open ? '<tr class="shall-row' + (r.daysLeft < 0 ? " closed" : "") + '"><td colspan="' + COLUMNS.length + '"><h4>Key requirements ("shall")</h4><ul>' +
+        r.shall.map(function (s) { return "<li>" + esc(s.text) + ' <span class="ref">[' + esc(s.ref) + "]</span></li>"; }).join("") +
+        "</ul></td></tr>" : "";
       return '<tr class="' + (r.daysLeft < 0 ? "closed" : "") + '">' +
-        '<td><div class="req-title">' + esc(r.title) + '</div><div class="agency">' + esc(r.agency) + "</div></td>" +
+        '<td><div class="req-title">' + esc(r.title) + '</div><div class="agency">' + esc(r.agency) + "</div>" +
+        '<div class="scope">' + esc(r.scope) + "</div>" +
+        '<button class="toggle" data-id="' + esc(r.id) + '" aria-expanded="' + !!open + '">' + (open ? "Hide" : "Show") + " requirements (" + r.shall.length + ")</button></td>" +
         "<td>" + esc(r.category) + "</td>" +
         "<td>" + fmtDate(r.posted) + "</td>" +
         "<td>" + fmtDate(r.due) + '<div class="agency">' + esc(r.dueTime) + "</div></td>" +
@@ -174,12 +188,17 @@
         '<td><span class="badge ' + r.level + '">' + r.level + "</span></td>" +
         '<td><a href="' + esc(r.rfqUrl) + '" target="_blank" rel="noopener">Open RFQ</a></td>' +
         '<td class="num">' + (money(r.value) || '<span class="na">Not published</span>') + "</td>" +
-        "<td>" + detailsHtml(r) + "</td></tr>";
+        "<td>" + detailsHtml(r) + "</td></tr>" + shallRow;
     }).join("");
     $("empty").hidden = list.length > 0;
     $("count").textContent = list.length + " of " + rows.length + " requests";
   }
 
+  $("body").addEventListener("click", function (e) {
+    var b = e.target.closest(".toggle"); if (!b) return;
+    expanded[b.dataset.id] = !expanded[b.dataset.id];
+    render();
+  });
   $("head").addEventListener("click", function (e) {
     var th = e.target.closest("th"); if (!th || th.classList.contains("nosort")) return;
     var key = th.dataset.key;
