@@ -18,9 +18,11 @@ Phase 1:  Build the app and its display (sample data). Data integration comes af
  6  Municipality    Federal / State / Local.
  7  RFQ doc         Link to the RFQ / solicitation document.
  8  Est. value      Dollar value. DEFAULT SORT: descending. Unpublished values sort last.
-    (under Request) Scope summary line + "Show requirements" toggle that expands a
-                    row listing the key "shall" statements with section/page refs.
- 9  Details         Important facts that inform the bid decision:
+ 9  Details         ONE merged column (no separate scope column). Top to bottom:
+                    1) region, 2) flag chips, 3) one-line scope summary,
+                    4) "Show requirements" toggle that expands a full-width row of
+                    the key "shall" statements with section/page refs.
+                    Chips cover important facts that inform the bid decision:
                     - State / region
                     - Specific instructions, e.g. workers must be TSA-checked,
                       licenses, bonds, mandatory pre-bid meetings, wage rules

@@ -45,7 +45,7 @@
   .left.closed { color: var(--muted); }
   .na { color: var(--muted); }
   a { color: var(--accent); }
-  .scope { margin-top: 4px; color: var(--ink); font-size: 13px; }
+  .scope { color: var(--ink); font-size: 13px; margin-top: 4px; min-width: 240px; }
   .toggle { margin-top: 6px; padding: 0; border: 0; background: none; color: var(--accent); font: inherit; font-size: 12px; cursor: pointer; text-decoration: underline; }
   tr.shall-row td { background: #f8fafc; padding: 10px 12px 14px 36px; }
   tr.shall-row h4 { margin: 0 0 6px; font-size: 12px; text-transform: uppercase; letter-spacing: .03em; color: var(--muted); }
@@ -178,9 +178,7 @@
         r.shall.map(function (s) { return "<li>" + esc(s.text) + ' <span class="ref">[' + esc(s.ref) + "]</span></li>"; }).join("") +
         "</ul></td></tr>" : "";
       return '<tr class="' + (r.daysLeft < 0 ? "closed" : "") + '">' +
-        '<td><div class="req-title">' + esc(r.title) + '</div><div class="agency">' + esc(r.agency) + "</div>" +
-        '<div class="scope">' + esc(r.scope) + "</div>" +
-        '<button class="toggle" data-id="' + esc(r.id) + '" aria-expanded="' + !!open + '">' + (open ? "Hide" : "Show") + " requirements (" + r.shall.length + ")</button></td>" +
+        '<td><div class="req-title">' + esc(r.title) + '</div><div class="agency">' + esc(r.agency) + "</div></td>" +
         "<td>" + esc(r.category) + "</td>" +
         "<td>" + fmtDate(r.posted) + "</td>" +
         "<td>" + fmtDate(r.due) + '<div class="agency">' + esc(r.dueTime) + "</div></td>" +
@@ -188,7 +186,9 @@
         '<td><span class="badge ' + r.level + '">' + r.level + "</span></td>" +
         '<td><a href="' + esc(r.rfqUrl) + '" target="_blank" rel="noopener">Open RFQ</a></td>' +
         '<td class="num">' + (money(r.value) || '<span class="na">Not published</span>') + "</td>" +
-        "<td>" + detailsHtml(r) + "</td></tr>" + shallRow;
+        "<td>" + detailsHtml(r) +
+          '<div class="scope">' + esc(r.scope) + "</div>" +
+          '<button class="toggle" data-id="' + esc(r.id) + '" aria-expanded="' + !!open + '">' + (open ? "Hide" : "Show") + " requirements (" + r.shall.length + ")</button></td></tr>" + shallRow;
     }).join("");
     $("empty").hidden = list.length > 0;
     $("count").textContent = list.length + " of " + rows.length + " requests";
