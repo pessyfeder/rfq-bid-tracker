@@ -188,7 +188,7 @@
         '<td class="num">' + (money(r.value) || '<span class="na">Not published</span>') + "</td>" +
         "<td>" + detailsHtml(r) +
           '<div class="scope">' + esc(r.scope) + "</div>" +
-          '<button class="toggle" data-id="' + esc(r.id) + '" aria-expanded="' + !!open + '">' + (open ? "Hide" : "Show") + " requirements (" + r.shall.length + ")</button></td></tr>" + shallRow;
+          '<button class="toggle" data-id="' + esc(r.id) + '" aria-expanded="' + !!open + '">' + (open ? "Hide" : "Show") + " all requirements (" + r.shall.length + ")</button></td></tr>" + shallRow;
     }).join("");
     $("empty").hidden = list.length > 0;
     $("count").textContent = list.length + " of " + rows.length + " requests";
