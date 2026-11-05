@@ -9,6 +9,17 @@ Phase 1:  Build the app and its display (sample data). Data integration comes af
 
 1. MAIN VIEW - TABLE COLUMNS
 ----------------------------
+ 0  Status          (leftmost) Four icon buttons; click to set, click again to clear.
+                    No icon selected = New. One status per request.
+                      star   Interested
+                      pencil Bidding (preparing the bid)
+                      check  Bid submitted
+                      cross  Pass / not applicable
+                    Row tint: passed rows dimmed; interested / bidding / submitted get a
+                    colored left edge. Status filter above the table (All / New /
+                    Interested / Bidding / Submitted / Passed).
+                    Saved in the browser (localStorage) for now: NOT shared across
+                    devices or users. Needs a backend when data integration happens.
  #  Column          Notes
  1  Request         Title of the request (agency shown beneath).
  2  Category        Type of work, e.g. janitorial, security, HVAC.
@@ -38,14 +49,21 @@ Behavior
 
 2. OPEN QUESTIONS / POSSIBLE GAPS (to confirm with Israel)
 ----------------------------------------------------------
- a. Eligibility: should the app answer "Can Discover Group actually bid on this?"
+ a. Eligibility (NEXT): today restricted requests are still shown, flagged only by a
+    red chip; the app does not know what Discover Group is eligible for.
+    Proposed: company profile + "Eligible / Not eligible / Unclear" per request,
+    ineligible hidden by default with a "show requests I can't bid on" toggle
+    (they may still matter for teaming). NEED FROM ISRAEL: which lists and
+    certifications Discover Group holds.
+    Original question: should the app answer "Can Discover Group actually bid on this?"
     Needs a company profile: certifications (e.g. MWBE, small business) and the
     vehicles/lists the company is on (e.g. GSA Schedule, NASA SEWP), matched
     against what each RFQ is restricted to. Show "Eligible" / "Not eligible" + why.
  b. Bond requirements and mandatory pre-bid meetings: these can decide bid or no-bid.
     Should they be dedicated fields rather than chips in Details?
- c. Bid status: should Israel be able to mark each request Bid / Pass / Watching,
-    so he can work through the list?
+ c. Bid status: DECIDED - four icons (interested, bidding, submitted, pass). See
+    column 0. OPEN: optional note per request (e.g. pass reason)? Won / Lost later?
+    Where to store statuses so they sync across devices/users?
  d. Contact and submission method: who to ask questions, and where/how the bid is
     submitted (portal, email, in person).
  e. Contract length: the term of the contract (not the same as the bidding window).
