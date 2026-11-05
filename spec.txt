@@ -9,8 +9,9 @@ Phase 1:  Build the app and its display (sample data). Data integration comes af
 
 1. MAIN VIEW - TABLE COLUMNS
 ----------------------------
- 0  Status          (leftmost) Four icon buttons; click to set, click again to clear.
-                    No icon selected = New. One status per request.
+ 0  Status          (leftmost) Dropdown per row (chosen over one-click icon buttons
+                    to avoid accidental clicks). Default "New" = not yet marked.
+                    One status per request; icon shown in each option:
                       star   Interested
                       pencil Bidding (preparing the bid)
                       check  Bid submitted
@@ -61,7 +62,7 @@ Behavior
     against what each RFQ is restricted to. Show "Eligible" / "Not eligible" + why.
  b. Bond requirements and mandatory pre-bid meetings: these can decide bid or no-bid.
     Should they be dedicated fields rather than chips in Details?
- c. Bid status: DECIDED - four icons (interested, bidding, submitted, pass). See
+ c. Bid status: DECIDED - dropdown with four statuses (interested, bidding, submitted, pass). See
     column 0. OPEN: optional note per request (e.g. pass reason)? Won / Lost later?
     Where to store statuses so they sync across devices/users?
  d. Contact and submission method: who to ask questions, and where/how the bid is

@@ -45,14 +45,7 @@
   .left.closed { color: var(--muted); }
   .na { color: var(--muted); }
   a { color: var(--accent); }
-  .st-btns { display: grid; grid-template-columns: repeat(2, 30px); gap: 4px; }
-  .st { width: 30px; height: 30px; border: 1px solid var(--line); border-radius: 6px; background: #fff; color: var(--muted); font-size: 16px; line-height: 1; cursor: pointer; padding: 0; }
-  .st:hover { border-color: var(--accent); color: var(--accent); }
-  .st[aria-pressed=true] { color: #fff; border-color: transparent; }
-  .st[data-s=interested][aria-pressed=true] { background: #c98a00; }
-  .st[data-s=bidding][aria-pressed=true] { background: var(--accent); }
-  .st[data-s=submitted][aria-pressed=true] { background: var(--ok); }
-  .st[data-s=pass][aria-pressed=true] { background: #8a93a0; }
+  .st-select { padding: 4px 6px; border: 1px solid var(--line); border-radius: 6px; background: #fff; font: inherit; max-width: 150px; }
   tr.st-pass td { opacity: .5; }
   tr.st-submitted td:first-child { box-shadow: inset 3px 0 var(--ok); }
   tr.st-bidding td:first-child { box-shadow: inset 3px 0 var(--accent); }
@@ -144,9 +137,9 @@
   // Saved in this browser only (localStorage); needs a real backend to share across users/devices.
   var STATUSES = [
     { key: "interested", icon: "★", label: "Interested" },
-    { key: "bidding",    icon: "✎", label: "Bidding (preparing bid)" },
+    { key: "bidding",    icon: "✎", label: "Bidding" },
     { key: "submitted",  icon: "✓", label: "Bid submitted" },
-    { key: "pass",       icon: "✕", label: "Pass (not bidding)" }
+    { key: "pass",       icon: "✕", label: "Pass" }
   ];
   var STORE = "rfq-bid-status";
   var statuses = {};
@@ -154,10 +147,11 @@
   function saveStatuses() { try { localStorage.setItem(STORE, JSON.stringify(statuses)); } catch (e) {} }
   function statusCell(r) {
     var cur = statuses[r.id];
-    return '<td><div class="st-btns">' + STATUSES.map(function (s) {
-      return '<button class="st" data-id="' + esc(r.id) + '" data-s="' + s.key + '" aria-pressed="' + (cur === s.key) +
-        '" aria-label="' + s.label + '" title="' + s.label + '">' + s.icon + "</button>";
-    }).join("") + "</div></td>";
+    return '<td><select class="st-select" data-id="' + esc(r.id) + '" aria-label="Status for ' + esc(r.title) + '">' +
+      '<option value="">New</option>' +
+      STATUSES.map(function (s) {
+        return '<option value="' + s.key + '"' + (cur === s.key ? " selected" : "") + ">" + s.icon + " " + s.label + "</option>";
+      }).join("") + "</select></td>";
   }
 
   var $ = function (id) { return document.getElementById(id); };
@@ -239,14 +233,14 @@
   }
 
   $("body").addEventListener("click", function (e) {
-    var s = e.target.closest(".st");
-    if (s) { // click sets the status; clicking the active one clears it
-      if (statuses[s.dataset.id] === s.dataset.s) delete statuses[s.dataset.id]; else statuses[s.dataset.id] = s.dataset.s;
-      saveStatuses(); render(); return;
-    }
     var b = e.target.closest(".toggle"); if (!b) return;
     expanded[b.dataset.id] = !expanded[b.dataset.id];
     render();
+  });
+  $("body").addEventListener("change", function (e) {
+    var s = e.target.closest(".st-select"); if (!s) return;
+    if (s.value) statuses[s.dataset.id] = s.value; else delete statuses[s.dataset.id];
+    saveStatuses(); render();
   });
   $("head").addEventListener("click", function (e) {
     var th = e.target.closest("th"); if (!th || th.classList.contains("nosort")) return;
