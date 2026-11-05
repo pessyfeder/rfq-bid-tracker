@@ -21,6 +21,10 @@ Phase 1:  Build the app and its display (sample data). Data integration comes af
                     Interested / Bidding / Submitted / Passed).
                     Saved in the browser (localStorage) for now: NOT shared across
                     devices or users. Needs a backend when data integration happens.
+ 0b Can we bid?     (right after Request) Eligible / Not eligible (needs: ...) / Unclear.
+                    Compares the RFQ's requires[] against the company profile. Sortable.
+                    Not-eligible rows are still shown (sort by this column to group them).
+                    Currently uses an INVENTED company profile.
  #  Column          Notes
  1  Request         Title of the request (agency shown beneath).
  2  Category        Type of work, e.g. janitorial, security, HVAC.
@@ -50,12 +54,13 @@ Behavior
 
 2. OPEN QUESTIONS / POSSIBLE GAPS (to confirm with Israel)
 ----------------------------------------------------------
- a. Eligibility (NEXT): today restricted requests are still shown, flagged only by a
-    red chip; the app does not know what Discover Group is eligible for.
-    Proposed: company profile + "Eligible / Not eligible / Unclear" per request,
-    ineligible hidden by default with a "show requests I can't bid on" toggle
-    (they may still matter for teaming). NEED FROM ISRAEL: which lists and
-    certifications Discover Group holds.
+ a. Eligibility: BUILT WITH INVENTED PROFILE (see "Can we bid?" column). Each RFQ has
+    requires[] (what an offeror must hold; null = could not be read); the company
+    profile has holds[]. Result: Eligible / Not eligible (+ what is missing) /
+    Unclear (check the RFQ). Not-eligible requests stay visible (no hide
+    toggle: the column already says so, and they may matter for teaming). STILL NEEDED FROM ISRAEL: the real list of lists,
+    certifications and licences Discover Group holds (replace window.COMPANY in
+    data.js). Also: how will requires[] be filled from each RFQ's restriction text?
     Original question: should the app answer "Can Discover Group actually bid on this?"
     Needs a company profile: certifications (e.g. MWBE, small business) and the
     vehicles/lists the company is on (e.g. GSA Schedule, NASA SEWP), matched
@@ -90,6 +95,9 @@ Behavior
  - SAM.gov Entity API can check vendor registrations.
  - State / city sites, DIBBS and eBuy need logins or scraping. Add one at a time.
  - Data shape used by the app is documented at the top of data.js.
+ - Sample RFQ documents live in rfq-docs/ (fictional, one per sample request; the
+   "shall" statements appear under the same section numbers the app cites). Real
+   data will link to the actual solicitation document instead.
 
 Things that trip up newcomers (from notes)
  - Deadlines are date, time and time zone, plus the agency's clock rules.

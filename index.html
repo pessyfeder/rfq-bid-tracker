@@ -50,6 +50,11 @@
   tr.st-submitted td:first-child { box-shadow: inset 3px 0 var(--ok); }
   tr.st-bidding td:first-child { box-shadow: inset 3px 0 var(--accent); }
   tr.st-interested td:first-child { box-shadow: inset 3px 0 #c98a00; }
+  .elig { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+  .elig.yes { background: #e3f4ea; color: var(--ok); }
+  .elig.no { background: #fdecea; color: var(--bad); }
+  .elig.unclear { background: #fff3cd; color: #7a5b00; }
+  .elig-note { margin-top: 4px; font-size: 12px; color: var(--muted); max-width: 150px; }
   .scope { color: var(--ink); font-size: 13px; margin-top: 4px; min-width: 240px; }
   .toggle { margin-top: 6px; padding: 0; border: 0; background: none; color: var(--accent); font: inherit; font-size: 12px; cursor: pointer; text-decoration: underline; }
   tr.shall-row td { background: #f8fafc; padding: 10px 12px 14px 36px; }
@@ -64,7 +69,7 @@
 <header>
   <h1>RFQ Bid Tracker</h1>
   <span class="sub">Discover Group &middot; Brooklyn, NY</span>
-  <span class="sample">Sample data</span>
+  <span class="sample">Sample data &amp; sample company profile</span>
 </header>
 
 <div class="toolbar">
@@ -102,6 +107,7 @@
   var COLUMNS = [
     { key: "status",   label: "Status", nosort: true },
     { key: "title",    label: "Request" },
+    { key: "eligRank", label: "Can we bid?" },
     { key: "category", label: "Category" },
     { key: "posted",   label: "Posted" },
     { key: "due",      label: "End date" },
@@ -123,9 +129,21 @@
   function money(n) { return n == null ? null : "$" + n.toLocaleString("en-US"); }
   function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
 
+  // Can the company bid? Compares what the RFQ requires against what the company holds.
+  //   requires null        -> "unclear" (restriction could not be read; check the RFQ)
+  //   all required held    -> "yes"
+  //   something missing    -> "no" (missing items listed)
+  var held = (window.COMPANY.holds || []).map(function (h) { return h.toLowerCase(); });
+  function eligibility(r) {
+    if (r.requires == null) return { status: "unclear", rank: 1, missing: [] };
+    var missing = r.requires.filter(function (q) { return held.indexOf(q.toLowerCase()) < 0; });
+    return missing.length ? { status: "no", rank: 2, missing: missing } : { status: "yes", rank: 0, missing: [] };
+  }
+
   var rows = window.RFQS.map(function (r) {
     return Object.assign({}, r, {
-      daysLeft: diffDays(todayStr, r.due)
+      daysLeft: diffDays(todayStr, r.due),
+      elig: eligibility(r)
     });
   });
 
@@ -182,6 +200,13 @@
     return h;
   }
 
+  function eligCell(r) {
+    var e = r.elig;
+    if (e.status === "yes") return '<td><span class="elig yes">Eligible</span></td>';
+    if (e.status === "unclear") return '<td><span class="elig unclear">Unclear</span><div class="elig-note">Check the RFQ</div></td>';
+    return '<td><span class="elig no">Not eligible</span><div class="elig-note">Needs: ' + esc(e.missing.join(", ")) + "</div></td>";
+  }
+
   function matches(r) {
     var q = $("q").value.trim().toLowerCase();
     if ($("level").value && r.level !== $("level").value) return false;
@@ -217,6 +242,7 @@
       return '<tr class="' + (r.daysLeft < 0 ? "closed " : "") + (statuses[r.id] ? "st-" + statuses[r.id] : "") + '">' +
         statusCell(r) +
         '<td><div class="req-title">' + esc(r.title) + '</div><div class="agency">' + esc(r.agency) + "</div></td>" +
+        eligCell(r) +
         "<td>" + esc(r.category) + "</td>" +
         "<td>" + fmtDate(r.posted) + "</td>" +
         "<td>" + fmtDate(r.due) + '<div class="agency">' + esc(r.dueTime) + "</div></td>" +

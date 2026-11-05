@@ -9,9 +9,21 @@
 // shall:    key "shall" statements from the RFQ: [{ text, ref }] - text verbatim or near-verbatim,
 //           ref = section/page in the RFQ so the reader can check the source.
 //           (Sample "shall" text below is invented for layout purposes.)
+// Company profile used for the eligibility check. INVENTED VALUES - replace with
+// Discover Group's real lists, certifications and licences once Israel provides them.
+window.COMPANY = {
+  name: "Discover Group",
+  sample: true,
+  holds: ["Small business", "MWBE", "NYC license", "NJ master electrician license"]
+};
+
+// requires: what an offeror must hold to bid, e.g. ["GSA Schedule"]. [] = open to all.
+//           null = restriction text could not be read -> app shows "Unclear".
+//           Each item is matched (case-insensitive) against COMPANY.holds.
 window.RFQS = [
   {
     id: "SAMPLE-001",
+    requires: [],
     scope: "Daily cleaning of 14 floors, 5 days a week, 1-year base + 4 option years.",
     shall: [
       { text: "The Contractor shall provide cleaning services Monday through Friday between 6:00 PM and 2:00 AM.", ref: "C.3.1, p.12" },
@@ -26,7 +38,7 @@ window.RFQS = [
     level: "Federal",
     agency: "GSA",
     value: 1850000,
-    rfqUrl: "https://sam.gov/",
+    rfqUrl: "rfq-docs/SAMPLE-001.html",
     details: {
       region: "New York, NY",
       requirements: ["TSA/Public Trust background check", "Prevailing wage (SCA)", "Site visit 11/10"],
@@ -36,6 +48,7 @@ window.RFQS = [
   },
   {
     id: "SAMPLE-002",
+    requires: ["GSA Schedule"],
     scope: "24/7 armed and unarmed guard posts at 6 regional offices across NY, NJ and CT.",
     shall: [
       { text: "The Contractor shall staff each post 24 hours per day, 7 days per week, with no unfilled shifts.", ref: "C.2, p.8" },
@@ -51,7 +64,7 @@ window.RFQS = [
     level: "Federal",
     agency: "DHS",
     value: 4200000,
-    rfqUrl: "https://sam.gov/",
+    rfqUrl: "rfq-docs/SAMPLE-002.html",
     details: {
       region: "NY, NJ, CT",
       requirements: ["TSA-cleared personnel", "Armed guards (NY license)", "24/7 coverage"],
@@ -61,6 +74,7 @@ window.RFQS = [
   },
   {
     id: "SAMPLE-003",
+    requires: ["NYC license"],
     scope: "Preventive and emergency HVAC maintenance for 11 school buildings, 1 year.",
     shall: [
       { text: "The Contractor shall perform quarterly preventive maintenance on all rooftop and boiler units.", ref: "3.1, p.5" },
@@ -75,7 +89,7 @@ window.RFQS = [
     level: "Local",
     agency: "NYC DOE",
     value: 320000,
-    rfqUrl: "https://example.org/rfq/003.pdf",
+    rfqUrl: "rfq-docs/SAMPLE-003.html",
     details: {
       region: "Brooklyn, NY",
       requirements: ["M/WBE participation goal 30%", "Fingerprint clearance (DOE)", "NYC license required"],
@@ -85,6 +99,7 @@ window.RFQS = [
   },
   {
     id: "SAMPLE-004",
+    requires: ["Own plow fleet"],
     scope: "Plowing and salting of state roadways in Zone 3 for the winter season.",
     shall: [
       { text: "The Contractor shall begin plowing within 1 hour of 2 inches of accumulation.", ref: "4.1, p.7" },
@@ -98,7 +113,7 @@ window.RFQS = [
     level: "State",
     agency: "NYS DOT",
     value: 780000,
-    rfqUrl: "https://example.org/rfq/004.pdf",
+    rfqUrl: "rfq-docs/SAMPLE-004.html",
     details: {
       region: "Hudson Valley, NY",
       requirements: ["Own plow fleet (min. 10 trucks)", "Bid bond 5%"],
@@ -108,6 +123,7 @@ window.RFQS = [
   },
   {
     id: "SAMPLE-005",
+    requires: ["Small business"],
     scope: "Supply and install office furniture for 4 courtrooms and chambers.",
     shall: [
       { text: "The Contractor shall deliver and install all items within 90 days of award.", ref: "2.2, p.4" },
@@ -121,7 +137,7 @@ window.RFQS = [
     level: "State",
     agency: "NYS OGS",
     value: null,
-    rfqUrl: "https://example.org/rfq/005.pdf",
+    rfqUrl: "rfq-docs/SAMPLE-005.html",
     details: {
       region: "Statewide (NY)",
       requirements: ["NYS Contract Reporter registration", "Delivery + install included"],
@@ -131,6 +147,7 @@ window.RFQS = [
   },
   {
     id: "SAMPLE-006",
+    requires: null, // sample of an "Unclear" result: restriction text could not be matched
     scope: "Replace main electrical panel and rewire two floors of the community center.",
     shall: [
       { text: "All electrical work shall be performed by a New Jersey licensed master electrician.", ref: "1.4, p.3" },
@@ -145,7 +162,7 @@ window.RFQS = [
     level: "Local",
     agency: "City of Newark",
     value: 560000,
-    rfqUrl: "https://example.org/rfq/006.pdf",
+    rfqUrl: "rfq-docs/SAMPLE-006.html",
     details: {
       region: "Newark, NJ",
       requirements: ["NJ master electrician license", "Performance bond", "Pre-bid meeting 11/12 (mandatory)"],
