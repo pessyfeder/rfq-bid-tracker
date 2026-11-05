@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RFQ Bid Tracker - Discover Group</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --card: #fff; --ink: #1c2430; --muted: #6b7686; --line: #e3e7ed;
+    --accent: #1f4e8c; --ok: #1d7a46; --warn: #b26a00; --bad: #b3261e;
+    --federal: #1f4e8c; --state: #6a3fa0; --local: #0e7c7b;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 14px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; background: var(--bg); color: var(--ink); }
+  header { padding: 16px 24px 8px; display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 24px; }
+  h1 { font-size: 20px; margin: 0; }
+  .sub { color: var(--muted); }
+  .sample { background: #fff3cd; color: #7a5b00; padding: 2px 8px; border-radius: 10px; font-size: 12px; }
+  .toolbar { padding: 4px 24px 12px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .toolbar input, .toolbar select { padding: 6px 10px; border: 1px solid var(--line); border-radius: 6px; background: #fff; font: inherit; }
+  .toolbar input[type=search] { min-width: 220px; }
+  .toolbar label { color: var(--muted); display: flex; gap: 6px; align-items: center; }
+  .wrap { margin: 0 24px 24px; background: var(--card); border: 1px solid var(--line); border-radius: 8px; overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; min-width: 1100px; }
+  th, td { padding: 10px 12px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--line); }
+  th { position: sticky; top: 0; background: #eef1f5; font-size: 12px; text-transform: uppercase; letter-spacing: .03em; color: var(--muted); white-space: nowrap; cursor: pointer; user-select: none; }
+  th.nosort { cursor: default; }
+  th .arrow { margin-left: 4px; color: var(--accent); }
+  tr:last-child td { border-bottom: 0; }
+  tr.closed td { opacity: .5; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .req-title { font-weight: 600; }
+  .agency { color: var(--muted); font-size: 12px; }
+  .badge { display: inline-block; padding: 1px 8px; border-radius: 10px; color: #fff; font-size: 12px; font-weight: 600; }
+  .badge.Federal { background: var(--federal); } .badge.State { background: var(--state); } .badge.Local { background: var(--local); }
+  .chip { display: inline-block; background: #eef1f5; border-radius: 4px; padding: 1px 6px; margin: 0 4px 4px 0; font-size: 12px; }
+  .chip.flag { background: #fdecea; color: var(--bad); font-weight: 600; }
+  .chip.amend { background: #fff3cd; color: #7a5b00; font-weight: 600; }
+  .region { font-weight: 600; margin-bottom: 4px; }
+  .days { font-weight: 600; }
+  .left { font-size: 12px; margin-top: 2px; }
+  .left.urgent { color: var(--bad); font-weight: 600; }
+  .left.soon { color: var(--warn); font-weight: 600; }
+  .left.ok { color: var(--ok); }
+  .left.closed { color: var(--muted); }
+  .na { color: var(--muted); }
+  a { color: var(--accent); }
+  .empty { padding: 24px; text-align: center; color: var(--muted); }
+</style>
+</head>
+<body>
+<header>
+  <h1>RFQ Bid Tracker</h1>
+  <span class="sub">Discover Group &middot; Brooklyn, NY</span>
+  <span class="sample">Sample data</span>
+</header>
+
+<div class="toolbar">
+  <input type="search" id="q" placeholder="Search requests, agency, details...">
+  <select id="level">
+    <option value="">All levels</option>
+    <option>Federal</option><option>State</option><option>Local</option>
+  </select>
+  <select id="category"><option value="">All categories</option></select>
+  <label><input type="checkbox" id="hideClosed" checked> Hide closed</label>
+  <span class="sub" id="count"></span>
+</div>
+
+<div class="wrap">
+  <table>
+    <thead>
+      <tr id="head"></tr>
+    </thead>
+    <tbody id="body"></tbody>
+  </table>
+  <div class="empty" id="empty" hidden>No requests match your filters.</div>
+</div>
+
+<script src="data.js"></script>
+<script>
+(function () {
+  var COLUMNS = [
+    { key: "title",    label: "Request" },
+    { key: "category", label: "Category" },
+    { key: "posted",   label: "Posted" },
+    { key: "due",      label: "End date" },
+    { key: "daysLeft", label: "Days left", num: true },
+    { key: "level",    label: "Municipality" },
+    { key: "rfqUrl",   label: "RFQ doc", nosort: true },
+    { key: "value",    label: "Est. value", num: true },
+    { key: "details",  label: "Details", nosort: true }
+  ];
+
+  var DAY = 86400000;
+  var t = new Date();
+  var todayStr = t.getFullYear() + "-" + (t.getMonth() + 1) + "-" + t.getDate();
+
+  // Parse "YYYY-MM-DD" as a local date (avoids UTC off-by-one).
+  function d(s) { var p = s.split("-"); return new Date(+p[0], p[1] - 1, +p[2]); }
+  function diffDays(a, b) { return Math.round((d(b) - d(a)) / DAY); }
+  function fmtDate(s) { return d(s).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }); }
+  function money(n) { return n == null ? null : "$" + n.toLocaleString("en-US"); }
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+
+  var rows = window.RFQS.map(function (r) {
+    return Object.assign({}, r, {
+      daysLeft: diffDays(todayStr, r.due)
+    });
+  });
+
+  // Default sort: dollar value, descending (unknown values last).
+  var sort = { key: "value", dir: -1 };
+
+  var $ = function (id) { return document.getElementById(id); };
+
+  // Category filter options
+  Array.from(new Set(rows.map(function (r) { return r.category; }))).sort().forEach(function (c) {
+    var o = document.createElement("option"); o.textContent = c; $("category").appendChild(o);
+  });
+
+  function renderHead() {
+    $("head").innerHTML = COLUMNS.map(function (c) {
+      var arrow = sort.key === c.key ? '<span class="arrow">' + (sort.dir > 0 ? "&#9650;" : "&#9660;") + "</span>" : "";
+      return '<th class="' + (c.num ? "num " : "") + (c.nosort ? "nosort" : "") + '" data-key="' + c.key + '">' + c.label + arrow + "</th>";
+    }).join("");
+  }
+
+  function leftCell(r) {
+    if (r.daysLeft < 0) return '<td class="num"><span class="left closed">Closed</span></td>';
+    var cls = r.daysLeft <= 7 ? "urgent" : r.daysLeft <= 14 ? "soon" : "ok";
+    return '<td class="num"><span class="left ' + cls + '" style="font-size:14px">' + r.daysLeft + "</span></td>";
+  }
+
+  function detailsHtml(r) {
+    var x = r.details, h = '<div class="region">' + esc(x.region) + "</div>";
+    if (x.restriction) h += '<span class="chip flag">Restricted: ' + esc(x.restriction) + "</span>";
+    if (x.amended) h += '<span class="chip amend">Amended</span>';
+    x.requirements.forEach(function (q) { h += '<span class="chip">' + esc(q) + "</span>"; });
+    return h;
+  }
+
+  function matches(r) {
+    var q = $("q").value.trim().toLowerCase();
+    if ($("level").value && r.level !== $("level").value) return false;
+    if ($("category").value && r.category !== $("category").value) return false;
+    if ($("hideClosed").checked && r.daysLeft < 0) return false;
+    if (q) {
+      var hay = [r.title, r.agency, r.category, r.details.region, r.details.restriction || ""].concat(r.details.requirements).join(" ").toLowerCase();
+      if (hay.indexOf(q) < 0) return false;
+    }
+    return true;
+  }
+
+  function render() {
+    renderHead();
+    var list = rows.filter(matches);
+    var k = sort.key;
+    list.sort(function (a, b) {
+      var x = a[k], y = b[k];
+      // nulls always last
+      if (x == null && y == null) return 0;
+      if (x == null) return 1;
+      if (y == null) return -1;
+      if (typeof x === "string") return x.localeCompare(y) * sort.dir;
+      return (x - y) * sort.dir;
+    });
+    $("body").innerHTML = list.map(function (r) {
+      return '<tr class="' + (r.daysLeft < 0 ? "closed" : "") + '">' +
+        '<td><div class="req-title">' + esc(r.title) + '</div><div class="agency">' + esc(r.agency) + "</div></td>" +
+        "<td>" + esc(r.category) + "</td>" +
+        "<td>" + fmtDate(r.posted) + "</td>" +
+        "<td>" + fmtDate(r.due) + '<div class="agency">' + esc(r.dueTime) + "</div></td>" +
+        leftCell(r) +
+        '<td><span class="badge ' + r.level + '">' + r.level + "</span></td>" +
+        '<td><a href="' + esc(r.rfqUrl) + '" target="_blank" rel="noopener">Open RFQ</a></td>' +
+        '<td class="num">' + (money(r.value) || '<span class="na">Not published</span>') + "</td>" +
+        "<td>" + detailsHtml(r) + "</td></tr>";
+    }).join("");
+    $("empty").hidden = list.length > 0;
+    $("count").textContent = list.length + " of " + rows.length + " requests";
+  }
+
+  $("head").addEventListener("click", function (e) {
+    var th = e.target.closest("th"); if (!th || th.classList.contains("nosort")) return;
+    var key = th.dataset.key;
+    sort = sort.key === key ? { key: key, dir: -sort.dir } : { key: key, dir: key === "value" ? -1 : 1 };
+    render();
+  });
+  ["q", "level", "category", "hideClosed"].forEach(function (id) {
+    $(id).addEventListener("input", render);
+    $(id).addEventListener("change", render);
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

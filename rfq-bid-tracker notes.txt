@@ -1,0 +1,33 @@
+rfq-bid-tracker notes:
+
+Example:
+
+Company A is on the approved list. It sees the request and can quote.
+Company B is not on the list. It may not even see the request, and it can’t bid if it does.
+
+Why your app cares:
+Say your app shows a user a list of RFQs. For each one, it should be able to answer: “Can this user’s company actually bid on it?”
+
+To answer that, the app needs to know two things:
+
+Which lists (vehicles) the company is on. For example: “GSA Schedule,” “NASA SEWP.”
+Which lists each RFQ is restricted to. For example: “Only GSA Schedule holders.”
+
+If they match, show “You’re eligible.” If not, show “Not eligible” and maybe why. Otherwise users waste time on bids they can never submit.
+
+USAspending.gov API
+
+Which ones to start with
+SAM.gov Opportunities is the main feed. Start here.
+USAspending is easy and free, and it makes your app smarter about pricing and competitors.
+SAM.gov Entity checks vendor registrations.
+The rest (DIBBS, state sites, eBuy) are harder, because they need logins or scraping. Add them later, one at a time.
+
+12. Things that trip up newcomers
+Deadlines are date, time, and time zone, and the agency’s clock rules.
+The solicitation can change by amendment after you start, so diff and notify.
+An RFQ is often not open to everyone: it may go only to GSA Schedule holders, or to a short list of vendors.
+“Lowest price” does not mean the best bid wins. Technically acceptable and responsible both count.
+Past performance and CPARS ratings matter a lot to repeat buyers.
+Winning bids often depend on relationships and market research before the RFQ is posted. Sources-sought notices are early signals.
+Teaming agreements and subcontracting are central, so model partners.

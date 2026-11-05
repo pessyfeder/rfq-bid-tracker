@@ -1,0 +1,76 @@
+RFQ BID TRACKER - SPEC
+======================
+
+User:     Israel Blackman, Discover Group (Brooklyn, NY)
+Purpose:  See each request at a glance and decide whether or not to bid.
+Principle: Include all information needed for a bid / no-bid decision, and nothing extra.
+Phase 1:  Build the app and its display (sample data). Data integration comes after.
+
+
+1. MAIN VIEW - TABLE COLUMNS
+----------------------------
+ #  Column          Notes
+ 1  Request         Title of the request (agency shown beneath).
+ 2  Category        Type of work, e.g. janitorial, security, HVAC.
+ 3  Posting date    Date the request was posted.
+ 4  End date        Bid due date. Also show due time and time zone.
+ 5  Days left       datediff(today, end date), in days. Closed requests are marked "Closed".
+ 6  Municipality    Federal / State / Local.
+ 7  RFQ doc         Link to the RFQ / solicitation document.
+ 8  Est. value      Dollar value. DEFAULT SORT: descending. Unpublished values sort last.
+ 9  Details         Important facts that inform the bid decision:
+                    - State / region
+                    - Specific instructions, e.g. workers must be TSA-checked,
+                      licenses, bonds, mandatory pre-bid meetings, wage rules
+                    - Restriction flag, e.g. "GSA Schedule holders only", small business set-aside
+                    - Amended flag if the solicitation changed after posting
+
+Behavior
+ - Default sort: Est. value, highest first. Any column header can be clicked to re-sort.
+ - Search box, plus filters for Municipality and Category.
+ - Closed requests hidden by default (toggle to show).
+ - Deadlines colored by urgency: 7 days or fewer = red, 14 days or fewer = orange.
+
+
+2. OPEN QUESTIONS / POSSIBLE GAPS (to confirm with Israel)
+----------------------------------------------------------
+ a. Eligibility: should the app answer "Can Discover Group actually bid on this?"
+    Needs a company profile: certifications (e.g. MWBE, small business) and the
+    vehicles/lists the company is on (e.g. GSA Schedule, NASA SEWP), matched
+    against what each RFQ is restricted to. Show "Eligible" / "Not eligible" + why.
+ b. Bond requirements and mandatory pre-bid meetings: these can decide bid or no-bid.
+    Should they be dedicated fields rather than chips in Details?
+ c. Bid status: should Israel be able to mark each request Bid / Pass / Watching,
+    so he can work through the list?
+ d. Contact and submission method: who to ask questions, and where/how the bid is
+    submitted (portal, email, in person).
+ e. Contract length: the term of the contract (not the same as the bidding window).
+ f. Amendments: should the app notify him (or show what changed) when a
+    solicitation is amended after he has looked at it?
+ g. Which regions/categories does Discover Group serve? Should out-of-area or
+    out-of-scope requests be hidden automatically?
+ h. Which sources matter first (SAM.gov, NY state portals, NYC city portals, others)?
+
+
+3. DATA INTEGRATION (LATER)
+---------------------------
+ - SAM.gov Opportunities is the main feed. Start there.
+ - USAspending.gov (free) can add pricing / competitor context.
+ - SAM.gov Entity API can check vendor registrations.
+ - State / city sites, DIBBS and eBuy need logins or scraping. Add one at a time.
+ - Data shape used by the app is documented at the top of data.js.
+
+Things that trip up newcomers (from notes)
+ - Deadlines are date, time and time zone, plus the agency's clock rules.
+ - Solicitations change by amendment: diff and notify.
+ - An RFQ may go only to GSA Schedule holders or a short list of vendors.
+ - Lowest price does not always win; technical acceptability and responsibility count.
+ - Past performance / CPARS ratings matter to repeat buyers.
+ - Sources-sought notices are early signals.
+ - Teaming agreements and subcontracting are central; model partners.
+
+
+4. STATUS
+---------
+ - index.html + data.js built with 6 sample RFQs (sample data, not real).
+ - Column 5 changed from posting-to-end window to days left from today.
