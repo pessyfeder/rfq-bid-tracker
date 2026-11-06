@@ -119,8 +119,8 @@
   var COLUMNS = [
     { key: "status",   label: "Status", nosort: true },
     { key: "title",    label: "Request" },
-    { key: "eligRank", label: "Can we bid?" },
     { key: "category", label: "Category" },
+    { key: "eligRank", label: "Can we bid?" },
     { key: "posted",   label: "Posted" },
     { key: "due",      label: "End date" },
     { key: "daysLeft", label: "Days left", num: true },
@@ -256,8 +256,8 @@
       return '<tr class="' + (r.daysLeft < 0 ? "closed " : "") + (statuses[r.id] ? "st-" + statuses[r.id] : "") + '">' +
         statusCell(r) +
         '<td><div class="req-title">' + esc(r.title) + '</div><div class="agency">' + esc(r.agency) + "</div></td>" +
-        eligCell(r) +
         "<td>" + esc(r.category) + "</td>" +
+        eligCell(r) +
         "<td>" + fmtDate(r.posted) + "</td>" +
         "<td>" + fmtDate(r.due) + '<div class="agency">' + esc(r.dueTime) + "</div></td>" +
         leftCell(r) +
