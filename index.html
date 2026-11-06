@@ -102,6 +102,18 @@
 </div>
 
 <script src="data.js"></script>
+<script src="live-sam.js" onerror="void 0"></script>
+<script src="live-nyc.js" onerror="void 0"></script>
+<script>
+// Merge whichever live feeds exist; fall back to the sample RFQs if none.
+(function () {
+  var src = window.LIVE_SOURCES || [];
+  if (!src.length) return;
+  window.RFQS = src.reduce(function (a, s) { return a.concat(s.rfqs); }, []);
+  window.RFQS_META = { source: src.map(function (s) { return s.meta.source; }).join(" + "),
+    fetchedAt: src.map(function (s) { return s.meta.fetchedAt; }).sort()[0] };
+})();
+</script>
 <script>
 (function () {
   var COLUMNS = [
@@ -252,10 +264,13 @@
         '<td class="num">' + (money(r.value) || '<span class="na">Not published</span>') + "</td>" +
         "<td>" + detailsHtml(r) +
           '<div class="scope">' + esc(r.scope) + "</div>" +
-          '<button class="toggle" data-id="' + esc(r.id) + '" aria-expanded="' + !!open + '">' + (open ? "Hide" : "Show") + " all requirements (" + r.shall.length + ")</button></td></tr>" + shallRow;
+          (r.shall.length ? '<button class="toggle" data-id="' + esc(r.id) + '" aria-expanded="' + !!open + '">' + (open ? "Hide" : "Show") + " all requirements (" + r.shall.length + ")</button>" : "") +
+          "</td></tr>" + shallRow;
     }).join("");
     $("empty").hidden = list.length > 0;
-    $("count").textContent = list.length + " of " + rows.length + " requests";
+    var m = window.RFQS_META;
+    $("count").textContent = list.length + " of " + rows.length + " requests · " +
+      (m ? "live from " + m.source + ", updated " + new Date(m.fetchedAt).toLocaleString("en-US") : "SAMPLE data");
   }
 
   $("body").addEventListener("click", function (e) {
