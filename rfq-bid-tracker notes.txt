@@ -31,3 +31,28 @@ An RFQ is often not open to everyone: it may go only to GSA Schedule holders, or
 Past performance and CPARS ratings matter a lot to repeat buyers.
 Winning bids often depend on relationships and market research before the RFQ is posted. Sources-sought notices are early signals.
 Teaming agreements and subcontracting are central, so model partners.
+
+What I’d suggest:
+
+Add a company profile. It lists the lists and certifications Discover Group holds, for example GSA Schedule, small business, MWBE or NY licences. Each RFQ’s restriction is matched against it.
+Show an eligibility result per request. It would read “Eligible”, or “Not eligible: requires GSA Schedule”. It could also read “Unclear” when the restriction text can’t be matched, since a wrong “Eligible” would be worse than a missing one.
+Hide ineligible requests by default, with a toggle to show them. They shouldn’t be deleted. He may want to know about a big bid he could join by teaming with a prime contractor, which your notes say is central. The toggle would be “Show requests I can’t bid on”.
+---
+
+Yes, Option A is safe if you follow a few simple rules. It’s actually the safer of the three options, because there’s no always-running server for anyone to attack.
+
+Why it’s safe
+The key stays hidden. Only the nightly script uses it. The webpage only sees the finished file, never the key.
+The data is public anyway. SAM.gov bid requests are public government information, so showing them is no privacy risk.
+Nothing is exposed to the internet. There’s no server listening for visitors. The script just makes outgoing requests.
+What can go wrong, and how to avoid it
+Accidentally publishing the key. This is the biggest risk. If you paste the key into a file and save that file to GitHub, anyone can find it.
+Keep the key in a protected spot: GitHub’s “Secrets” feature, or an environment variable on your computer. Never put it in data.js, index.html, or any file in the project.
+Add a .gitignore entry for any file that holds it.
+If it ever leaks, you can revoke and replace it on SAM.gov for free.
+Who can see the app. Your status choices (Interested, Bidding, Passed) reveal which bids you’re pursuing. Today they stay in your own browser, which is private. If the app is put on a public website, the data file would be visible to anyone, though that data is public anyway. Keep the app on your computer or behind a login if you don’t want competitors seeing your pipeline. Right now the statuses aren’t uploaded, so that part stays private.
+Bad or odd data from the feed. The script is trusting text written by other people (agencies). The app should show that text as plain text, not run it as code. Your current app should be checked for this once real data flows in.
+Document reading by Claude. If I read the attachments to fill in the summary, a malicious document could try to include hidden instructions. That’s why I’d keep that step limited to filling in fields, never letting it take actions, and label results “AI-read, please verify.”
+Bottom line
+
+Option A is safe as long as the key never ends up in your project files or GitHub, and you decide on purpose where the app is hosted. If you’d like, I can set it up so the key is stored safely from the start.

@@ -69,7 +69,7 @@
 <header>
   <h1>RFQ Bid Tracker</h1>
   <span class="sub">Discover Group &middot; Brooklyn, NY</span>
-  <span class="sample">Sample data &amp; sample company profile</span>
+  <span class="sample" id="profileNote" hidden>Company profile: No data</span>
 </header>
 
 <div class="toolbar">
@@ -105,7 +105,7 @@
 <script src="live-sam.js" onerror="void 0"></script>
 <script src="live-nyc.js" onerror="void 0"></script>
 <script>
-// Merge whichever live feeds exist; fall back to the sample RFQs if none.
+// Merge whichever live feeds exist. No live feed = no requests (never made-up data).
 (function () {
   var src = window.LIVE_SOURCES || [];
   if (!src.length) return;
@@ -145,9 +145,11 @@
   //   requires null        -> "unclear" (restriction could not be read; check the RFQ)
   //   all required held    -> "yes"
   //   something missing    -> "no" (missing items listed)
+  var hasProfile = Array.isArray(window.COMPANY.holds);
   var held = (window.COMPANY.holds || []).map(function (h) { return h.toLowerCase(); });
   function eligibility(r) {
-    if (r.requires == null) return { status: "unclear", rank: 1, missing: [] };
+    if (!hasProfile) return { status: "nodata", rank: 1, missing: [], why: "Company profile not provided" };
+    if (r.requires == null) return { status: "nodata", rank: 1, missing: [], why: "Restriction not read from the RFQ" };
     var missing = r.requires.filter(function (q) { return held.indexOf(q.toLowerCase()) < 0; });
     return missing.length ? { status: "no", rank: 2, missing: missing } : { status: "yes", rank: 0, missing: [] };
   }
@@ -215,7 +217,7 @@
   function eligCell(r) {
     var e = r.elig, ai = r.aiRead ? '<div class="elig-note">AI-extracted, please verify.</div>' : "";
     if (e.status === "yes") return '<td><span class="elig yes">Eligible</span>' + ai + "</td>";
-    if (e.status === "unclear") return '<td><span class="elig unclear">Unclear</span><div class="elig-note">Check the RFQ</div>' + ai + "</td>";
+    if (e.status === "nodata") return '<td><span class="elig unclear">No data</span><div class="elig-note">' + esc(e.why) + "</div>" + ai + "</td>";
     return '<td><span class="elig no">Not eligible</span><div class="elig-note">Needs: ' + esc(e.missing.join(", ")) + "</div>" + ai + "</td>";
   }
 
@@ -261,16 +263,18 @@
         leftCell(r) +
         '<td><span class="badge ' + r.level + '">' + r.level + "</span></td>" +
         '<td><a href="' + esc(r.rfqUrl) + '" target="_blank" rel="noopener">Open RFQ</a></td>' +
-        '<td class="num">' + (money(r.value) || '<span class="na">Not published</span>') + "</td>" +
+        '<td class="num">' + (money(r.value) || '<span class="na">No data</span>') + "</td>" +
         "<td>" + detailsHtml(r) +
-          '<div class="scope">' + esc(r.scope) + "</div>" +
+          '<div class="scope">' + (r.scope ? esc(r.scope) : '<span class="na">No data</span>') + "</div>" +
           (r.shall.length ? '<button class="toggle" data-id="' + esc(r.id) + '" aria-expanded="' + !!open + '">' + (open ? "Hide" : "Show") + " all requirements (" + r.shall.length + ")</button>" : "") +
           "</td></tr>" + shallRow;
     }).join("");
     $("empty").hidden = list.length > 0;
+    $("empty").textContent = rows.length ? "No requests match your filters." : "No data";
+    $("profileNote").hidden = hasProfile;
     var m = window.RFQS_META;
     $("count").textContent = list.length + " of " + rows.length + " requests · " +
-      (m ? "live from " + m.source + ", updated " + new Date(m.fetchedAt).toLocaleString("en-US") : "SAMPLE data");
+      (m ? "live from " + m.source + ", updated " + new Date(m.fetchedAt).toLocaleString("en-US") : "No data");
   }
 
   $("body").addEventListener("click", function (e) {

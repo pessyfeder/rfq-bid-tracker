@@ -58,7 +58,7 @@ function toRfq(o) {
   const place = o.placeOfPerformance || {};
   const office = o.officeAddress || {};
   const region = [place.city && place.city.name, place.state && (place.state.code || place.state.name)].filter(Boolean).join(", ")
-    || [office.city, office.state].filter(Boolean).join(", ") || "Not stated";
+    || [office.city, office.state].filter(Boolean).join(", ") || "No data";
   const amount = o.award && Number(String(o.award.amount || "").replace(/[^0-9.]/g, ""));
 
   const requirements = [];
@@ -67,10 +67,10 @@ function toRfq(o) {
   return {
     id: o.noticeId,
     requires,
-    scope: "See the solicitation on SAM.gov (summary not yet extracted).",
+    scope: "", // not extracted yet -> page shows "No data"
     shall: [],
     title: o.title || "(untitled)",
-    category: o.naicsCode ? "NAICS " + o.naicsCode : "Uncategorized",
+    category: o.naicsCode ? "NAICS " + o.naicsCode : "No data",
     posted: String(o.postedDate || "").slice(0, 10) || dp.due,
     due: dp.due,
     dueTime: dp.dueTime,

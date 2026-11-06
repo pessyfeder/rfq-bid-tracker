@@ -27,7 +27,7 @@ function toRfq(o) {
     scope: scope ? (scope.length > 220 ? scope.slice(0, 217) + "..." : scope) : "See the notice on the City Record.",
     shall: [],
     title: o.short_title || "(untitled)",
-    category: o.category_description || "Uncategorized",
+    category: o.category_description || "No data",
     posted: o.start_date.slice(0, 10),
     due,
     dueTime: time + " ET",
