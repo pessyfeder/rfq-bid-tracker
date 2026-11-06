@@ -213,10 +213,10 @@
   }
 
   function eligCell(r) {
-    var e = r.elig;
-    if (e.status === "yes") return '<td><span class="elig yes">Eligible</span></td>';
-    if (e.status === "unclear") return '<td><span class="elig unclear">Unclear</span><div class="elig-note">Check the RFQ</div></td>';
-    return '<td><span class="elig no">Not eligible</span><div class="elig-note">Needs: ' + esc(e.missing.join(", ")) + "</div></td>";
+    var e = r.elig, ai = r.aiRead ? '<div class="elig-note">AI-extracted, please verify.</div>' : "";
+    if (e.status === "yes") return '<td><span class="elig yes">Eligible</span>' + ai + "</td>";
+    if (e.status === "unclear") return '<td><span class="elig unclear">Unclear</span><div class="elig-note">Check the RFQ</div>' + ai + "</td>";
+    return '<td><span class="elig no">Not eligible</span><div class="elig-note">Needs: ' + esc(e.missing.join(", ")) + "</div>" + ai + "</td>";
   }
 
   function matches(r) {
@@ -248,9 +248,9 @@
     });
     $("body").innerHTML = list.map(function (r) {
       var open = expanded[r.id];
-      var shallRow = open ? '<tr class="shall-row' + (r.daysLeft < 0 ? " closed" : "") + '"><td colspan="' + COLUMNS.length + '"><h4>Key requirements ("shall")</h4><ul>' +
-        r.shall.map(function (s) { return "<li>" + esc(s.text) + ' <span class="ref">[' + esc(s.ref) + "]</span></li>"; }).join("") +
-        "</ul></td></tr>" : "";
+      var shallRow = open ? '<tr class="shall-row' + (r.daysLeft < 0 ? " closed" : "") + '"><td colspan="' + COLUMNS.length + '"><h4>Key requirements ("shall")' + (r.aiRead ? " &middot; AI-read, please verify" : "") + '</h4><ul>' +
+        r.shall.map(function (s) { return "<li>" + esc(s.text) + (s.ref ? ' <span class="ref">[' + esc(s.ref) + "]</span>" : "") + "</li>"; }).join("") +
+        '</ul><a href="' + esc(r.rfqUrl) + '" target="_blank" rel="noopener">Open the full RFQ document</a></td></tr>' : "";
       return '<tr class="' + (r.daysLeft < 0 ? "closed " : "") + (statuses[r.id] ? "st-" + statuses[r.id] : "") + '">' +
         statusCell(r) +
         '<td><div class="req-title">' + esc(r.title) + '</div><div class="agency">' + esc(r.agency) + "</div></td>" +
