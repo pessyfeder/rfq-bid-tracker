@@ -24,7 +24,7 @@ function toRfq(o) {
   return {
     id: "NYC-" + o.request_id,
     requires: null, // restriction (e.g. M/WBE set-aside) not yet read from the text -> "Unclear"
-    scope: scope ? (scope.length > 220 ? scope.slice(0, 217) + "..." : scope) : "See the notice on the City Record.",
+    scope: scope ? scope : "See the notice on the City Record.",
     shall: [],
     title: o.short_title || "(untitled)",
     category: o.category_description || "No data",

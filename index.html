@@ -20,10 +20,16 @@
   .toolbar input, .toolbar select { padding: 6px 10px; border: 1px solid var(--line); border-radius: 6px; background: #fff; font: inherit; }
   .toolbar input[type=search] { min-width: 220px; }
   .toolbar label { color: var(--muted); display: flex; gap: 6px; align-items: center; }
-  .wrap { margin: 0 24px 24px; background: var(--card); border: 1px solid var(--line); border-radius: 8px; overflow-x: auto; }
-  table { border-collapse: collapse; width: 100%; min-width: 1100px; }
-  th, td { padding: 10px 12px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--line); }
-  th { position: sticky; top: 0; background: #eef1f5; font-size: 12px; text-transform: uppercase; letter-spacing: .03em; color: var(--muted); white-space: nowrap; cursor: pointer; user-select: none; }
+  .wrap { margin: 0 24px 24px; background: var(--card); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  table { border-collapse: collapse; width: 100%; table-layout: auto; }
+  th, td { padding: 8px 8px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--line); overflow-wrap: break-word; }
+  table { table-layout: fixed; }
+  th:nth-child(1) { width: 7%; }  th:nth-child(2) { width: 14%; } th:nth-child(3) { width: 9%; }
+  th:nth-child(4) { width: 7%; }  th:nth-child(5) { width: 6%; }  th:nth-child(6) { width: 7%; }
+  th:nth-child(7) { width: 5%; }  th:nth-child(8) { width: 8%; }  th:nth-child(9) { width: 5%; }
+  th:nth-child(10) { width: 6%; } /* Details takes the rest */
+  th { overflow-wrap: normal; }
+  th { position: sticky; top: 0; background: #eef1f5; font-size: 11px; text-transform: uppercase; letter-spacing: .02em; color: var(--muted); cursor: pointer; user-select: none; }
   th.nosort { cursor: default; }
   th .arrow { margin-left: 4px; color: var(--accent); }
   tr:last-child td { border-bottom: 0; }
@@ -54,8 +60,10 @@
   .elig.yes { background: #e3f4ea; color: var(--ok); }
   .elig.no { background: #fdecea; color: var(--bad); }
   .elig.unclear { background: #fff3cd; color: #7a5b00; }
-  .elig-note { margin-top: 4px; font-size: 12px; color: var(--muted); max-width: 150px; }
-  .scope { color: var(--ink); font-size: 13px; margin-top: 4px; min-width: 240px; }
+  .elig-note { margin-top: 4px; font-size: 12px; color: var(--muted); }
+  .st-select { max-width: 100%; width: 100%; }
+  .elig { white-space: normal; }
+  .scope { color: var(--ink); font-size: 13px; margin-top: 4px; }
   .toggle { margin-top: 6px; padding: 0; border: 0; background: none; color: var(--accent); font: inherit; font-size: 12px; cursor: pointer; text-decoration: underline; }
   tr.shall-row td { background: #f8fafc; padding: 10px 12px 14px 36px; }
   tr.shall-row h4 { margin: 0 0 6px; font-size: 12px; text-transform: uppercase; letter-spacing: .03em; color: var(--muted); }
@@ -73,7 +81,7 @@
 </header>
 
 <div class="toolbar">
-  <input type="search" id="q" placeholder="Search requests, agency, details...">
+  <input type="search" id="q" placeholder="Search...">
   <select id="level">
     <option value="">All levels</option>
     <option>Federal</option><option>State</option><option>Local</option>
@@ -214,6 +222,16 @@
     return h;
   }
 
+  var SCOPE_MAX = 220;
+  var scopeOpen = {}; // request id -> true when full description is shown
+  function scopeHtml(r, open) {
+    if (!r.scope) return '<div class="scope"><span class="na">No data</span></div>';
+    var long = r.scope.length > SCOPE_MAX;
+    var text = long && !open ? r.scope.slice(0, SCOPE_MAX - 3).trim() + "..." : r.scope;
+    return '<div class="scope">' + esc(text) + "</div>" +
+      (long ? '<button class="toggle scope-toggle" data-id="' + esc(r.id) + '" aria-expanded="' + open + '">' + (open ? "Show less" : "Show more") + "</button> " : "");
+  }
+
   function eligCell(r) {
     var e = r.elig, ai = r.aiRead ? '<div class="elig-note">AI-extracted, please verify.</div>' : "";
     if (e.status === "yes") return '<td><span class="elig yes">Eligible</span>' + ai + "</td>";
@@ -256,7 +274,7 @@
       return '<tr class="' + (r.daysLeft < 0 ? "closed " : "") + (statuses[r.id] ? "st-" + statuses[r.id] : "") + '">' +
         statusCell(r) +
         '<td><div class="req-title">' + esc(r.title) + '</div><div class="agency">' + esc(r.agency) + "</div></td>" +
-        "<td>" + esc(r.category) + "</td>" +
+        "<td>" + esc(r.category).replace(/\//g, "/<wbr>") + "</td>" +
         eligCell(r) +
         "<td>" + fmtDate(r.posted) + "</td>" +
         "<td>" + fmtDate(r.due) + '<div class="agency">' + esc(r.dueTime) + "</div></td>" +
@@ -265,7 +283,7 @@
         '<td><a href="' + esc(r.rfqUrl) + '" target="_blank" rel="noopener">Open RFQ</a></td>' +
         '<td class="num">' + (money(r.value) || '<span class="na">No data</span>') + "</td>" +
         "<td>" + detailsHtml(r) +
-          '<div class="scope">' + (r.scope ? esc(r.scope) : '<span class="na">No data</span>') + "</div>" +
+          scopeHtml(r, !!scopeOpen[r.id]) +
           (r.shall.length ? '<button class="toggle" data-id="' + esc(r.id) + '" aria-expanded="' + !!open + '">' + (open ? "Hide" : "Show") + " all requirements (" + r.shall.length + ")</button>" : "") +
           "</td></tr>" + shallRow;
     }).join("");
@@ -279,7 +297,8 @@
 
   $("body").addEventListener("click", function (e) {
     var b = e.target.closest(".toggle"); if (!b) return;
-    expanded[b.dataset.id] = !expanded[b.dataset.id];
+    var map = b.classList.contains("scope-toggle") ? scopeOpen : expanded;
+    map[b.dataset.id] = !map[b.dataset.id];
     render();
   });
   $("body").addEventListener("change", function (e) {
