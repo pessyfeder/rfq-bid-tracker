@@ -333,7 +333,7 @@
       var pq = parseQuery(q);
       if (pq.noDue && !r.noDue) return false;
       for (var i = 0; i < pq.nums.length; i++) {
-        var n = pq.nums[i], v = r[n.field];
+        var n = pq.nums[i], v = n.get ? n.get(r) : r[n.field];
         if (v == null || !n.test(v)) return false;
       }
       if (pq.terms.length) {
@@ -352,23 +352,57 @@
     { field: "dueSort",   names: "due(?: date)?|ends?(?: date)?|closes?|deadline", date: true },
     { field: "posted",    names: "posted(?: date)?|date", date: true }
   ];
-  var NUM_RE = new RegExp("(?:(" + FIELDS.map(function (f) { return f.names; }).join("|") + ")\\s*)?(>=|<=|!=|>|<|=)\\s*(?:(\\d{4}-\\d{2}-\\d{2})|\\$?\\s*(\\d[\\d,]*\\.?\\d*)\\s*([kmb])?)(?![a-z0-9])", "g");
+  // field [:] [operator] value. The operator is optional when a field name is given:
+  // "days left: 22", "days left 22", "value 100k-500k" (range).
+  var NUM = "\\$?\\s*(\\d[\\d,]*\\.?\\d*)\\s*([kmb])?";
+  var NUM_RE = new RegExp("(?<![a-z])(?:(" + FIELDS.map(function (f) { return f.names; }).join("|") + ")\\s*:?\\s*)?(>=|<=|!=|>|<|=)?\\s*(?:(\\d{4}-\\d{2}-\\d{2})|" + NUM + "(?:\\s*-\\s*" + NUM + ")?)(?![a-z0-9-])", "g");
+  var MULT = { k: 1e3, m: 1e6, b: 1e9 };
   function parseQuery(q) {
     var nums = [];
-    var rest = q.replace(NUM_RE, function (m, name, op, date, num, suf) {
+    var rest = q.replace(NUM_RE, function (m, name, op, date, num, suf, num2, suf2) {
+      if (!name && !op) return m; // bare numbers/dates stay plain search words
       var f = date ? FIELDS[2] : FIELDS[0]; // no field name: dates mean due date, numbers mean value
       if (name) FIELDS.forEach(function (x) { if (new RegExp("^(" + x.names + ")$").test(name.trim())) f = x; });
       if (!!date !== !!f.date) return m; // date/number mismatch: leave as plain text
-      var val = date || parseFloat(num.replace(/,/g, "")) * ({ k: 1e3, m: 1e6, b: 1e9 }[suf] || 1);
-      nums.push({ field: f.field, test: function (v) {
-        return op === ">" ? v > val : op === "<" ? v < val : op === ">=" ? v >= val : op === "<=" ? v <= val : op === "=" ? v === val : v !== val;
-      } });
+      function n(x, sf) { return parseFloat(x.replace(/,/g, "")) * (MULT[sf] || 1); }
+      var val = date || n(num, suf), test;
+      if (!op && num2 != null) { var hi = n(num2, suf2 || suf); test = function (v) { return v >= val && v <= hi; }; }
+      else {
+        op = op || "=";
+        test = function (v) {
+          return op === ">" ? v > val : op === "<" ? v < val : op === ">=" ? v >= val : op === "<=" ? v <= val : op === "=" ? v === val : v !== val;
+        };
+      }
+      nums.push({ field: f.field, test: test });
       return " ";
     });
     // "no due date" is a real filter (placeholder/missing deadlines), not three loose words
     var noDue = false;
     rest = rest.replace(/\bno (?:real )?due date\b/g, function () { noDue = true; return " "; });
-    return { nums: nums, noDue: noDue, terms: rest.split(/\s+/).filter(Boolean) };
+    // "column: text" limits the text to that column, e.g. "municipality: local", "category: construction"
+    var TEXT = {
+      "municipality": function (r) { return r.level; }, "level": function (r) { return r.level; },
+      "category": function (r) { return r.category; }, "agency": function (r) { return r.agency; },
+      "request": function (r) { return r.title; }, "title": function (r) { return r.title; },
+      "region": function (r) { return r.details.region; },
+      "status": function (r) { var s = STATUSES.filter(function (x) { return x.key === statuses[r.id]; })[0]; return s ? s.label : "new"; },
+      "can we bid": function (r) { return r.elig.status === "yes" ? "eligible yes" : r.elig.status === "no" ? "not eligible no" : "no data unclear"; }
+    };
+    rest = rest.replace(new RegExp("(?<![a-z])(" + Object.keys(TEXT).join("|") + ")\\s*:\\s*(\"[^\"]*\"|\\S+)", "g"), function (m, name, val) {
+      val = val.replace(/"/g, "").toLowerCase();
+      nums.push({ get: TEXT[name], test: function (v) { return String(v || "").toLowerCase().indexOf(val) >= 0; } });
+      return " ";
+    });
+    // status keywords ("interested", "bidding", "bid submitted", "passed") filter by bid status, not by words in the text
+    var KEYS = { "bid submitted": "submitted", "submitted": "submitted", "interested": "interested", "bidding": "bidding", "passed": "pass", "pass": "pass" };
+    rest = rest.replace(/(?<![a-z])(bid submitted|submitted|interested|bidding|passed|pass)(?![a-z])/g, function (m, w) {
+      nums.push({ get: function (r) { return statuses[r.id] || "new"; }, test: function (v) { return v === KEYS[w]; } });
+      return " ";
+    });
+    // a bare column name ("municipality") isn't data, so it doesn't narrow the results
+    var labels = COLUMNS.map(function (c) { return c.label.toLowerCase(); }).concat(["municipality", "level", "agency"]);
+    var terms = rest.split(/\s+/).filter(Boolean).filter(function (w) { return labels.indexOf(w) < 0; });
+    return { nums: nums, noDue: noDue, terms: terms };
   }
   function haystack(r) {
     var parts = [];
@@ -383,8 +417,7 @@
     if (r.daysLeft != null) parts.push(r.daysLeft + " days");
     parts.push(r.elig.status === "yes" ? "eligible" : r.elig.status === "no" ? "not eligible" : "no data");
     var st = STATUSES.filter(function (s) { return s.key === statuses[r.id]; })[0];
-    parts.push(st ? st.label : "new");
-    if (r.noDue) parts.push("no due date");
+    parts.push(st ? st.label : "new");    if (r.noDue) parts.push("no due date");
     else if (r.daysLeft < 0) parts.push("closed");
     return parts.join(" ").toLowerCase();
   }
