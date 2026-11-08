@@ -91,6 +91,11 @@ Behavior
     from each RFQ - read by hand, or have Claude extract it from the document?
     How many "shall" statements are enough (3-5 key ones vs. all)? Data needed
     per RFQ: scope (text), shall[] (text + section/page ref). See data.js.
+ j. AI reading and billing: the AI read (fetch-nyc.js, fetch-sam.js via ai-extract.js) needs an
+    Anthropic API key (ANTHROPIC_API_KEY, set in the environment, never in a file). API usage
+    is billed separately from a Claude chat plan; about 200 Haiku calls per NYC refresh, no
+    caching yet. OPEN: who owns the Anthropic account and pays? Where does the key live once
+    refreshes run on a schedule? Until then, NYC rows have fewer Bid factors chips.
 
 
 3. DATA INTEGRATION (LATER)
