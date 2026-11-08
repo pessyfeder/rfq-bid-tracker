@@ -76,6 +76,10 @@
   tr.shall-row li { margin-bottom: 4px; max-width: 900px; }
   tr.shall-row .ref { color: var(--muted); font-size: 12px; white-space: nowrap; }
   .empty { padding: 24px; text-align: center; color: var(--muted); }
+  .pager { display: flex; gap: 12px; align-items: center; justify-content: center; margin: 0 24px 16px; color: var(--muted); }
+  .pager:empty { display: none; }
+  .pager button { padding: 6px 12px; border: 1px solid var(--line); border-radius: 6px; background: #fff; font: inherit; color: var(--accent); cursor: pointer; }
+  .pager button:disabled { color: var(--muted); opacity: .5; cursor: default; }
 </style>
 </head>
 <body>
@@ -104,6 +108,7 @@
   <span class="sub" id="count"></span>
 </div>
 
+<div class="pager" id="pagerTop"></div>
 <div class="wrap">
   <table>
     <thead>
@@ -113,6 +118,7 @@
   </table>
   <div class="empty" id="empty" hidden>No requests match your filters.</div>
 </div>
+<div class="pager" id="pagerBottom"></div>
 
 <script src="data.js"></script>
 <script src="live-sam.js" onerror="void 0"></script>
@@ -178,6 +184,7 @@
 
   // Default sort: dollar value, descending (unknown values last).
   var sort = { key: "valueSort", dir: -1 };
+  var PAGE_SIZE = 10, page = 0, showAll = false;
   var expanded = {}; // request id -> true when its "shall" list is open
 
   // Bid status per request id. One of STATUSES, or absent = New.
@@ -303,6 +310,21 @@
       if (typeof x === "string") return x.localeCompare(y) * sort.dir;
       return (x - y) * sort.dir;
     });
+    var total = list.length;
+    var pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+    if (page >= pages) page = pages - 1;
+    if (page < 0) page = 0;
+    var from = showAll ? 0 : page * PAGE_SIZE;
+    if (!showAll) list = list.slice(from, from + PAGE_SIZE);
+    var pagerHtml = total <= PAGE_SIZE ? "" : showAll ?
+      "<span>Showing all " + total + "</span>" +
+      '<button class="pg-all" aria-expanded="true">Show 10 at a time &#9650;</button>' :
+      '<button class="pg-prev" aria-label="Show previous 10"' + (page === 0 ? " disabled" : "") + '>&larr; Previous 10</button>' +
+      "<span>Showing " + (from + 1) + "&ndash;" + (from + list.length) + " of " + total + "</span>" +
+      '<button class="pg-next" aria-label="Show next 10"' + (page >= pages - 1 ? " disabled" : "") + '>Next 10 &rarr;</button>' +
+      '<button class="pg-all" aria-expanded="false">Show all &#9660;</button>';
+    $("pagerTop").innerHTML = pagerHtml;
+    $("pagerBottom").innerHTML = pagerHtml;
     $("body").innerHTML = list.map(function (r) {
       var open = expanded[r.id];
       var shallRow = open ? '<tr class="shall-row' + (r.daysLeft < 0 ? " closed" : "") + '"><td colspan="' + COLUMNS.length + '"><h4>Key requirements ("shall")' + (r.aiRead ? " &middot; AI-read, please verify" : "") + '</h4><ul>' +
@@ -324,11 +346,11 @@
           (r.shall.length ? '<button class="toggle" data-id="' + esc(r.id) + '" aria-expanded="' + !!open + '">' + (open ? "Hide" : "Show") + " all requirements (" + r.shall.length + ")</button>" : "") +
           "</td></tr>" + shallRow;
     }).join("");
-    $("empty").hidden = list.length > 0;
+    $("empty").hidden = total > 0;
     $("empty").textContent = rows.length ? "No requests match your filters." : "No data";
     $("profileNote").hidden = hasProfile;
     var m = window.RFQS_META;
-    $("count").textContent = list.length + " of " + rows.length + " requests · " +
+    $("count").textContent = total + " of " + rows.length + " requests · " +
       (m ? "live from " + m.source + ", updated " + new Date(m.fetchedAt).toLocaleString("en-US") : "No data");
   }
 
@@ -347,12 +369,23 @@
     var th = e.target.closest("th"); if (!th || th.classList.contains("nosort")) return;
     var key = th.dataset.key;
     sort = sort.key === key ? { key: key, dir: -sort.dir } : { key: key, dir: key === "value" ? -1 : 1 };
+    page = 0;
     render();
   });
   ["q", "level", "category", "status", "hideClosed"].forEach(function (id) {
-    $(id).addEventListener("input", render);
-    $(id).addEventListener("change", render);
+    function onFilter() { page = 0; render(); }
+    $(id).addEventListener("input", onFilter);
+    $(id).addEventListener("change", onFilter);
   });
+  function onPager(e) {
+    var b = e.target.closest("button"); if (!b || b.disabled) return;
+    if (b.classList.contains("pg-all")) { showAll = !showAll; page = 0; }
+    else page += b.classList.contains("pg-next") ? 1 : -1;
+    render();
+    window.scrollTo({ top: 0 });
+  }
+  $("pagerTop").addEventListener("click", onPager);
+  $("pagerBottom").addEventListener("click", onPager);
 
   render();
 })();
