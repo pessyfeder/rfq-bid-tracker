@@ -27,7 +27,7 @@
   th:nth-child(1) { width: 7%; }  th:nth-child(2) { width: 14%; } th:nth-child(3) { width: 9%; }
   th:nth-child(4) { width: 7%; }  th:nth-child(5) { width: 6%; }  th:nth-child(6) { width: 7%; }
   th:nth-child(7) { width: 5%; }  th:nth-child(8) { width: 8%; }  th:nth-child(9) { width: 5%; }
-  th:nth-child(10) { width: 6%; } /* Details takes the rest */
+  th:nth-child(10) { width: 13%; } /* Est. value; Details takes the rest */
   th { overflow-wrap: normal; }
   th { position: sticky; top: 0; background: #eef1f5; font-size: 11px; text-transform: uppercase; letter-spacing: .02em; color: var(--muted); cursor: pointer; user-select: none; }
   th.nosort { cursor: default; }
@@ -61,6 +61,11 @@
   .elig.no { background: #fdecea; color: var(--bad); }
   .elig.unclear { background: #fff3cd; color: #7a5b00; }
   .elig-note { margin-top: 4px; font-size: 12px; color: var(--muted); }
+  .val-range { font-size: 12px; color: var(--muted); }
+  .val-note { margin-top: 4px; font-size: 11px; line-height: 1.35; color: var(--muted); font-weight: 400; text-align: left; overflow-wrap: anywhere; }
+  .val-ex { margin-top: 4px; font-size: 11px; line-height: 1.35; text-align: left; overflow-wrap: anywhere; }
+  .val-ex summary { cursor: pointer; color: var(--muted); }
+  .val-ex ul { margin: 4px 0 0; padding-left: 14px; }
   .st-select { max-width: 100%; width: 100%; }
   .elig { white-space: normal; }
   .scope { color: var(--ink); font-size: 13px; margin-top: 4px; }
@@ -134,7 +139,7 @@
     { key: "daysLeft", label: "Days left", num: true },
     { key: "level",    label: "Municipality" },
     { key: "rfqUrl",   label: "RFQ doc", nosort: true },
-    { key: "value",    label: "Est. value (if published)", num: true },
+    { key: "valueSort", label: "Est. value", num: true },
     { key: "details",  label: "Details", nosort: true }
   ];
 
@@ -165,12 +170,14 @@
   var rows = window.RFQS.map(function (r) {
     return Object.assign({}, r, {
       daysLeft: diffDays(todayStr, r.due),
-      elig: eligibility(r)
+      elig: eligibility(r),
+      // one number to sort by: published value, else amount stated in the notice, else the similar-awards median
+      valueSort: r.value != null ? r.value : r.valueEst ? (r.valueEst.kind === "stated" ? r.valueEst.amount : r.valueEst.median) : null
     });
   });
 
   // Default sort: dollar value, descending (unknown values last).
-  var sort = { key: "value", dir: -1 };
+  var sort = { key: "valueSort", dir: -1 };
   var expanded = {}; // request id -> true when its "shall" list is open
 
   // Bid status per request id. One of STATUSES, or absent = New.
@@ -239,6 +246,31 @@
     return '<td><span class="elig no">Not eligible</span><div class="elig-note">Needs: ' + esc(e.missing.join(", ")) + "</div>" + ai + "</td>";
   }
 
+  // Est. value cell. Always says where the number came from.
+  function compact(n) {
+    return n >= 1e6 ? "$" + +(n / 1e6).toFixed(1) + "M" : n >= 1e3 ? "$" + Math.round(n / 1e3) + "K" : "$" + n;
+  }
+  function valueCell(r) {
+    var e = r.valueEst;
+    if (r.value != null) return '<td class="num">' + money(r.value) + '<div class="val-note">Published by the agency</div></td>';
+    if (e && e.kind === "stated") {
+      return '<td class="num">' + money(e.amount) + '<div class="val-note">Stated in the notice &middot; AI-extracted, please verify</div>' +
+        '<details class="val-ex"><summary>Where from</summary><div>Quoted from the notice: &ldquo;' + esc(e.quote) + "&rdquo;</div></details></td>";
+    }
+    if (e && e.kind === "similar") {
+      var list = e.examples.map(function (a) {
+        return '<li><a href="' + esc(a.url) + '" target="_blank" rel="noopener">' + esc(a.title) + "</a> &middot; " + money(a.amount) +
+          (a.vendor ? " &middot; " + esc(a.vendor) : "") + " &middot; " + fmtDate(a.date) + "</li>";
+      }).join("");
+      return '<td class="num">~' + compact(e.median) + '<div class="val-range">range ' + compact(e.low) + "&ndash;" + compact(e.high) + "</div>" +
+        '<div class="val-note">Estimate from similar past awards</div>' +
+        '<details class="val-ex"><summary>How estimated</summary><div>Not the agency&rsquo;s figure and not read from this notice. ' +
+        "Median and 25th&ndash;75th percentile of " + e.n + " competitively bid awards to " + esc(r.agency) + " in the &ldquo;" + esc(r.category) +
+        "&rdquo; category over the last " + e.years + " years, from City Record award notices (renewals, amendments and noncompetitive awards excluded). Most recent:</div><ul>" + list + "</ul></details></td>";
+    }
+    return '<td class="num"><span class="na">Not published</span><div class="val-note">No stated amount; too few similar past awards</div></td>';
+  }
+
   function matches(r) {
     var q = $("q").value.trim().toLowerCase();
     if ($("level").value && r.level !== $("level").value) return false;
@@ -281,7 +313,7 @@
         leftCell(r) +
         '<td><span class="badge ' + r.level + '">' + r.level + "</span></td>" +
         '<td><a href="' + esc(r.rfqUrl) + '" target="_blank" rel="noopener">Open RFQ</a></td>' +
-        '<td class="num">' + (money(r.value) || '<span class="na">Not published</span>') + "</td>" +
+        valueCell(r) +
         "<td>" + detailsHtml(r) +
           scopeHtml(r, !!scopeOpen[r.id]) +
           (r.shall.length ? '<button class="toggle" data-id="' + esc(r.id) + '" aria-expanded="' + !!open + '">' + (open ? "Hide" : "Show") + " all requirements (" + r.shall.length + ")</button>" : "") +
