@@ -65,8 +65,13 @@ Behavior
     Needs a company profile: certifications (e.g. MWBE, small business) and the
     vehicles/lists the company is on (e.g. GSA Schedule, NASA SEWP), matched
     against what each RFQ is restricted to. Show "Eligible" / "Not eligible" + why.
- b. Bond requirements and mandatory pre-bid meetings: these can decide bid or no-bid.
-    Should they be dedicated fields rather than chips in Details?
+ b. Bond requirements, mandatory pre-bid meetings and background checks: these can decide
+    bid or no-bid. DECIDED: shown as chips in a "Bid factors" box at the top of Details,
+    not as dedicated or filterable fields. Chips are colored: red = gate (TSA-checked
+    workers, clearance, background checks, licenses), amber = cost/effort (bonds, insurance,
+    wage rules, mandatory pre-bid/site visit, 24/7), blue = info (set-aside, past
+    performance, option years). Detected by keyword from scope + "shall" text
+    (FACT_RULES in index.html); hover a chip to see the source sentence.
  c. Bid status: DECIDED - dropdown with four statuses (interested, bidding, submitted, pass). See
     column 0. OPEN: optional note per request (e.g. pass reason)? Won / Lost later?
     Where to store statuses so they sync across devices/users?
