@@ -12,6 +12,37 @@ const OUT = path.join(__dirname, "live-nyc.js");
 
 const stripHtml = (s) => String(s || "").replace(/<[^>]*>/g, " ").replace(/&nbsp;/g, " ").replace(/[\u0000-\u001f]/g, "'").replace(/\s+/g, " ").trim();
 
+// Agencies type titles by hand; some are ALL CAPS. Title-case those only (mixed-case titles are left alone).
+// Words with no vowel (DHS, NYPD) and a few known acronyms stay upper case.
+const SMALL = new Set("a an and as at but by for in of on or the to with".split(" "));
+const ACRONYMS = new Set("NYC DOE DOT DEP DSNY HPD EDC MWBE MOCS OTI IT HVAC HRA ACS DOC DOH II III IV".split(" "));
+// Learn more acronyms from the data itself: any upper-case token that appears inside a mixed-case title
+// (e.g. NYCHA, IDIQ, WWTP) is an acronym, so keep it upper case in all-caps titles too.
+function learnAcronyms(titles) {
+  for (const t of titles) {
+    if (!t || !/[a-z]/.test(t)) continue;
+    // Short tokens only: long shouted words in a mixed-case title (MAINTENANCE) are words, not acronyms.
+    for (const w of t.match(/\b[A-Z][A-Z0-9&]{1,5}\b/g) || []) if (!SMALL.has(w.toLowerCase())) ACRONYMS.add(w);
+  }
+}
+function tidyTitle(t) {
+  if (!t || /[a-z]/.test(t) || !/[A-Z]{2}/.test(t)) return t;
+  return t.toLowerCase().replace(/[a-z][a-z'’]*/g, (w, i) => {
+    const up = w.toUpperCase();
+    if (ACRONYMS.has(up) || !/[aeiouy]/.test(w)) return up;
+    if (i > 0 && SMALL.has(w)) return w;
+    return w[0].toUpperCase() + w.slice(1);
+  });
+}
+
+// Notices that pass the "due in the future" filter but are probably not real, current bid opportunities.
+function warnings(o) {
+  const out = [];
+  if (Number(o.due_date.slice(0, 4)) >= 2099) out.push("No real deadline (placeholder date)");
+  if (Date.now() - new Date(o.start_date).getTime() > 365 * 86400000) out.push("Posted over a year ago");
+  return out;
+}
+
 function toRfq(o) {
   if (!o.due_date || !o.request_id) return null;
   const due = o.due_date.slice(0, 10);
@@ -26,7 +57,7 @@ function toRfq(o) {
     requires: null, // restriction (e.g. M/WBE set-aside) not yet read from the text -> "Unclear"
     scope: scope ? scope : "See the notice on the City Record.",
     shall: [],
-    title: o.short_title || "(untitled)",
+    title: tidyTitle(o.short_title) || "(untitled)",
     category: o.category_description || "No data",
     posted: o.start_date.slice(0, 10),
     due,
@@ -35,7 +66,7 @@ function toRfq(o) {
     agency: o.agency_name || "NYC agency",
     value: o.contract_amount && Number(o.contract_amount) > 0 ? Number(o.contract_amount) : null,
     rfqUrl: "https://a856-cityrecord.nyc.gov/RequestDetail/" + encodeURIComponent(o.request_id),
-    details: { region: "New York City", requirements, restriction: null, amended: false }
+    details: { region: "New York City", requirements, restriction: null, amended: false, warnings: warnings(o) }
   };
 }
 
@@ -143,6 +174,7 @@ async function inBatches(items, size, fn) {
     $order: "start_date DESC",
     $limit: String(MAX)
   });
+  learnAcronyms(items.map((o) => o.short_title));
   const rfqs = items.map(toRfq).filter(Boolean);
   const byId = new Map(items.map((o) => ["NYC-" + o.request_id, o]));
 
