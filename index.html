@@ -130,6 +130,7 @@
     <option value="pass">Passed</option>
   </select>
   <label><input type="checkbox" id="hideClosed" checked> Hide closed</label>
+  <label title="Placeholder deadlines (2099) and notices posted over a year ago"><input type="checkbox" id="hideFlagged" checked> Hide flagged</label>
   <span class="sub" id="count"></span>
 </div>
 
@@ -314,6 +315,7 @@
     if ($("level").value && r.level !== $("level").value) return false;
     if ($("category").value && r.category !== $("category").value) return false;
     if ($("hideClosed").checked && r.daysLeft < 0) return false;
+    if ($("hideFlagged").checked && (r.details.warnings || []).length) return false;
     var sf = $("status").value;
     if (sf === "new" ? statuses[r.id] : sf && statuses[r.id] !== sf) return false;
     if (q) {
@@ -398,7 +400,7 @@
     page = 0;
     render();
   });
-  ["q", "level", "category", "status", "hideClosed"].forEach(function (id) {
+  ["q", "level", "category", "status", "hideClosed", "hideFlagged"].forEach(function (id) {
     function onFilter() { page = 0; render(); }
     $(id).addEventListener("input", onFilter);
     $(id).addEventListener("change", onFilter);
