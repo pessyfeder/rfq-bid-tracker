@@ -68,6 +68,12 @@
   .val-ex ul { margin: 4px 0 0; padding-left: 14px; }
   .st-select { max-width: 100%; width: 100%; }
   .elig { white-space: normal; }
+  .facts { margin: 2px 0 6px; padding: 6px 8px; border-left: 3px solid var(--warn); background: #fffaf0; border-radius: 0 4px 4px 0; }
+  .facts-h { font-size: 10px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin-bottom: 3px; }
+  .fact { display: inline-block; margin: 0 4px 4px 0; padding: 1px 7px; border-radius: 4px; font-size: 12px; font-weight: 600; cursor: help; }
+  .fact.hard { background: #fdecea; color: var(--bad); }
+  .fact.cost { background: #fff3cd; color: #7a5b00; }
+  .fact.info { background: #e8eef7; color: var(--accent); }
   .scope { color: var(--ink); font-size: 13px; margin-top: 4px; }
   .toggle { margin-top: 6px; padding: 0; border: 0; background: none; color: var(--accent); font: inherit; font-size: 12px; cursor: pointer; text-decoration: underline; }
   tr.shall-row td { background: #f8fafc; padding: 10px 12px 14px 36px; }
@@ -265,8 +271,49 @@
     return '<td class="num"><span class="left ' + cls + '" style="font-size:14px">' + r.daysLeft + "</span></td>";
   }
 
+  // Bid factors: facts that commonly decide bid / no-bid, detected from the scope, "shall"
+  // statements and requirement chips. Each shows as a labelled chip (hover for the source text).
+  // sev "hard" = a gate (can we even qualify / staff it); "cost" = adds cost or effort; "info" = good to know.
+  var FACT_RULES = [
+    { label: "TSA-checked workers",        sev: "hard", re: /\bTSA\b|transportation security administration|\bTWIC\b/i },
+    { label: "Security clearance",         sev: "hard", re: /security clearance|secret clearance|top secret|\bpublic trust\b|\bNACI\b|\bCAC\b/i },
+    { label: "Background checks / fingerprinting", sev: "hard", re: /background (check|investigation|screening)|fingerprint|criminal history|\bE-?Verify\b|\bbadg(e|ing)\b/i },
+    { label: "License / certification",    sev: "hard", re: /\blicens(e|ed|ure)\b|certified by|certification required|\bOSHA[- ]?(10|30)\b|master (plumber|electrician)|\bEPA\b.*certif/i },
+    { label: "Bid / performance bond",     sev: "cost", re: /(bid|performance|payment|surety)\s+(bond|security)|\bsurety\b|bonding/i },
+    { label: "Insurance minimums",         sev: "cost", re: /\binsurance\b|general liability|workers.? comp/i },
+    { label: "Prevailing / living wage",   sev: "cost", re: /prevailing wage|living wage|service contract (labor )?standards|\bSCA\b|davis[- ]bacon|wage determination|union|collective bargaining/i },
+    { label: "Mandatory site visit / pre-bid", sev: "cost", re: /(mandatory|required)[^.]{0,60}(pre-?bid|site (visit|walk)|walk-?through|conference)|pre-?bid[^.]{0,40}mandatory/i },
+    { label: "24/7 or after-hours",        sev: "cost", re: /24\s*\/\s*7|24[- ]hour|after[- ]hours|overnight|night shift|on-?call|emergency response/i },
+    { label: "Set-aside / preference",     sev: "info", re: /set-?aside|\bM\/?WBE\b|\bSDVOSB\b|\bHUBZone\b|\b8\(a\)|\bWOSB\b|small business|minority|women[- ]owned|veteran[- ]owned/i },
+    { label: "Past performance / references", sev: "info", re: /past performance|references|\bCPARS\b|years of experience|similar (projects|contracts)/i },
+    { label: "Multi-year / renewal term",  sev: "info", re: /option (year|period)|base (year|period)|\b\d+[- ]year (contract|term)|renewal/i }
+  ];
+  function keyFacts(r) {
+    var x = r.details || {};
+    var src = [];
+    if (r.scope) src.push(r.scope);
+    (r.shall || []).forEach(function (s) { src.push(s.text); });
+    (x.requirements || []).forEach(function (q) { src.push(q); });
+    if (x.restriction) src.push(x.restriction);
+    var out = [];
+    FACT_RULES.forEach(function (rule) {
+      for (var i = 0; i < src.length; i++) {
+        if (rule.re.test(src[i])) { out.push({ label: rule.label, sev: rule.sev, why: src[i] }); return; }
+      }
+    });
+    return out;
+  }
+  function factsHtml(r) {
+    var f = keyFacts(r);
+    if (!f.length) return "";
+    return '<div class="facts"><div class="facts-h">Bid factors' + (r.aiRead ? " &middot; AI-read, verify" : "") + "</div>" +
+      f.map(function (k) {
+        return '<span class="fact ' + k.sev + '" title="' + esc(k.why) + '">' + (k.sev === "hard" ? "&#9873; " : "") + esc(k.label) + "</span>";
+      }).join("") + "</div>";
+  }
+
   function detailsHtml(r) {
-    var x = r.details, h = '<div class="region">' + esc(x.region) + "</div>";
+    var x = r.details, h = '<div class="region">' + esc(x.region) + "</div>" + factsHtml(r);
     if (x.restriction) h += '<span class="chip flag">Restricted: ' + esc(x.restriction) + "</span>";
     if (x.amended) h += '<span class="chip amend">Amended</span>';
     (x.warnings || []).forEach(function (w) { h += '<span class="chip amend">&#9888; ' + esc(w) + "</span>"; });
