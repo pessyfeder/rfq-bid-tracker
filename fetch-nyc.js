@@ -58,8 +58,22 @@ function percentile(sorted, p) {
 // Round to 2 significant figures so a range does not look more precise than it is.
 const round2 = (n) => { const m = Math.pow(10, Math.max(0, Math.floor(Math.log10(n)) - 1)); return Math.round(n / m) * m; };
 
-// Past awards (City Record "Award" notices with a contract amount), grouped by agency + category.
-async function loadAwardIndex() {
+// Keywords from a title: lowercase words, generic procurement words dropped, plural "s" trimmed.
+const STOP = new Set(("services service contract contracts request requests proposal proposals bid bids rfp rfq rfei ifb invitation " +
+  "solicitation notice provide providing provision various citywide city york nyc department dept agency program programs project projects " +
+  "work works for the and with from into that this under per new fiscal year years open ended term general related " +
+  "including include required requirements support supply supplies other cons").split(" "));
+function keywords(title) {
+  const out = new Set();
+  for (const w of String(title || "").toLowerCase().split(/[^a-z]+/)) {
+    if (w.length < 4 || STOP.has(w)) continue;
+    out.add(w.length > 4 && w.endsWith("s") && !w.endsWith("ss") ? w.slice(0, -1) : w);
+  }
+  return out;
+}
+
+// Past awards (City Record "Award" notices with a contract amount), as a flat list, newest first.
+async function loadAwards() {
   const since = new Date(Date.now() - AWARD_YEARS * 365 * 86400000).toISOString().slice(0, 10);
   const rows = await socrata({
     $select: "request_id,agency_name,category_description,short_title,vendor_name,contract_amount,start_date",
@@ -71,30 +85,51 @@ async function loadAwardIndex() {
     $limit: "50000"
   });
   const NOT_NEW = /\b(amend\w*|renewal|extension|allowance|increase|change order|modification)\b/i;
-  const seen = new Set(), index = new Map();
+  const seen = new Set(), awards = [];
   for (const r of rows) {
     const amount = Number(r.contract_amount);
     if (!r.request_id || seen.has(r.request_id) || !(amount > 0) || NOT_NEW.test(r.short_title || "")) continue;
     seen.add(r.request_id);
-    const key = r.agency_name + "||" + r.category_description;
-    if (!index.has(key)) index.set(key, []);
-    index.get(key).push({
+    awards.push({
+      agency: r.agency_name, category: r.category_description, kw: keywords(r.short_title),
       title: r.short_title || "(untitled)", vendor: r.vendor_name || "", amount, date: r.start_date.slice(0, 10),
       url: "https://a856-cityrecord.nyc.gov/RequestDetail/" + encodeURIComponent(r.request_id)
     });
   }
-  return index;
+  return awards;
 }
 
-function similarEstimate(rfq, index) {
-  const list = index.get(rfq.agency + "||" + rfq.category);
-  if (!list || list.length < MIN_SIMILAR) return null;
+function summarize(list, basis, words) {
   const amts = list.map((a) => a.amount).sort((a, b) => a - b);
   return {
-    kind: "similar", n: list.length, years: AWARD_YEARS,
+    kind: "similar", basis, keywords: words, n: list.length, years: AWARD_YEARS,
     low: round2(percentile(amts, 0.25)), median: round2(percentile(amts, 0.5)), high: round2(percentile(amts, 0.75)),
-    examples: list.slice(0, 5) // most recent first
+    examples: list.slice(0, 5).map(({ title, vendor, amount, date, url }) => ({ title, vendor, amount, date, url }))
   };
+}
+
+// Tiers, most specific first; the first with enough awards wins:
+//   1. same agency + category, and the award title shares keywords with this bid's title
+//   2. same category (any agency), and the title shares keywords with this bid
+//   3. same agency + category, no keyword match (broad: typical size of this agency's work)
+function similarEstimate(rfq, awards) {
+  const mine = keywords(rfq.title);
+  const need = mine.size >= 3 ? 2 : 1; // 2 shared keywords, or 1 if the bid's title has very few
+  const scored = (pool) => mine.size === 0 ? [] : pool
+    .map((a) => ({ a, hits: [...a.kw].filter((w) => mine.has(w)) }))
+    .filter((x) => x.hits.length >= need)
+    .sort((x, y) => y.hits.length - x.hits.length); // stable: ties stay newest first
+  const sameCat = awards.filter((a) => a.category === rfq.category);
+  const sameBoth = sameCat.filter((a) => a.agency === rfq.agency);
+
+  for (const [pool, basis] of [[sameBoth, "agency+keywords"], [sameCat, "category+keywords"]]) {
+    const hit = scored(pool);
+    if (hit.length >= MIN_SIMILAR) {
+      const words = [...new Set(hit.flatMap((x) => x.hits))].slice(0, 6);
+      return summarize(hit.map((x) => x.a), basis, words);
+    }
+  }
+  return sameBoth.length >= MIN_SIMILAR ? summarize(sameBoth, "agency", []) : null;
 }
 
 async function inBatches(items, size, fn) {
@@ -129,11 +164,11 @@ async function inBatches(items, size, fn) {
   }
 
   // Estimate 2: range from similar past awards, only where there is no published or stated amount.
-  const index = await loadAwardIndex();
+  const awards = await loadAwards();
   let similar = 0;
   for (const r of rfqs) {
     if (r.value != null || r.valueEst) continue;
-    const est = similarEstimate(r, index);
+    const est = similarEstimate(r, awards);
     if (est) { r.valueEst = est; similar++; }
   }
   console.log(`Similar-award estimates for ${similar} notices`);

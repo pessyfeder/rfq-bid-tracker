@@ -263,10 +263,15 @@
           (a.vendor ? " &middot; " + esc(a.vendor) : "") + " &middot; " + fmtDate(a.date) + "</li>";
       }).join("");
       return '<td class="num">~' + compact(e.median) + '<div class="val-range">range ' + compact(e.low) + "&ndash;" + compact(e.high) + "</div>" +
-        '<div class="val-note">Estimate from similar past awards</div>' +
+        '<div class="val-note">' + (e.basis === "agency" ? "Broad estimate: this agency&rsquo;s past awards, no keyword match" : "Estimate from past awards with matching keywords") + "</div>" +
         '<details class="val-ex"><summary>How estimated</summary><div>Not the agency&rsquo;s figure and not read from this notice. ' +
-        "Median and 25th&ndash;75th percentile of " + e.n + " competitively bid awards to " + esc(r.agency) + " in the &ldquo;" + esc(r.category) +
-        "&rdquo; category over the last " + e.years + " years, from City Record award notices (renewals, amendments and noncompetitive awards excluded). Most recent:</div><ul>" + list + "</ul></details></td>";
+        "Median and 25th&ndash;75th percentile of " + e.n + " competitively bid awards " +
+        (e.basis === "category+keywords" ? "from any agency" : "to " + esc(r.agency)) + " in the &ldquo;" + esc(r.category) +
+        "&rdquo; category over the last " + e.years + " years, from City Record award notices (renewals, amendments and noncompetitive awards excluded). " +
+        (e.basis === "agency"
+          ? "Too few awards shared keywords with this title, so this is the typical size of the agency&rsquo;s work in this category, not of this kind of work. "
+          : "Matched on title keywords: " + esc(e.keywords.join(", ")) + ". ") +
+        "Most recent:</div><ul>" + list + "</ul></details></td>";
     }
     return '<td class="num"><span class="na">Not published</span><div class="val-note">No stated amount; too few similar past awards</div></td>';
   }
