@@ -130,7 +130,7 @@
     <option value="pass">Passed</option>
   </select>
   <label><input type="checkbox" id="hideClosed" checked> Hide closed</label>
-  <label title="Placeholder deadlines (2099) and notices posted over a year ago"><input type="checkbox" id="hideFlagged" checked> Hide flagged</label>
+  <label title="Placeholder deadlines (more than 3 years out) and notices posted over a year ago"><input type="checkbox" id="hideFlagged" checked> Hide flagged</label>
   <span class="sub" id="count"></span>
 </div>
 
@@ -167,7 +167,7 @@
     { key: "category", label: "Category" },
     { key: "eligRank", label: "Can we bid?" },
     { key: "posted",   label: "Posted" },
-    { key: "due",      label: "End date" },
+    { key: "dueSort",  label: "End date" },
     { key: "daysLeft", label: "Days left", num: true },
     { key: "level",    label: "Municipality" },
     { key: "rfqUrl",   label: "RFQ doc", nosort: true },
@@ -199,9 +199,18 @@
     return missing.length ? { status: "no", rank: 2, missing: missing } : { status: "yes", rank: 0, missing: [] };
   }
 
+  // Agencies enter placeholder due dates (2040, 2099, 9999...) for open-ended notices.
+  // A due date more than 3 years out is treated as "no real due date".
+  var noDueCutoff = new Date(); noDueCutoff.setFullYear(noDueCutoff.getFullYear() + 3);
+  var noDueStr = noDueCutoff.toISOString().slice(0, 10);
+  function hasNoRealDue(r) { return !r.due || r.due > noDueStr; }
+
   var rows = window.RFQS.map(function (r) {
+    var noDue = hasNoRealDue(r);
     return Object.assign({}, r, {
-      daysLeft: diffDays(todayStr, r.due),
+      noDue: noDue,
+      dueSort: noDue ? null : r.due,
+      daysLeft: noDue ? null : diffDays(todayStr, r.due),
       elig: eligibility(r),
       // one number to sort by: published value, else amount stated in the notice, else the similar-awards median
       valueSort: r.value != null ? r.value : r.valueEst ? (r.valueEst.kind === "stated" ? r.valueEst.amount : r.valueEst.median) : null
@@ -249,6 +258,7 @@
   }
 
   function leftCell(r) {
+    if (r.noDue) return '<td class="num"><span class="left">&mdash;</span></td>';
     if (r.daysLeft < 0) return '<td class="num"><span class="left closed">Closed</span></td>';
     var cls = r.daysLeft <= 7 ? "urgent" : r.daysLeft <= 14 ? "soon" : "ok";
     return '<td class="num"><span class="left ' + cls + '" style="font-size:14px">' + r.daysLeft + "</span></td>";
@@ -315,7 +325,7 @@
     if ($("level").value && r.level !== $("level").value) return false;
     if ($("category").value && r.category !== $("category").value) return false;
     if ($("hideClosed").checked && r.daysLeft < 0) return false;
-    if ($("hideFlagged").checked && (r.details.warnings || []).length) return false;
+    if ($("hideFlagged").checked && ((r.details.warnings || []).length || r.noDue)) return false;
     var sf = $("status").value;
     if (sf === "new" ? statuses[r.id] : sf && statuses[r.id] !== sf) return false;
     if (q) {
@@ -364,7 +374,7 @@
         "<td>" + esc(r.category).replace(/\//g, "/<wbr>") + "</td>" +
         eligCell(r) +
         "<td>" + fmtDate(r.posted) + "</td>" +
-        "<td>" + fmtDate(r.due) + '<div class="agency">' + esc(r.dueTime) + "</div></td>" +
+        "<td>" + (r.noDue ? "No real due date" : fmtDate(r.due) + '<div class="agency">' + esc(r.dueTime) + "</div>") + "</td>" +
         leftCell(r) +
         '<td><span class="badge ' + r.level + '">' + r.level + "</span></td>" +
         '<td><a href="' + esc(r.rfqUrl) + '" target="_blank" rel="noopener">Open RFQ</a></td>' +
