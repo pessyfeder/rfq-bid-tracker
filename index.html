@@ -134,7 +134,7 @@
     { key: "daysLeft", label: "Days left", num: true },
     { key: "level",    label: "Municipality" },
     { key: "rfqUrl",   label: "RFQ doc", nosort: true },
-    { key: "value",    label: "Est. value", num: true },
+    { key: "value",    label: "Est. value (if published)", num: true },
     { key: "details",  label: "Details", nosort: true }
   ];
 
@@ -281,7 +281,7 @@
         leftCell(r) +
         '<td><span class="badge ' + r.level + '">' + r.level + "</span></td>" +
         '<td><a href="' + esc(r.rfqUrl) + '" target="_blank" rel="noopener">Open RFQ</a></td>' +
-        '<td class="num">' + (money(r.value) || '<span class="na">No data</span>') + "</td>" +
+        '<td class="num">' + (money(r.value) || '<span class="na">Not published</span>') + "</td>" +
         "<td>" + detailsHtml(r) +
           scopeHtml(r, !!scopeOpen[r.id]) +
           (r.shall.length ? '<button class="toggle" data-id="' + esc(r.id) + '" aria-expanded="' + !!open + '">' + (open ? "Hide" : "Show") + " all requirements (" + r.shall.length + ")</button>" : "") +
