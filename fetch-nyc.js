@@ -191,6 +191,24 @@ async function inBatches(items, size, fn) {
       } catch (e) { console.warn("Amount read failed for " + r.id + ": " + e.message); }
     });
     console.log(`Stated amounts found in ${found} notices`);
+
+    // AI read of the notice text: fills requires[], a one-line scope and 3-5 key "shall" points,
+    // which feed the Bid factors chips (TSA/background checks, bonds, licenses, site visits...).
+    const { extract } = require("./ai-extract");
+    let read = 0;
+    await inBatches(rfqs, 5, async (r) => {
+      const o = byId.get(r.id);
+      try {
+        const ai = await extract([o.short_title, o.additional_description_1, o.other_info_1].filter(Boolean).join("\n"), apiKey);
+        if (!ai) return; // too little text: leave as is
+        if (ai.requires !== null) r.requires = ai.requires;
+        if (ai.scope) r.scope = ai.scope;
+        if (ai.shall.length) r.shall = ai.shall;
+        r.aiRead = true;
+        read++;
+      } catch (e) { console.warn("AI read failed for " + r.id + ": " + e.message); }
+    });
+    console.log(`AI read ${read} of ${rfqs.length} notices`);
   } else {
     console.log("ANTHROPIC_API_KEY not set: skipping stated-amount extraction (similar-award estimates still run)");
   }
