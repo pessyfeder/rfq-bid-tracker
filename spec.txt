@@ -100,6 +100,8 @@ Search
    dates:     "due < 2026-12-31", "posted >= 2026-10-01" (a bare date means due date).
    column:    "municipality: local", "category: construction", "agency: ...",
               "request: ...", "region: ...", "status: ...", "eligibility: <requirement>".
+              "eligibility: determined" shows only rows whose eligibility is known (not
+              "No data"); "eligibility: yes" / "eligibility: no" filter by result.
    status:    keywords interested / bidding / submitted / passed filter by bid status.
    "no due date" finds placeholder or missing deadlines.
    A bare column name (e.g. "municipality") does not narrow the results.

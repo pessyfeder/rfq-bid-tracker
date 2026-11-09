@@ -422,6 +422,11 @@
     // "no due date" is a real filter (placeholder/missing deadlines), not three loose words
     var noDue = false;
     rest = rest.replace(/\bno (?:real )?due date\b/g, function () { noDue = true; return " "; });
+    // "eligibility: determined" = restrictions read and profile known; "eligibility: yes|no" = by result
+    rest = rest.replace(/(?<![a-z])eligibility\s*:\s*(determined|yes|no)(?![a-z])/g, function (m, w) {
+      nums.push({ get: function (r) { return r.elig.status; }, test: function (v) { return w === "determined" ? v !== "nodata" : v === w; } });
+      return " ";
+    });
     // "column: text" limits the text to that column, e.g. "municipality: local", "category: construction"
     var TEXT = {
       "municipality": function (r) { return r.level; }, "level": function (r) { return r.level; },
