@@ -25,7 +25,7 @@
   th, td { padding: 8px 8px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--line); overflow-wrap: break-word; }
   table { table-layout: fixed; }
   th:nth-child(1) { width: 7%; }  th:nth-child(2) { width: 14%; } th:nth-child(3) { width: 9%; }
-  th:nth-child(4) { width: 7%; }  th:nth-child(5) { width: 6%; }  th:nth-child(6) { width: 7%; }
+  th:nth-child(4) { width: 9%; }  th:nth-child(5) { width: 6%; }  th:nth-child(6) { width: 7%; }
   th:nth-child(7) { width: 5%; }  th:nth-child(8) { width: 8%; }  th:nth-child(9) { width: 5%; }
   th:nth-child(10) { width: 13%; } /* Est. value; Details takes the rest */
   th { overflow-wrap: normal; }
@@ -68,7 +68,7 @@
   .val-ex summary { cursor: pointer; color: var(--muted); }
   .val-ex ul { margin: 4px 0 0; padding-left: 14px; }
   .st-select { max-width: 100%; width: 100%; }
-  .elig { white-space: normal; }
+  .elig { white-space: normal; max-width: 100%; box-sizing: border-box; overflow-wrap: anywhere; }
   .facts { margin: 2px 0 6px; padding: 6px 8px; border-left: 3px solid var(--warn); background: #fffaf0; border-radius: 0 4px 4px 0; }
   .facts-h { font-size: 10px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin-bottom: 3px; }
   .fact { display: inline-block; margin: 0 4px 4px 0; padding: 1px 7px; border-radius: 4px; font-size: 12px; font-weight: 600; cursor: help; }
@@ -450,6 +450,16 @@
       nums.push({ get: function (r) { return statuses[r.id] || "new"; }, test: function (v) { return v === KEYS[w]; } });
       return " ";
     });
+    // "closed" means the end date has passed
+    rest = rest.replace(/(?<![a-z])closed(?![a-z])/g, function () {
+      nums.push({ get: function (r) { return r.noDue ? null : r.daysLeft; }, test: function (v) { return v < 0; } });
+      return " ";
+    });
+    // "federal", "state", "local" mean the municipality level only, never a word elsewhere in the record
+    rest = rest.replace(/(?<![a-z])(federal|state|local)(?![a-z])/g, function (m, w) {
+      nums.push({ get: function (r) { return r.level; }, test: function (v) { return String(v || "").toLowerCase() === w; } });
+      return " ";
+    });
     // a bare column name ("municipality") isn't data, so it doesn't narrow the results
     var labels = COLUMNS.map(function (c) { return c.label.toLowerCase(); }).concat(["municipality", "level", "agency"]);
     var terms = rest.split(/\s+/).filter(Boolean).filter(function (w) { return labels.indexOf(w) < 0; });
@@ -457,18 +467,11 @@
   }
   function haystack(r) {
     var parts = [];
-    (function walk(x) {
-      if (x == null) return;
-      if (Array.isArray(x)) return x.forEach(walk);
-      if (typeof x === "object") return Object.keys(x).forEach(function (k) { walk(x[k]); });
-      parts.push(String(x));
-    })(r);
-    ["posted", "due"].forEach(function (k) { if (r[k]) parts.push(fmtDate(r[k])); });
-    if (r.valueSort != null) parts.push(String(r.valueSort), money(r.valueSort), compact(r.valueSort));
-    if (r.daysLeft != null) parts.push(r.daysLeft + " days");
-    var st = STATUSES.filter(function (s) { return s.key === statuses[r.id]; })[0];
-    parts.push(st ? st.label : "new");    if (r.noDue) parts.push("no due date");
-    else if (r.daysLeft < 0) parts.push("closed");
+    // Free text matches only these fields, never the notice text. Reserved words (federal/state/local,
+    // bid statuses, "closed", "no due date", values, days left) are handled in parseQuery against their own field.
+    [r.title, r.agency, r.category, r.details && r.details.region].forEach(function (v) { if (v) parts.push(String(v)); });
+    (r.requires || []).forEach(function (q) { parts.push(String(q)); });
+    ["posted", "due"].forEach(function (k) { if (r[k] && !(k === "due" && r.noDue)) parts.push(fmtDate(r[k])); });
     return parts.join(" ").toLowerCase();
   }
 
