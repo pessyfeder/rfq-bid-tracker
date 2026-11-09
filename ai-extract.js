@@ -19,7 +19,7 @@ const usage = { calls: 0, input: 0, output: 0, hits: 0 };
 // (what was asked + the exact text). Same text again = no API call, no cost. If a notice is
 // edited its text changes, the hash changes, and it is read afresh. Entries not seen for
 // CACHE_DAYS are dropped on save. Delete ai-cache.json at any time to force a full re-read
-// (do that after changing a PROMPT, since prompts are not part of the hash).
+// (not needed after editing a PROMPT: the prompt text is part of the hash, so it re-reads automatically).
 const fs = require("fs"), path = require("path"), crypto = require("crypto");
 const CACHE_FILE = path.join(__dirname, "ai-cache.json"), CACHE_DAYS = 60;
 let cache = null;
@@ -31,7 +31,7 @@ function loadCache() {
   if (!cache || typeof cache !== "object" || Array.isArray(cache)) cache = {};
   return cache;
 }
-const cacheKey = (kind, text) => crypto.createHash("sha256").update(MODEL + "\n" + kind + "\n" + text).digest("hex");
+const cacheKey = (kind, prompt, text) => crypto.createHash("sha256").update(MODEL + "\n" + kind + "\n" + prompt + "\n" + text).digest("hex");
 
 function cacheGet(key) {
   const e = loadCache()[key];
@@ -103,7 +103,7 @@ function validate(o) {
 async function extract(html, apiKey) {
   const text = stripHtml(html).slice(0, 60000);
   if (text.length < 200) return null; // too little text to judge: leave as "Unclear"
-  const key = cacheKey("extract", text), hit = cacheGet(key);
+  const key = cacheKey("extract", PROMPT, text), hit = cacheGet(key);
   if (hit !== undefined) return hit;
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
@@ -155,7 +155,7 @@ function amountIsSupported(amount, quote, text) {
 async function extractAmount(html, apiKey) {
   const text = stripHtml(html).slice(0, 60000);
   if (text.length < 100) return null;
-  const key = cacheKey("amount", text), hit = cacheGet(key);
+  const key = cacheKey("amount", AMOUNT_PROMPT, text), hit = cacheGet(key);
   if (hit !== undefined) return hit;
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
