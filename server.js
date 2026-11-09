@@ -157,7 +157,10 @@ function serveStatic(req, res, pathname) {
   const file = pathname === "/" ? "index.html" : pathname.slice(1);
   fs.readFile(path.join(ROOT, file), (err, buf) => {
     if (err) return send(res, 404, { error: "not found" });
-    res.writeHead(200, { "Content-Type": file.endsWith(".html") ? "text/html; charset=utf-8" : "text/javascript; charset=utf-8", "Cache-Control": "no-store" });
+    res.writeHead(200, { "Content-Type": file.endsWith(".html") ? "text/html; charset=utf-8" : "text/javascript; charset=utf-8", "Cache-Control": "no-store",
+      // Defence in depth: no inline event handlers, no remote scripts, no framing, even if agency text slipped through unescaped.
+      "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'none'; form-action 'none'",
+      "X-Content-Type-Options": "nosniff" });
     res.end(buf);
   });
 }

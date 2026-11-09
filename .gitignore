@@ -18,3 +18,7 @@ more notes.txt
 data/
 sam-cache.json
 sam-quota.json
+
+# Personal notes and account setup (not part of the app)
+quesions.md
+anthropic-account-setup.pdf

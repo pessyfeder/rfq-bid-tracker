@@ -169,6 +169,8 @@
   function fmtDate(s) { return d(s).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }); }
   function money(n) { return n == null ? null : "$" + n.toLocaleString("en-US"); }
   function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  // Links only ever open https pages; anything else (javascript:, data:) becomes a dead link.
+  function safeUrl(u) { return /^https:\/\//i.test(String(u)) ? String(u) : "#"; }
 
   // Agencies enter placeholder due dates (2040, 2099, 9999...) for open-ended notices.
   // A due date more than 3 years out is treated as "no real due date".
@@ -296,7 +298,7 @@
     }
     if (e && e.kind === "similar") {
       var list = e.examples.map(function (a) {
-        return '<li><a href="' + esc(a.url) + '" target="_blank" rel="noopener">' + esc(a.title) + "</a> &middot; " + money(a.amount) +
+        return '<li><a href="' + esc(safeUrl(a.url)) + '" target="_blank" rel="noopener">' + esc(a.title) + "</a> &middot; " + money(a.amount) +
           (a.vendor ? " &middot; " + esc(a.vendor) : "") + " &middot; " + fmtDate(a.date) + "</li>";
       }).join("");
       if (e.source === "usaspending") {
@@ -436,7 +438,7 @@
       var open = expanded[r.id];
       var shallRow = open ? '<tr class="shall-row' + (r.daysLeft < 0 ? " closed" : "") + '"><td colspan="' + COLUMNS.length + '"><h4>Key requirements ("shall")' + (r.aiRead ? " &middot; AI-read, please verify" : "") + '</h4><ul>' +
         r.shall.map(function (s) { return "<li>" + esc(s.text) + (s.ref ? ' <span class="ref">[' + esc(s.ref) + "]</span>" : "") + "</li>"; }).join("") +
-        '</ul><a href="' + esc(r.rfqUrl) + '" target="_blank" rel="noopener">Open the full RFQ document</a></td></tr>' : "";
+        '</ul><a href="' + esc(safeUrl(r.rfqUrl)) + '" target="_blank" rel="noopener">Open the full RFQ document</a></td></tr>' : "";
       return '<tr class="' + (r.daysLeft < 0 ? "closed" : "") + '">' +
         '<td><div class="req-title">' + esc(r.title) + '</div><div class="agency">' + esc(r.agency) + "</div></td>" +
         "<td>" + esc(r.category).replace(/\//g, "/<wbr>") + "</td>" +
@@ -444,8 +446,8 @@
         "<td>" + fmtDate(r.posted) + "</td>" +
         "<td>" + (r.noDue ? "No real due date" : fmtDate(r.due) + '<div class="agency">' + esc(r.dueTime) + "</div>") + "</td>" +
         leftCell(r) +
-        '<td><span class="badge ' + r.level + '">' + r.level + "</span></td>" +
-        '<td><a href="' + esc(r.rfqUrl) + '" target="_blank" rel="noopener">Open RFQ</a></td>' +
+        '<td><span class="badge ' + esc(r.level) + '">' + esc(r.level) + "</span></td>" +
+        '<td><a href="' + esc(safeUrl(r.rfqUrl)) + '" target="_blank" rel="noopener">Open RFQ</a></td>' +
         valueCell(r) +
         "<td>" + detailsHtml(r) +
           scopeHtml(r, !!scopeOpen[r.id]) +
