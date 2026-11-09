@@ -51,14 +51,8 @@
   .left.closed { color: var(--muted); }
   .na { color: var(--muted); }
   a { color: var(--accent); }
-  .st-select { padding: 4px 6px; border: 1px solid var(--line); border-radius: 6px; background: #fff; font: inherit; max-width: 150px; }
-  tr.st-pass td { opacity: .5; }
-  tr.st-submitted td:first-child { box-shadow: inset 3px 0 var(--ok); }
-  tr.st-bidding td:first-child { box-shadow: inset 3px 0 var(--accent); }
-  tr.st-interested td:first-child { box-shadow: inset 3px 0 #c98a00; }
   .elig { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 12px; font-weight: 600; white-space: nowrap; }
   .elig.yes { background: #e3f4ea; color: var(--ok); }
-  .elig.no { background: #fdecea; color: var(--bad); }
   .elig.chip { background: #e8eefc; color: #1f3a8a; margin: 0 4px 4px 0; }
   .elig.unclear { background: #fff3cd; color: #7a5b00; }
   .elig-note { margin-top: 4px; font-size: 12px; color: var(--muted); }
@@ -67,7 +61,6 @@
   .val-ex { margin-top: 4px; font-size: 11px; line-height: 1.35; text-align: left; overflow-wrap: anywhere; }
   .val-ex summary { cursor: pointer; color: var(--muted); }
   .val-ex ul { margin: 4px 0 0; padding-left: 14px; }
-  .st-select { max-width: 100%; width: 100%; }
   .elig { white-space: normal; }
   .facts { margin: 2px 0 6px; padding: 6px 8px; border-left: 3px solid var(--warn); background: #fffaf0; border-radius: 0 4px 4px 0; }
   .facts-h { font-size: 10px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin-bottom: 3px; }
@@ -93,17 +86,16 @@
     tbody td { display: grid; grid-template-columns: 110px 1fr; gap: 8px; width: auto; text-align: left; }
     tbody td.num { text-align: left; }
     tbody td::before { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .02em; padding-top: 2px; }
-    tbody tr:not(.shall-row) td:nth-child(1)::before { content: "Status"; }
-    tbody tr:not(.shall-row) td:nth-child(2)::before { content: "Request"; }
-    tbody tr:not(.shall-row) td:nth-child(3)::before { content: "Category"; }
-    tbody tr:not(.shall-row) td:nth-child(4)::before { content: "Eligibility"; }
-    tbody tr:not(.shall-row) td:nth-child(5)::before { content: "Posted"; }
-    tbody tr:not(.shall-row) td:nth-child(6)::before { content: "End date"; }
-    tbody tr:not(.shall-row) td:nth-child(7)::before { content: "Days left"; }
-    tbody tr:not(.shall-row) td:nth-child(8)::before { content: "Municipality"; }
-    tbody tr:not(.shall-row) td:nth-child(9)::before { content: "RFQ doc"; }
-    tbody tr:not(.shall-row) td:nth-child(10)::before { content: "Est. value"; }
-    tbody tr:not(.shall-row) td:nth-child(11)::before { content: "Details"; }
+    tbody tr:not(.shall-row) td:nth-child(1)::before { content: "Request"; }
+    tbody tr:not(.shall-row) td:nth-child(2)::before { content: "Category"; }
+    tbody tr:not(.shall-row) td:nth-child(3)::before { content: "Eligibility"; }
+    tbody tr:not(.shall-row) td:nth-child(4)::before { content: "Posted"; }
+    tbody tr:not(.shall-row) td:nth-child(5)::before { content: "End date"; }
+    tbody tr:not(.shall-row) td:nth-child(6)::before { content: "Days left"; }
+    tbody tr:not(.shall-row) td:nth-child(7)::before { content: "Municipality"; }
+    tbody tr:not(.shall-row) td:nth-child(8)::before { content: "RFQ doc"; }
+    tbody tr:not(.shall-row) td:nth-child(9)::before { content: "Est. value"; }
+    tbody tr:not(.shall-row) td:nth-child(10)::before { content: "Details"; }
     tbody tr:not(.shall-row) td:last-child { border-bottom: 0; }
     tr.shall-row td { display: block; padding-left: 12px; }
   }
@@ -113,7 +105,6 @@
 <header>
   <h1>RFQ Bid Tracker</h1>
   <span class="sub">Discover Group &middot; Brooklyn, NY</span>
-  <span class="sample" id="profileNote" hidden>Company profile: No data</span>
 </header>
 
 <div class="toolbar">
@@ -123,14 +114,6 @@
     <option>Federal</option><option>State</option><option>Local</option>
   </select>
   <select id="category"><option value="">All categories</option></select>
-  <select id="status">
-    <option value="">All statuses</option>
-    <option value="new">New (not marked)</option>
-    <option value="interested">Interested</option>
-    <option value="bidding">Bidding</option>
-    <option value="submitted">Bid submitted</option>
-    <option value="pass">Passed</option>
-  </select>
   <label><input type="checkbox" id="hideClosed" checked> Hide closed</label>
   <label title="Placeholder deadlines (more than 3 years out) and notices posted over a year ago"><input type="checkbox" id="hideFlagged" checked> Hide flagged</label>
   <span class="sub" id="count"></span>
@@ -164,7 +147,6 @@
 <script>
 (function () {
   var COLUMNS = [
-    { key: "status",   label: "Status", nosort: true },
     { key: "title",    label: "Request" },
     { key: "category", label: "Category" },
     { key: "eligRank", label: "Eligibility" },
@@ -188,19 +170,6 @@
   function money(n) { return n == null ? null : "$" + n.toLocaleString("en-US"); }
   function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
 
-  // Can the company bid? Compares what the RFQ requires against what the company holds.
-  //   requires null        -> "unclear" (restriction could not be read; check the RFQ)
-  //   all required held    -> "yes"
-  //   something missing    -> "no" (missing items listed)
-  var hasProfile = Array.isArray(window.COMPANY.holds);
-  var held = (window.COMPANY.holds || []).map(function (h) { return h.toLowerCase(); });
-  function eligibility(r) {
-    if (!hasProfile) return { status: "nodata", rank: 1, missing: [], why: "Company profile not provided" };
-    if (r.requires == null) return { status: "nodata", rank: 1, missing: [], why: "Restriction not read from the RFQ" };
-    var missing = r.requires.filter(function (q) { return held.indexOf(q.toLowerCase()) < 0; });
-    return missing.length ? { status: "no", rank: 2, missing: missing } : { status: "yes", rank: 0, missing: [] };
-  }
-
   // Agencies enter placeholder due dates (2040, 2099, 9999...) for open-ended notices.
   // A due date more than 3 years out is treated as "no real due date".
   var noDueCutoff = new Date(); noDueCutoff.setFullYear(noDueCutoff.getFullYear() + 3);
@@ -213,7 +182,8 @@
       noDue: noDue,
       dueSort: noDue ? null : r.due,
       daysLeft: noDue ? null : diffDays(todayStr, r.due),
-      elig: eligibility(r),
+      // Eligibility sort: fewest requirements first; "Not read" (null) last
+      eligRank: r.requires == null ? null : r.requires.length,
       // one number to sort by: published value, else amount stated in the notice, else the similar-awards median
       valueSort: r.value != null ? r.value : r.valueEst ? (r.valueEst.kind === "stated" ? r.valueEst.amount : r.valueEst.median) : null
     });
@@ -222,27 +192,6 @@
   // Default sort: dollar value, descending (unknown values last).
   var sort = { key: "valueSort", dir: -1 };
   var expanded = {}; // request id -> true when its "shall" list is open
-
-  // Bid status per request id. One of STATUSES, or absent = New.
-  // Saved in this browser only (localStorage); needs a real backend to share across users/devices.
-  var STATUSES = [
-    { key: "interested", icon: "★", label: "Interested" },
-    { key: "bidding",    icon: "✎", label: "Bidding" },
-    { key: "submitted",  icon: "✓", label: "Bid submitted" },
-    { key: "pass",       icon: "✕", label: "Pass" }
-  ];
-  var STORE = "rfq-bid-status";
-  var statuses = {};
-  try { statuses = JSON.parse(localStorage.getItem(STORE) || "{}"); } catch (e) {}
-  function saveStatuses() { try { localStorage.setItem(STORE, JSON.stringify(statuses)); } catch (e) {} }
-  function statusCell(r) {
-    var cur = statuses[r.id];
-    return '<td><select class="st-select" data-id="' + esc(r.id) + '" aria-label="Status for ' + esc(r.title) + '">' +
-      '<option value="">New</option>' +
-      STATUSES.map(function (s) {
-        return '<option value="' + s.key + '"' + (cur === s.key ? " selected" : "") + ">" + s.icon + " " + s.label + "</option>";
-      }).join("") + "</select></td>";
-  }
 
   var $ = function (id) { return document.getElementById(id); };
 
@@ -379,8 +328,6 @@
     if ($("category").value && r.category !== $("category").value) return false;
     if ($("hideClosed").checked && r.daysLeft < 0) return false;
     if ($("hideFlagged").checked && ((r.details.warnings || []).length || r.noDue)) return false;
-    var sf = $("status").value;
-    if (sf === "new" ? statuses[r.id] : sf && statuses[r.id] !== sf) return false;
     if (q) {
       var pq = parseQuery(q);
       if (pq.noDue && !r.noDue) return false;
@@ -431,18 +378,12 @@
     // "no due date" is a real filter (placeholder/missing deadlines), not three loose words
     var noDue = false;
     rest = rest.replace(/\bno (?:real )?due date\b/g, function () { noDue = true; return " "; });
-    // "eligibility: determined" = restrictions read and profile known; "eligibility: yes|no" = by result
-    rest = rest.replace(/(?<![a-z])eligibility\s*:\s*(determined|yes|no)(?![a-z])/g, function (m, w) {
-      nums.push({ get: function (r) { return r.elig.status; }, test: function (v) { return w === "determined" ? v !== "nodata" : v === w; } });
-      return " ";
-    });
     // "column: text" limits the text to that column, e.g. "municipality: local", "category: construction"
     var TEXT = {
       "municipality": function (r) { return r.level; }, "level": function (r) { return r.level; },
       "category": function (r) { return r.category; }, "agency": function (r) { return r.agency; },
       "request": function (r) { return r.title; }, "title": function (r) { return r.title; },
       "region": function (r) { return r.details.region; },
-      "status": function (r) { var s = STATUSES.filter(function (x) { return x.key === statuses[r.id]; })[0]; return s ? s.label : "new"; },
       "eligibility": function (r) { return (r.requires || []).join(" "); }
     };
     rest = rest.replace(new RegExp("(?<![a-z])(" + Object.keys(TEXT).join("|") + ")\\s*:\\s*(\"[^\"]*\"|\\S+)", "g"), function (m, name, val) {
@@ -452,12 +393,6 @@
     });
     // a column prefix with no text yet ("category:") is still being typed: ignore it rather than match nothing
     rest = rest.replace(new RegExp("(?<![a-z])(?:" + Object.keys(TEXT).join("|") + ")\\s*:\\s*(?=\\s|$)", "g"), " ");
-    // status keywords ("interested", "bidding", "bid submitted", "passed") filter by bid status, not by words in the text
-    var KEYS = { "bid submitted": "submitted", "submitted": "submitted", "interested": "interested", "bidding": "bidding", "passed": "pass", "pass": "pass" };
-    rest = rest.replace(/(?<![a-z])(bid submitted|submitted|interested|bidding|passed|pass)(?![a-z])/g, function (m, w) {
-      nums.push({ get: function (r) { return statuses[r.id] || "new"; }, test: function (v) { return v === KEYS[w]; } });
-      return " ";
-    });
     // "closed" means the end date has passed
     rest = rest.replace(/(?<![a-z])closed(?![a-z])/g, function () {
       nums.push({ get: function (r) { return r.noDue ? null : r.daysLeft; }, test: function (v) { return v < 0; } });
@@ -476,7 +411,7 @@
   function haystack(r) {
     var parts = [];
     // Free text matches only these fields, never the notice text. Reserved words (federal/state/local,
-    // bid statuses, "closed", "no due date", values, days left) are handled in parseQuery against their own field.
+    // "closed", "no due date", values, days left) are handled in parseQuery against their own field.
     [r.title, r.agency, r.category, r.details && r.details.region].forEach(function (v) { if (v) parts.push(String(v)); });
     (r.requires || []).forEach(function (q) { parts.push(String(q)); });
     ["posted", "due"].forEach(function (k) { if (r[k] && !(k === "due" && r.noDue)) parts.push(fmtDate(r[k])); });
@@ -502,8 +437,7 @@
       var shallRow = open ? '<tr class="shall-row' + (r.daysLeft < 0 ? " closed" : "") + '"><td colspan="' + COLUMNS.length + '"><h4>Key requirements ("shall")' + (r.aiRead ? " &middot; AI-read, please verify" : "") + '</h4><ul>' +
         r.shall.map(function (s) { return "<li>" + esc(s.text) + (s.ref ? ' <span class="ref">[' + esc(s.ref) + "]</span>" : "") + "</li>"; }).join("") +
         '</ul><a href="' + esc(r.rfqUrl) + '" target="_blank" rel="noopener">Open the full RFQ document</a></td></tr>' : "";
-      return '<tr class="' + (r.daysLeft < 0 ? "closed " : "") + (statuses[r.id] ? "st-" + statuses[r.id] : "") + '">' +
-        statusCell(r) +
+      return '<tr class="' + (r.daysLeft < 0 ? "closed" : "") + '">' +
         '<td><div class="req-title">' + esc(r.title) + '</div><div class="agency">' + esc(r.agency) + "</div></td>" +
         "<td>" + esc(r.category).replace(/\//g, "/<wbr>") + "</td>" +
         eligCell(r) +
@@ -520,7 +454,6 @@
     }).join("");
     $("empty").hidden = total > 0;
     $("empty").textContent = rows.length ? "No requests match your filters." : "No data";
-    $("profileNote").hidden = hasProfile;
     var m = window.RFQS_META;
     $("count").textContent = total + " of " + rows.length + " requests · " +
       (m ? "live from " + m.source + ", updated " + new Date(m.fetchedAt).toLocaleString("en-US") : "No data");
@@ -532,18 +465,13 @@
     map[b.dataset.id] = !map[b.dataset.id];
     render();
   });
-  $("body").addEventListener("change", function (e) {
-    var s = e.target.closest(".st-select"); if (!s) return;
-    if (s.value) statuses[s.dataset.id] = s.value; else delete statuses[s.dataset.id];
-    saveStatuses(); render();
-  });
   $("head").addEventListener("click", function (e) {
     var th = e.target.closest("th"); if (!th || th.classList.contains("nosort")) return;
     var key = th.dataset.key;
     sort = sort.key === key ? { key: key, dir: -sort.dir } : { key: key, dir: key === "value" ? -1 : 1 };
     render();
   });
-  ["q", "level", "category", "status", "hideClosed", "hideFlagged"].forEach(function (id) {
+  ["q", "level", "category", "hideClosed", "hideFlagged"].forEach(function (id) {
     function onFilter() { render(); }
     $(id).addEventListener("input", onFilter);
     $(id).addEventListener("change", onFilter);
