@@ -440,6 +440,8 @@
       nums.push({ get: TEXT[name], test: function (v) { return String(v || "").toLowerCase().indexOf(val) >= 0; } });
       return " ";
     });
+    // a column prefix with no text yet ("category:") is still being typed: ignore it rather than match nothing
+    rest = rest.replace(new RegExp("(?<![a-z])(?:" + Object.keys(TEXT).join("|") + ")\\s*:\\s*(?=\\s|$)", "g"), " ");
     // status keywords ("interested", "bidding", "bid submitted", "passed") filter by bid status, not by words in the text
     var KEYS = { "bid submitted": "submitted", "submitted": "submitted", "interested": "interested", "bidding": "bidding", "passed": "pass", "pass": "pass" };
     rest = rest.replace(/(?<![a-z])(bid submitted|submitted|interested|bidding|passed|pass)(?![a-z])/g, function (m, w) {
