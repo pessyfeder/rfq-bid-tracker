@@ -152,14 +152,15 @@ Search
     the app as its own low-privilege user or in Docker; if it is old, neglected or hosts
     something important, a separate VPS ($5-10/month) is cheaper than the risk. Also
     open: Linux or Windows server (decides the setup steps in DEPLOY.md).
- n. Refresh schedule: OPEN. Fetchers must run automatically at set times (nightly is
+ n. Refresh schedule: OPEN. Fetchers must run automatically at set times (daily at 09:00 is
     documented in DEPLOY.md). The AI cache file (ai-cache.json) must persist on the
     server between runs, otherwise every notice is re-read and re-billed. Estimated AI
     cost is about 50 cents a month. SAM.gov limits requests per key (a personal key is
     commonly about 10 a day; an entity-linked key about 1,000 - check the account page).
     A higher limit would allow refreshing more than once a day, checking amendments on
     Interested notices, and pulling attachments for the AI summaries.
- o. Privacy: the feed data is not private, so the API has no authentication, and the page is served only on the service
+ o. Privacy: the feed data is not private, so the API has no authentication, the service listens on
+    127.0.0.1 by default (HOST must be set to expose it), and the page is served only on the service
     machine. No bid statuses are stored here. Agency text must be shown as plain text,
     never run as code: CHECKED 2026-11-09 with real data flowing in. Every field is HTML-escaped,
     links must be https (otherwise a dead "#"), and the service sends a Content-Security-Policy.

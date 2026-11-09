@@ -6,7 +6,7 @@ Base URL: `http://<service-machine>:8765` (port set by `PORT`). Schema version: 
 
 ## Authentication
 
-None. The data is not private. Traffic is plain HTTP.
+None. The data is not private. Traffic is plain HTTP. The service listens on `127.0.0.1` (this machine only) unless `HOST` is set; see DEPLOY.md section 9 to open it to another machine.
 
 ## Endpoints
 

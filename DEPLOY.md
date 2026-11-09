@@ -14,7 +14,7 @@ No secrets belong in this file. Keys live in environment variables or a `.env` f
 - Node.js, recent LTS (`node --version`; 18 or newer). No `npm install`: there are no dependencies.
 - Always on (or at least on around 09:00). If it was off at 09:00, it refreshes on start-up when the data is over a day old.
 - Outbound internet to sam.gov, data.cityofnewyork.us, usaspending.gov, api.anthropic.com.
-- The service listens on this machine only (`HOST=127.0.0.1` in `.env`), so no firewall change is needed.
+- The service listens on this machine only (the default; `.env` also sets `HOST=127.0.0.1` to make it explicit), so no firewall change is needed.
 
 ## 2. Put the project on the machine
 
@@ -154,7 +154,7 @@ The service reads `.env` itself, so no `EnvironmentFile=` is needed.
 
 ## 9. Optional: letting another machine read the feed
 
-Skip this unless another machine really needs the JSON. By default the service answers this machine only.
+Skip this unless another machine really needs the JSON. By default the service answers this machine only (it binds to `127.0.0.1` even if `HOST` is not set).
 
 1. In `.env`, change `HOST` (`0.0.0.0` listens on every network interface; or use this machine's own address to listen on one):
 
