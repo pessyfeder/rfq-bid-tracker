@@ -12,7 +12,7 @@ Every `/api/*` call except `/api/health` needs the shared secret:
 Authorization: Bearer <RFQ_API_TOKEN>
 ```
 
-Wrong or missing token: `401`. The token is set on the service machine (see DEPLOY.md). Traffic is plain HTTP; keep both machines on a trusted network or put the service behind a VPN / TLS proxy.
+Wrong or missing token: `401`. The token is set on the service machine (see DEPLOY.md section 9). Traffic is plain HTTP; keep the service and its readers on a trusted network or put the service behind a VPN / TLS proxy.
 
 ## Endpoints
 
