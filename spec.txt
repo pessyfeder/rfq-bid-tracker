@@ -141,9 +141,12 @@ Search
  f. Amendments: should the app notify him (or show what changed) when a solicitation is
     amended after he has looked at it? Today only an "Amended" chip exists, and the
     feeds do not set it.
- g. Which regions/categories does Discover Group serve? Should out-of-area or
-    out-of-scope requests be hidden automatically?
- h. Which sources matter first? SAM.gov and NYC are live; NYS waits on a source.
+ g. Regions and categories: DECIDED - all USA, all categories. Anything out of area
+    (outside the USA) or out of scope is HIDDEN automatically. NOT BUILT YET. OPEN:
+    what counts as out of scope when every category is wanted (e.g. a work type
+    Discover Group does not do)? Needs Israel's definition.
+ h. Sources: DECIDED - no source priority; all are wanted. Order the list by estimated
+    value, highest first (already the default sort). NYS still waits on a source.
  i. "Shall" requirements: DECIDED - scope summary under each request plus an expandable
     list of key "shall" statements, each with its RFQ section/page. Now filled by the AI
     read (3-5 key points per notice, quoted near-verbatim) for NYC and SAM.gov rows
@@ -160,6 +163,37 @@ Search
     Without a key, NYC and SAM rows simply have fewer Bid factors chips and no AI value.
     OPEN: who owns the Anthropic account and pays? Where does the key live once refreshes
     run on a schedule?
+ k. "Interested" follow-up: OPEN. When a request is marked Interested, what should the
+    app show to help act on it?
+      - A bid link. The data has only rfqUrl (the solicitation page). Either reuse it, or
+        have the fetchers (SAM, NYC, NYS) capture a portal / submission URL (a bidUrl
+        field) when the source provides one.
+      - The buyer's contact details (contracting officer name, email, phone), if the
+        source provides them. Show them at all (may be personal data), and only when
+        status is Interested? Not every source exposes them.
+ l. Multiple users: OPEN. If several people use the app, how are status choices handled?
+      1) each person's choices stay on their own machine only
+      2) everyone sees everyone's choices, marked with who chose them
+      3) everyone sees the choices without names: a joint decision
+    Also: should ineligible requests stay visible? Notes suggest hide by default with a
+    "Show requests I can't bid on" toggle (kept for teaming with a prime contractor).
+ m. Hosting: OPEN - to discuss with Israel, to keep the information safe. Assumed: own
+    server, multiple logins. Existing server or a new one? Recommendation: use the
+    existing server only if it is well maintained (patched, backed up, HTTPS) and run
+    the app as its own low-privilege user or in Docker; if it is old, neglected or hosts
+    something important, a separate VPS ($5-10/month) is cheaper than the risk. Also
+    open: Linux or Windows server (decides the setup steps in DEPLOY.md).
+ n. Refresh schedule: OPEN. Fetchers must run automatically at set times (nightly is
+    documented in DEPLOY.md). The AI cache file (ai-cache.json) must persist on the
+    server between runs, otherwise every notice is re-read and re-billed. Estimated AI
+    cost is about 50 cents a month. SAM.gov limits requests per key (a personal key is
+    commonly about 10 a day; an entity-linked key about 1,000 - check the account page).
+    A higher limit would allow refreshing more than once a day, checking amendments on
+    Interested notices, and pulling attachments for the AI summaries.
+ o. Privacy: OPEN. Statuses reveal which bids are being pursued, so the app should sit
+    behind a login rather than on a public site. Agency text must be shown as plain text,
+    never run as code (check now that real data flows in). AI reading of attachments
+    must only fill fields and be labelled "AI-read, verify".
 
 
 3. DATA INTEGRATION
@@ -198,4 +232,6 @@ Things that trip up newcomers (from notes)
  - Table, filters, search, status tracking and Bid factors built (index.html, data.js).
  - Live feeds: NYC and SAM.gov working; NYS stub.
  - AI read with caching and cost reporting built.
- - Waiting on Israel: company profile (holds), regions/categories served, billing owner.
+ - Waiting on Israel: company profile (holds), billing owner, and the hosting and
+   multi-user decisions (items k-o). Regions/categories (all USA, all) and sources are
+   settled.
