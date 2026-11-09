@@ -25,7 +25,7 @@
   th, td { padding: 8px 8px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--line); overflow-wrap: break-word; }
   table { table-layout: fixed; }
   th:nth-child(1) { width: 7%; }  th:nth-child(2) { width: 14%; } th:nth-child(3) { width: 9%; }
-  th:nth-child(4) { width: 9%; }  th:nth-child(5) { width: 6%; }  th:nth-child(6) { width: 7%; }
+  th:nth-child(4) { width: 7%; }  th:nth-child(5) { width: 6%; }  th:nth-child(6) { width: 7%; }
   th:nth-child(7) { width: 5%; }  th:nth-child(8) { width: 8%; }  th:nth-child(9) { width: 5%; }
   th:nth-child(10) { width: 13%; } /* Est. value; Details takes the rest */
   th { overflow-wrap: normal; }
@@ -68,7 +68,7 @@
   .val-ex summary { cursor: pointer; color: var(--muted); }
   .val-ex ul { margin: 4px 0 0; padding-left: 14px; }
   .st-select { max-width: 100%; width: 100%; }
-  .elig { white-space: normal; max-width: 100%; box-sizing: border-box; overflow-wrap: anywhere; }
+  .elig { white-space: normal; }
   .facts { margin: 2px 0 6px; padding: 6px 8px; border-left: 3px solid var(--warn); background: #fffaf0; border-radius: 0 4px 4px 0; }
   .facts-h { font-size: 10px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin-bottom: 3px; }
   .fact { display: inline-block; margin: 0 4px 4px 0; padding: 1px 7px; border-radius: 4px; font-size: 12px; font-weight: 600; cursor: help; }
@@ -228,7 +228,7 @@
 
   // Default sort: dollar value, descending (unknown values last).
   var sort = { key: "valueSort", dir: -1 };
-  var PAGE_SIZE = 10, page = 0, showAll = false;
+  var PAGE_SIZE = 10, page = 0;
   var expanded = {}; // request id -> true when its "shall" list is open
 
   // Bid status per request id. One of STATUSES, or absent = New.
@@ -286,7 +286,6 @@
     { label: "Prevailing / living wage",   sev: "cost", re: /prevailing wage|living wage|service contract (labor )?standards|\bSCA\b|davis[- ]bacon|wage determination|union|collective bargaining/i },
     { label: "Mandatory site visit / pre-bid", sev: "cost", re: /(mandatory|required)[^.]{0,60}(pre-?bid|site (visit|walk)|walk-?through|conference)|pre-?bid[^.]{0,40}mandatory/i },
     { label: "24/7 or after-hours",        sev: "cost", re: /24\s*\/\s*7|24[- ]hour|after[- ]hours|overnight|night shift|on-?call|emergency response/i },
-    { label: "Set-aside / preference",     sev: "info", re: /set-?aside|\bM\/?WBE\b|\bSDVOSB\b|\bHUBZone\b|\b8\(a\)|\bWOSB\b|small business|minority|women[- ]owned|veteran[- ]owned/i },
     { label: "Past performance / references", sev: "info", re: /past performance|references|\bCPARS\b|years of experience|similar (projects|contracts)/i },
     { label: "Multi-year / renewal term",  sev: "info", re: /option (year|period)|base (year|period)|\b\d+[- ]year (contract|term)|renewal/i }
   ];
@@ -316,10 +315,13 @@
 
   function detailsHtml(r) {
     var x = r.details, h = '<div class="region">' + esc(x.region) + "</div>" + factsHtml(r);
-    if (x.restriction) h += '<span class="chip flag">Restricted: ' + esc(x.restriction) + "</span>";
+    // Restrictions / set-asides live in the Eligibility column only; show other notes here.
+    var inElig = (r.requires || []).map(function (q) { return q.toLowerCase(); });
     if (x.amended) h += '<span class="chip amend">Amended</span>';
     (x.warnings || []).forEach(function (w) { h += '<span class="chip amend">&#9888; ' + esc(w) + "</span>"; });
-    x.requirements.forEach(function (q) { h += '<span class="chip">' + esc(q) + "</span>"; });
+    x.requirements.forEach(function (q) {
+      if (inElig.indexOf(String(q).toLowerCase()) < 0 && !(x.restriction && q === x.restriction)) h += '<span class="chip">' + esc(q) + "</span>";
+    });
     return h;
   }
 
@@ -337,7 +339,12 @@
     var ai = r.aiRead ? '<div class="elig-note">AI-extracted, please verify.</div>' : "";
     if (r.requires == null) return '<td><span class="elig unclear">Not read</span><div class="elig-note">Restriction not read from the RFQ; check the document.</div>' + ai + "</td>";
     if (!r.requires.length) return '<td><span class="elig yes">No requirements found</span>' + ai + "</td>";
-    return "<td>" + r.requires.map(function (q) { return '<span class="elig chip">' + esc(q) + "</span>"; }).join(" ") + ai + "</td>";
+    // With a company profile, mark each requirement as held (green check) or missing (red cross).
+    return "<td>" + r.requires.map(function (q) {
+      if (!hasProfile) return '<span class="elig chip">' + esc(q) + "</span>";
+      var ok = held.indexOf(q.toLowerCase()) >= 0;
+      return '<span class="elig ' + (ok ? "yes" : "no") + '" title="' + (ok ? "Your company holds this" : "Your company does not hold this") + '">' + (ok ? "&#10003; " : "&#10007; ") + esc(q) + "</span>";
+    }).join(" ") + ai + "</td>";
   }
 
   // Est. value cell. Always says where the number came from.
@@ -492,15 +499,12 @@
     var pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
     if (page >= pages) page = pages - 1;
     if (page < 0) page = 0;
-    var from = showAll ? 0 : page * PAGE_SIZE;
-    if (!showAll) list = list.slice(from, from + PAGE_SIZE);
-    var pagerHtml = total <= PAGE_SIZE ? "" : showAll ?
-      "<span>Showing all " + total + "</span>" +
-      '<button class="pg-all" aria-expanded="true">Show 10 at a time &#9650;</button>' :
+    var from = page * PAGE_SIZE;
+    list = list.slice(from, from + PAGE_SIZE);
+    var pagerHtml = total <= PAGE_SIZE ? "" :
       '<button class="pg-prev" aria-label="Show previous 10"' + (page === 0 ? " disabled" : "") + '>&larr; Previous 10</button>' +
       "<span>Showing " + (from + 1) + "&ndash;" + (from + list.length) + " of " + total + "</span>" +
-      '<button class="pg-next" aria-label="Show next 10"' + (page >= pages - 1 ? " disabled" : "") + '>Next 10 &rarr;</button>' +
-      '<button class="pg-all" aria-expanded="false">Show all &#9660;</button>';
+      '<button class="pg-next" aria-label="Show next 10"' + (page >= pages - 1 ? " disabled" : "") + '>Next 10 &rarr;</button>';
     $("pagerTop").innerHTML = pagerHtml;
     $("pagerBottom").innerHTML = pagerHtml;
     $("body").innerHTML = list.map(function (r) {
@@ -557,8 +561,7 @@
   });
   function onPager(e) {
     var b = e.target.closest("button"); if (!b || b.disabled) return;
-    if (b.classList.contains("pg-all")) { showAll = !showAll; page = 0; }
-    else page += b.classList.contains("pg-next") ? 1 : -1;
+    page +=b.classList.contains("pg-next") ? 1 : -1;
     render();
     window.scrollTo({ top: 0 });
   }
