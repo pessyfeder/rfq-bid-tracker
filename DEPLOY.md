@@ -1,4 +1,4 @@
-# Installing the RFQ service on Israel's machine
+# Installing the RFQ service
 
 This is a standalone service on **one machine** (the "service machine"). It fetches solicitations from NYC and SAM.gov on a schedule, keeps them in `data/`, and serves them as JSON. The JSON contract is in `FEED.md`.
 
@@ -18,13 +18,21 @@ No secrets belong in this file. Keys live in environment variables or a `.env` f
 
 ## 2. Put the project on the machine
 
-**From the zip (simplest):**
+Extract `rfq-bid-tracker.zip` to a permanent location. That folder is "the project folder" in the steps below.
 
-1. Save `rfq-bid-tracker.zip` anywhere, for example your Downloads folder.
+**Windows:**
+
+1. Save the zip anywhere, for example your Downloads folder.
 2. Right-click it > **Extract All**. This makes a folder called `rfq-bid-tracker`.
-3. Move that folder to `C:\` so the path is `C:\rfq-bid-tracker`. Any other location works too. Wherever you put it, that is "the project folder" in the steps below.
+3. Move that folder to `C:\` so the path is `C:\rfq-bid-tracker`. Any other location works too.
 
-(Linux: extract the zip to `/opt/rfq-bid-tracker`.)
+**Linux / macOS:**
+
+```bash
+sudo unzip rfq-bid-tracker.zip -d /opt
+```
+
+This gives `/opt/rfq-bid-tracker`. Make sure the account that will run the service owns it (for example `sudo chown -R rfq /opt/rfq-bid-tracker`).
 
 ## 3. Create your keys
 
@@ -37,8 +45,10 @@ You need two values. They go in a `.env` file in the next step. Never email them
 
 ## 4. Create the `.env` file
 
-1. Open the project folder in File Explorer. The zip already contains an empty `.env` file with the names and no values. (If you can't see it, Windows may be hiding dot-files: turn on View > Show > Hidden items. If it is missing, create a new text file named exactly `.env`, with no `.txt` at the end; turn on View > Show > File name extensions so you can check.)
-2. Right-click `.env` > Open with > Notepad.
+1. The zip already contains an empty `.env` file in the project folder with the names and no values.
+   - **Windows:** open the folder in File Explorer. If you can't see the file, turn on View > Show > Hidden items. If it is missing, create a new text file named exactly `.env`, with no `.txt` at the end (turn on View > Show > File name extensions so you can check).
+   - **Linux / macOS:** it is a dot-file, so use `ls -a`. If it is missing, `touch .env`.
+2. Open it in a text editor: on Windows, right-click `.env` > Open with > Notepad; on Linux / macOS, `nano .env`.
 3. Type each value after its `=` sign, with no spaces or quotes:
 
 ```
@@ -65,26 +75,26 @@ Notes:
 
 ## 5. Try it by hand
 
-Open PowerShell **in the project folder**. The easy way: open the folder in File Explorer, click the address bar, type `powershell`, press Enter.
+Open a terminal **in the project folder**. On Windows, the easy way is to open the folder in File Explorer, click the address bar, type `powershell`, press Enter. On Linux / macOS, `cd /opt/rfq-bid-tracker`.
 
-```powershell
+```
 node server.js --once
 ```
 
-This fetches everything once, writes `data\feed.json` and exits. With AI reading on it takes a few minutes. Then start the service:
+This fetches everything once, writes `data/feed.json` and exits. With AI reading on it takes a few minutes. Then start the service:
 
-```powershell
+```
 node server.js
 ```
 
-Leave that window open. In a second PowerShell window, check that it works:
+Leave that window open. In a second terminal, check that it works (on Windows PowerShell, use `curl.exe` in place of `curl`):
 
-```powershell
+```
 curl http://localhost:8765/api/health
 curl http://localhost:8765/api/status
 ```
 
-`/api/status` should show each source with a recent `lastSuccess` and `error: null`. Logs: `data\service.log`.
+`/api/status` should show each source with a recent `lastSuccess` and `error: null`. Logs: `data/service.log`.
 
 ## 6. Keep it running
 
@@ -94,7 +104,7 @@ Simplest: Task Scheduler.
 
 1. Create Task > General: name "RFQ service", "Run whether user is logged on or not", "Run with highest privileges" off.
 2. Triggers: **At startup**.
-3. Actions: Start a program = `start.cmd` in the project folder (full path), and Start in = the project folder. (`start.cmd` restarts the service if it ever exits.)
+3. Actions: Start a program = `start.cmd` in the project folder (full path), and Start in = the project folder. (`start.cmd` restarts the service 10 seconds after it exits. It needs `node` on the PATH of the account the task runs as: test with `where node` in a fresh PowerShell. After saving the task, right-click it > Run, then check `curl http://localhost:8765/api/health`. To stop the service, End the task in Task Scheduler; ending only `node.exe` makes `start.cmd` start it again.)
 4. Settings: untick "Stop the task if it runs longer than".
 
 Alternative: NSSM (`nssm install rfq-service "C:\Program Files\nodejs\node.exe" server.js`, startup directory the project folder) gives a real Windows service.
@@ -130,12 +140,17 @@ The service reads `.env` itself, so no `EnvironmentFile=` is needed.
 - **Freshness**: check `/api/status` (or `/api/health`'s `lastSuccessfulRefresh`); if it is over ~26 hours old, something is wrong.
 - **Back up** `data/state.json` and `ai-cache.json`. The data itself rebuilds on the next refresh, but losing `state.json` resets the `seq` cursor, and losing `ai-cache.json` makes every notice be re-read and re-billed.
 - **Cost**: after the first daily run, check Anthropic Console > Usage; each run also appends to `ai-usage.log`.
-- **Key leaks**: delete the key on its service's site, make a new one, edit `.env`, restart the service.- **Manual refresh**: `POST /api/refresh`, or restart the service.
-- The service is HTTP, not HTTPS. Keep both machines on a trusted network or VPN; if they must talk across the internet, put a TLS reverse proxy (Caddy) in front.
+- **Key leaks**: delete the key on its service's site, make a new one, edit `.env`, restart the service.
+- **Manual refresh**: `POST /api/refresh`, or restart the service.
+- **Upgrading to a new version**:
+  1. Stop the service (Windows: End the task in Task Scheduler; Linux: `sudo systemctl stop rfq-service`).
+  2. Extract the new zip to a temporary folder, not over the project folder.
+  3. Copy its files into the project folder, replacing existing files, but **do not overwrite or delete** these: `.env`, the `data/` folder (`state.json` and `service.log`), and `ai-cache.json` and `ai-usage.log` in the project folder itself. If the new zip contains any of them, skip them.
+  4. Start the service again and check `/api/health` and `/api/status`.
 
 ## 8. The human page
 
-`http://localhost:8765/` on the service machine itself still serves the table page (`index.html`). It is not served to other machines. The page has no bid statuses and stores nothing, so it is a read-only view of the same data.
+`http://localhost:8765/` on the service machine itself still serves the table page (`index.html`). The page has no bid statuses and stores nothing, so it is a read-only view of the same data.
 
 ## 9. Not built yet
 
