@@ -59,6 +59,7 @@
   .elig { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 12px; font-weight: 600; white-space: nowrap; }
   .elig.yes { background: #e3f4ea; color: var(--ok); }
   .elig.no { background: #fdecea; color: var(--bad); }
+  .elig.chip { background: #e8eefc; color: #1f3a8a; margin: 0 4px 4px 0; }
   .elig.unclear { background: #fff3cd; color: #7a5b00; }
   .elig-note { margin-top: 4px; font-size: 12px; color: var(--muted); }
   .val-range { font-size: 12px; color: var(--muted); }
@@ -96,7 +97,7 @@
     tbody tr:not(.shall-row) td:nth-child(1)::before { content: "Status"; }
     tbody tr:not(.shall-row) td:nth-child(2)::before { content: "Request"; }
     tbody tr:not(.shall-row) td:nth-child(3)::before { content: "Category"; }
-    tbody tr:not(.shall-row) td:nth-child(4)::before { content: "Can we bid?"; }
+    tbody tr:not(.shall-row) td:nth-child(4)::before { content: "Eligibility"; }
     tbody tr:not(.shall-row) td:nth-child(5)::before { content: "Posted"; }
     tbody tr:not(.shall-row) td:nth-child(6)::before { content: "End date"; }
     tbody tr:not(.shall-row) td:nth-child(7)::before { content: "Days left"; }
@@ -173,7 +174,7 @@
     { key: "status",   label: "Status", nosort: true },
     { key: "title",    label: "Request" },
     { key: "category", label: "Category" },
-    { key: "eligRank", label: "Can we bid?" },
+    { key: "eligRank", label: "Eligibility" },
     { key: "posted",   label: "Posted" },
     { key: "dueSort",  label: "End date" },
     { key: "daysLeft", label: "Days left", num: true },
@@ -333,10 +334,10 @@
   }
 
   function eligCell(r) {
-    var e = r.elig, ai = r.aiRead ? '<div class="elig-note">AI-extracted, please verify.</div>' : "";
-    if (e.status === "yes") return '<td><span class="elig yes">Eligible</span>' + ai + "</td>";
-    if (e.status === "nodata") return '<td><span class="elig unclear">No data</span><div class="elig-note">' + esc(e.why) + "</div>" + ai + "</td>";
-    return '<td><span class="elig no">Not eligible</span><div class="elig-note">Needs: ' + esc(e.missing.join(", ")) + "</div>" + ai + "</td>";
+    var ai = r.aiRead ? '<div class="elig-note">AI-extracted, please verify.</div>' : "";
+    if (r.requires == null) return '<td><span class="elig unclear">Not read</span><div class="elig-note">Restriction not read from the RFQ; check the document.</div>' + ai + "</td>";
+    if (!r.requires.length) return '<td><span class="elig yes">No requirements found</span>' + ai + "</td>";
+    return "<td>" + r.requires.map(function (q) { return '<span class="elig chip">' + esc(q) + "</span>"; }).join(" ") + ai + "</td>";
   }
 
   // Est. value cell. Always says where the number came from.
@@ -434,7 +435,7 @@
       "request": function (r) { return r.title; }, "title": function (r) { return r.title; },
       "region": function (r) { return r.details.region; },
       "status": function (r) { var s = STATUSES.filter(function (x) { return x.key === statuses[r.id]; })[0]; return s ? s.label : "new"; },
-      "can we bid": function (r) { return r.elig.status === "yes" ? "eligible yes" : r.elig.status === "no" ? "not eligible no" : "no data unclear"; }
+      "eligibility": function (r) { return (r.requires || []).join(" "); }
     };
     rest = rest.replace(new RegExp("(?<![a-z])(" + Object.keys(TEXT).join("|") + ")\\s*:\\s*(\"[^\"]*\"|\\S+)", "g"), function (m, name, val) {
       val = val.replace(/"/g, "").toLowerCase();
@@ -465,7 +466,6 @@
     ["posted", "due"].forEach(function (k) { if (r[k]) parts.push(fmtDate(r[k])); });
     if (r.valueSort != null) parts.push(String(r.valueSort), money(r.valueSort), compact(r.valueSort));
     if (r.daysLeft != null) parts.push(r.daysLeft + " days");
-    parts.push(r.elig.status === "yes" ? "eligible" : r.elig.status === "no" ? "not eligible" : "no data");
     var st = STATUSES.filter(function (s) { return s.key === statuses[r.id]; })[0];
     parts.push(st ? st.label : "new");    if (r.noDue) parts.push("no due date");
     else if (r.daysLeft < 0) parts.push("closed");

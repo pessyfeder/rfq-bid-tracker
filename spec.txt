@@ -28,7 +28,7 @@ Eleven columns, left to right. Each is sortable except Status, RFQ doc and Detai
  2  Request         Title of the request (agency shown beneath). ALL-CAPS titles from
                     agencies are tidied to Title Case (acronyms kept upper case).
  3  Category        Type of work. NYC: City Record category. SAM.gov: "NAICS <code>".
- 4  Can we bid?     Eligible / Not eligible (Needs: ...) / No data.
+ 4  Eligibility     Chips listing everything the RFQ requires to bid (Israel decides); "Not read" if unknown.
                     Compares the RFQ's requires[] against the company profile
                     (COMPANY.holds in data.js). "No data" when the profile is empty
                     (currently the case: Israel has not provided it) or the RFQ's
@@ -99,7 +99,7 @@ Search
               posted/date. Operators: > < >= <= = != ; k/m/b suffixes; ranges.
    dates:     "due < 2026-12-31", "posted >= 2026-10-01" (a bare date means due date).
    column:    "municipality: local", "category: construction", "agency: ...",
-              "request: ...", "region: ...", "status: ...", "can we bid: eligible".
+              "request: ...", "region: ...", "status: ...", "eligibility: <requirement>".
    status:    keywords interested / bidding / submitted / passed filter by bid status.
    "no due date" finds placeholder or missing deadlines.
    A bare column name (e.g. "municipality") does not narrow the results.
