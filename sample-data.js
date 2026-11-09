@@ -10,7 +10,6 @@
       rfqUrl: "https://example.com/sample-rfq/" + n,
       details: { region: region, requirements: reqs, restriction: restr, amended: !!amended, warnings: [] } };
   }
-  window.COMPANY = { name: "Discover Group (sample profile)", holds: ["Small business", "MWBE"] };
   (window.LIVE_SOURCES = window.LIVE_SOURCES || []).push({ meta: { source: "SAMPLE DATA (not real)", fetchedAt: new Date().toISOString(), count: 14 }, rfqs: [
     R(1, "Federal", "General Services Administration", "Janitorial Services, Federal Building, Brooklyn", "Services", -6, 21, 1850000, "New York, NY", ["Small business set-aside"], "Small business set-aside",
       "Daily janitorial and day-porter services for a 400,000 sq ft federal office building, base year plus four option years. Service Contract Act wage determination applies.",

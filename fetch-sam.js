@@ -26,7 +26,7 @@ const MAX = opt("max", 300);
 const PTYPES = "o,k";
 const OUT = path.join(__dirname, "live-sam.js");
 
-// SAM.gov set-aside codes -> what the offeror must hold (matched against COMPANY.holds in data.js).
+// SAM.gov set-aside codes -> what the offeror must hold (shown in the Eligibility column).
 const SET_ASIDE = {
   SBA: "Small business", SBP: "Small business",
   "8A": "8(a)", "8AN": "8(a)",

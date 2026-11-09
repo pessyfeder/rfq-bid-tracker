@@ -9,15 +9,7 @@
 // scope:    plain-English summary of the work ("" if unknown -> page shows "No data")
 // shall:    key "shall" statements: [{ text, ref }] ([] if unknown)
 // requires: what an offeror must hold to bid, e.g. ["GSA Schedule"]. [] = open to all.
-//           null = restriction not read -> page shows "No data".
-
-// Company profile used for the eligibility check.
-// holds: null = Discover Group's real lists/certifications/licences have not been provided yet,
-// so the eligibility column shows "No data". Fill in the real list once Israel provides it,
-// e.g. holds: ["Small business", "MWBE"].
-window.COMPANY = {
-  name: "Discover Group",
-  holds: null
-};
+//           null = restriction not read -> page shows "Not read".
+//           Listed in the Eligibility column only; the app does not judge eligibility.
 
 window.RFQS = [];

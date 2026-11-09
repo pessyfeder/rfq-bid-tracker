@@ -10,30 +10,17 @@ Status:   Phase 1 (display) is built and runs on LIVE data (NYC and SAM.gov feed
 
 1. MAIN VIEW - TABLE COLUMNS
 ----------------------------
-Eleven columns, left to right. Each is sortable except Status, RFQ doc and Details.
+Ten columns, left to right. Each is sortable except RFQ doc and Details.
 
  #  Column          Notes
- 1  Status          Dropdown per row (chosen over one-click icon buttons to avoid
-                    accidental clicks). Default "New" = not yet marked.
-                    One status per request; icon shown in each option:
-                      star   Interested
-                      pencil Bidding (preparing the bid)
-                      check  Bid submitted
-                      cross  Pass / not applicable
-                    Row tint: passed rows dimmed; interested / bidding / submitted get a
-                    colored left edge.
-                    Saved in the browser (localStorage) for now: NOT shared across
-                    devices or users, and lost if browser data is cleared or the
-                    computer fails. Needs a backend or a file store (see 2c).
+ 1  (removed)        The per-row Status dropdown was removed; bid tracking lives in the bidding app.
  2  Request         Title of the request (agency shown beneath). ALL-CAPS titles from
                     agencies are tidied to Title Case (acronyms kept upper case).
  3  Category        Type of work. NYC: City Record category. SAM.gov: "NAICS <code>".
  4  Eligibility     Chips listing everything the RFQ requires to bid (Israel decides); "Not read" if unknown.
-                    Compares the RFQ's requires[] against the company profile
-                    (COMPANY.holds in data.js). "No data" when the profile is empty
-                    (currently the case: Israel has not provided it) or the RFQ's
-                    restriction could not be read. Sortable. Not-eligible rows are
-                    still shown. AI-read rows say "AI-extracted, please verify."
+                    The app does NOT judge eligibility: there is no company profile
+                    and no yes / no result (DECIDED, see 2a). Sortable. AI-read rows
+                    say "AI-extracted, please verify."
  5  Posted          Date the request was posted.
  6  End date        Bid due date plus due time and time zone. Due dates more than 3 years
                     out are treated as placeholders: shown as "No real due date".
@@ -88,8 +75,7 @@ Bid factors (box at the top of Details)
 
 Toolbar and behavior
  - Search box (see below).
- - Filters: Municipality (All levels / Federal / State / Local), Category, Status (All /
-   New / Interested / Bidding / Bid submitted / Passed).
+ - Filters: Municipality (All levels / Federal / State / Local), Category.
  - "Hide closed" (on by default).
  - "Hide flagged" (on by default): hides notices with a warning, i.e. a placeholder
    deadline (2099 or later, or more than 3 years out) or posted over a year ago.
@@ -106,44 +92,29 @@ Search
               posted/date. Operators: > < >= <= = != ; k/m/b suffixes; ranges.
    dates:     "due < 2026-12-31", "posted >= 2026-10-01" (a bare date means due date).
    column:    "municipality: local", "category: construction", "agency: ...",
-              "request: ...", "region: ...", "status: ...", "eligibility: <requirement>".
-              "eligibility: determined" shows only rows whose eligibility is known (not
-              "No data"); "eligibility: yes" / "eligibility: no" filter by result.
-   status:    keywords interested / bidding / submitted / passed filter by bid status.
+              "request: ...", "region: ...", "eligibility: <requirement>".
    "no due date" finds placeholder or missing deadlines.
    A bare column name (e.g. "municipality") does not narrow the results.
 
 
 2. OPEN QUESTIONS / POSSIBLE GAPS (to confirm with Israel)
 ----------------------------------------------------------
- a. Eligibility: BUILT, but with no company profile yet (COMPANY.holds = null, so the
-    column shows "No data"). STILL NEEDED FROM ISRAEL: the real list of lists,
-    certifications and licences Discover Group holds (put in data.js). requires[] is
-    filled per source:
+ a. Eligibility: DECIDED - the column only lists what each RFQ requires; Israel judges.
+    The company-profile comparison (yes / no per request) is SKIPPED: not needed, and
+    nothing is required from Israel for it. Its code, the company profile and the
+    "eligibility: determined / yes / no" searches were removed. The column sorts by
+    number of requirements (fewest first, "Not read" last).
+    requires[] is filled per source:
       - SAM.gov: mapped from the set-aside code; keyword scan of the description for
         GSA Schedule, NASA SEWP, CIO-SP, Alliant when worded as a limit; then AI.
       - NYC: AI read of the notice text (null = could not tell = No data).
       - NYS: passed through from the source if present, else null.
     Original question: should the app answer "Can Discover Group actually bid on this?"
+    Answer: no.
  b. Bonds, pre-bid meetings, background checks: DECIDED, shown as Bid factors chips
     (section 1).
- c. Bid status: DECIDED - dropdown with four statuses. OPEN: optional note per request
-    (e.g. pass reason)? Won / Lost later? Where to store statuses so they sync across
-    devices and users (today: this browser only)?
-    DECISION PATH (depends on whether anyone besides Israel will use the app):
-      - If Israel is the ONLY user: have the app write the statuses to a file (e.g.
-        statuses.json) in a synced folder (OneDrive / Google Drive / Dropbox) instead of
-        the browser. This needs a small local server (node) that serves index.html and
-        reads/writes that file. Gives automatic backup and survives a crash, cleared
-        browser data, or deleted project folder; no hosted server, nothing stored on a
-        third-party app server. (Lighter stopgap: an Export / Import button that saves
-        the statuses to a JSON file.)
-      - If MORE than one person needs to share the statuses: a real shared backend is
-        needed (hosted server + database + logins).
-    Risks of the current browser-only storage: statuses are lost if browser data is
-    cleared, a private window or different browser is used, or the disk fails. The code
-    is on GitHub and bid data can be regenerated by re-running the fetchers; the
-    statuses are the only data that cannot be recreated.
+ c. Bid status: REMOVED from this app. Tracking which requests are pursued (interested / bidding /
+    submitted / passed) is handled by the separate bidding app fed from the JSON feed.
  d. Contact and submission method: who to ask questions, and where/how the bid is
     submitted (portal, email, in person).
  e. Contract length: the term of the contract (not the same as the bidding window).
@@ -172,20 +143,10 @@ Search
     Without a key, NYC and SAM rows simply have fewer Bid factors chips and no AI value.
     OPEN: who owns the Anthropic account and pays? Where does the key live once refreshes
     run on a schedule?
- k. "Interested" follow-up: OPEN. When a request is marked Interested, what should the
-    app show to help act on it?
-      - A bid link. The data has only rfqUrl (the solicitation page). Either reuse it, or
-        have the fetchers (SAM, NYC, NYS) capture a portal / submission URL (a bidUrl
-        field) when the source provides one.
-      - The buyer's contact details (contracting officer name, email, phone), if the
-        source provides them. Show them at all (may be personal data), and only when
-        status is Interested? Not every source exposes them.
- l. Multiple users: OPEN. If several people use the app, how are status choices handled?
-      1) each person's choices stay on their own machine only
-      2) everyone sees everyone's choices, marked with who chose them
-      3) everyone sees the choices without names: a joint decision
-    Also: should ineligible requests stay visible? Notes suggest hide by default with a
-    "Show requests I can't bid on" toggle (kept for teaming with a prime contractor).
+ k. "Interested" follow-up: MOVED to the bidding app (no statuses here). The feed already carries rfqUrl;
+    a bidUrl / buyer contact would be new fetcher fields if the bidding app needs them.
+ l. Multiple users: no longer applies to this app (no statuses, no logins). The reading machine is the only client.
+    Whether ineligible requests stay visible is now the reading machine's filtering decision.
  m. Hosting: OPEN - to discuss with Israel, to keep the information safe. Assumed: own
     server, multiple logins. Existing server or a new one? Recommendation: use the
     existing server only if it is well maintained (patched, backed up, HTTPS) and run
@@ -199,8 +160,8 @@ Search
     commonly about 10 a day; an entity-linked key about 1,000 - check the account page).
     A higher limit would allow refreshing more than once a day, checking amendments on
     Interested notices, and pulling attachments for the AI summaries.
- o. Privacy: OPEN. Statuses reveal which bids are being pursued, so the app should sit
-    behind a login rather than on a public site. Agency text must be shown as plain text,
+ o. Privacy: the feed is protected by a shared token (RFQ_API_TOKEN) and the page is served only on the service
+    machine. No bid statuses are stored here. Agency text must be shown as plain text,
     never run as code (check now that real data flows in). AI reading of attachments
     must only fill fields and be labelled "AI-read, verify".
 
@@ -209,7 +170,8 @@ Search
 -------------------
 How it works: node scripts write live-*.js files; index.html loads whichever exist
 (live-sam.js, live-nyc.js, live-ny-state.js) and merges them. Re-run a script to refresh;
-there is no scheduler yet. The data shape is documented at the top of data.js.
+server.js now runs them on a schedule and serves the merged result as JSON (FEED.md) to a
+separate reading machine (see DEPLOY.md). The data shape is documented at the top of data.js.
 
  - NYC City Record (fetch-nyc.js): LIVE. Open Procurement solicitations from NYC Open
    Data, no key needed. Optional AI read (needs ANTHROPIC_API_KEY): stated amount,
@@ -238,9 +200,12 @@ Things that trip up newcomers (from notes)
 
 4. STATUS
 ---------
- - Table, filters, search, status tracking and Bid factors built (index.html, data.js).
+ - Table, filters, search and Bid factors built (index.html, data.js). Bid status tracking was removed;
+   it belongs to the separate bidding app.
+ - Standalone service built (server.js): scheduled fetches + token-protected JSON feed for the reading machine
+   (FEED.md, DEPLOY.md).
  - Live feeds: NYC and SAM.gov working; NYS stub.
  - AI read with caching and cost reporting built.
- - Waiting on Israel: company profile (holds), billing owner, and the hosting and
-   multi-user decisions (items k-o). Regions/categories (all USA, all) and sources are
-   settled.
+ - Waiting on Israel: billing owner, and the hosting and multi-user decisions (items
+   k-o). Regions/categories (all USA, all), sources and eligibility (no company
+   profile, see 2a) are settled.
