@@ -47,7 +47,11 @@ Eleven columns, left to right. Each is sortable except Status, RFQ doc and Detai
                     b) Stated in the notice: amount read by AI, with the quoted sentence
                        under "Where from". Only kept if the quote really contains the
                        amount. Flagged "AI-extracted, please verify".
-                    c) Estimate from similar past awards (NYC only): median with a
+                    c') Federal (SAM.gov) notices: same kind of estimate from USAspending.gov
+                       awards (last 3 years, purchase/delivery orders and contracts) with the
+                       same NAICS code, matched on title keywords, else all in that NAICS;
+                       needs at least 5 awards. Run by fetch-sam.js; or `node sam-estimates.js`.
+                    c) Estimate from similar past awards (NYC): median with a
                        25th-75th percentile range, from competitively bid City Record
                        awards of the last 3 years (renewals, amendments, noncompetitive
                        excluded). Tiers: same agency + category + title keywords;
