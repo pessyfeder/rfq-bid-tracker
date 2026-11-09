@@ -209,6 +209,7 @@ async function inBatches(items, size, fn) {
       } catch (e) { console.warn("AI read failed for " + r.id + ": " + e.message); }
     });
     console.log(`AI read ${read} of ${rfqs.length} notices`);
+    require("./ai-extract").reportUsage("NYC refresh");
   } else {
     console.log("ANTHROPIC_API_KEY not set: skipping stated-amount extraction (similar-award estimates still run)");
   }
