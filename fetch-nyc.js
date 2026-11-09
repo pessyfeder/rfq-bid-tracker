@@ -178,19 +178,30 @@ async function inBatches(items, size, fn) {
   const rfqs = items.map(toRfq).filter(Boolean);
   const byId = new Map(items.map((o) => ["NYC-" + o.request_id, o]));
 
-  // Estimate 1: an amount the notice itself states (AI-read; needs ANTHROPIC_API_KEY).
+  // Estimate 1 (always tried first): an amount the notice itself states.
+  // Keyword pass first (free, needs no key), then the AI read where ANTHROPIC_API_KEY is set.
   const apiKey = process.env.ANTHROPIC_API_KEY;
+  const noticeText = (r) => { const o = byId.get(r.id); return [o.additional_description_1, o.other_info_1].filter(Boolean).join("\n"); };
+  {
+    const { statedAmount } = require("./stated-amount");
+    let found = 0;
+    for (const r of rfqs) {
+      if (r.value != null) continue;
+      const a = statedAmount(noticeText(r));
+      if (a) { r.valueEst = { kind: "stated", amount: a.amount, quote: a.quote }; found++; }
+    }
+    console.log(`Stated amounts found by keyword pass in ${found} notices`);
+  }
   if (apiKey) {
     const { extractAmount } = require("./ai-extract");
     let found = 0;
-    await inBatches(rfqs.filter((r) => r.value == null), 5, async (r) => {
-      const o = byId.get(r.id);
+    await inBatches(rfqs.filter((r) => r.value == null && !r.valueEst), 5, async (r) => {
       try {
-        const a = await extractAmount([o.additional_description_1, o.other_info_1].filter(Boolean).join("\n"), apiKey);
+        const a = await extractAmount(noticeText(r), apiKey);
         if (a) { r.valueEst = { kind: "stated", amount: a.amount, quote: a.quote }; found++; }
       } catch (e) { console.warn("Amount read failed for " + r.id + ": " + e.message); }
     });
-    console.log(`Stated amounts found in ${found} notices`);
+    console.log(`Stated amounts found by AI read in ${found} notices`);
 
     // AI read of the notice text: fills requires[], a one-line scope and 3-5 key "shall" points,
     // which feed the Bid factors chips (TSA/background checks, bonds, licenses, site visits...).

@@ -47,6 +47,9 @@ Eleven columns, left to right. Each is sortable except Status, RFQ doc and Detai
                     b) Stated in the notice: amount read by AI, with the quoted sentence
                        under "Where from". Only kept if the quote really contains the
                        amount. Flagged "AI-extracted, please verify".
+                       Both fetchers ALWAYS try (b) before any estimate: a keyword pass
+                       (stated-amount.js, no key needed, cue phrase + no conflicting
+                       figures) and then the AI read when ANTHROPIC_API_KEY is set.
                     c') Federal (SAM.gov) notices: same kind of estimate from USAspending.gov
                        awards (last 3 years, purchase/delivery orders and contracts) with the
                        same NAICS code, matched on title keywords, else all in that NAICS;

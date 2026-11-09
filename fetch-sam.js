@@ -146,6 +146,12 @@ async function getPage(from, to, offset) {
             found.forEach((f) => { if (r.details.requirements.indexOf(f) < 0) r.details.requirements.push(f); });
           } else if (r.requires == null && !code0(o)) r.requires = []; // text read, no restriction found
         }
+        // Always try a stated amount first (keyword pass, then AI); the USAspending estimate only fills what is left.
+        if (r.value == null && dj && typeof dj.description === "string") {
+          let a = require("./stated-amount").statedAmount(dj.description);
+          if (!a && AI_KEY) a = await require("./ai-extract").extractAmount(dj.description, AI_KEY).catch(() => null);
+          if (a) r.valueEst = { kind: "stated", amount: a.amount, quote: a.quote };
+        }
         const ai = AI_KEY && dj && dj.description ? await require("./ai-extract").extract(dj.description, AI_KEY) : null;
         if (ai) {
           // requires: AI list plus any mapped set-aside. AI "null" (unsure) keeps the set-aside answer, else stays Unclear.
