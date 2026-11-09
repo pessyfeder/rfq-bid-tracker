@@ -4,110 +4,169 @@ RFQ BID TRACKER - SPEC
 User:     Israel Blackman, Discover Group (Brooklyn, NY)
 Purpose:  See each request at a glance and decide whether or not to bid.
 Principle: Include all information needed for a bid / no-bid decision, and nothing extra.
-Phase 1:  Build the app and its display (sample data). Data integration comes after.
+Status:   Phase 1 (display) is built and runs on LIVE data (NYC and SAM.gov feeds). The page
+          never shows made-up data: no feed = "No data". NYS feed is a stub (see section 3).
 
 
 1. MAIN VIEW - TABLE COLUMNS
 ----------------------------
- 0  Status          (leftmost) Dropdown per row (chosen over one-click icon buttons
-                    to avoid accidental clicks). Default "New" = not yet marked.
+Eleven columns, left to right. Each is sortable except Status, RFQ doc and Details.
+
+ #  Column          Notes
+ 1  Status          Dropdown per row (chosen over one-click icon buttons to avoid
+                    accidental clicks). Default "New" = not yet marked.
                     One status per request; icon shown in each option:
                       star   Interested
                       pencil Bidding (preparing the bid)
                       check  Bid submitted
                       cross  Pass / not applicable
                     Row tint: passed rows dimmed; interested / bidding / submitted get a
-                    colored left edge. Status filter above the table (All / New /
-                    Interested / Bidding / Submitted / Passed).
+                    colored left edge.
                     Saved in the browser (localStorage) for now: NOT shared across
-                    devices or users. Needs a backend when data integration happens.
- 0b Can we bid?     (right after Request) Eligible / Not eligible (needs: ...) / Unclear.
-                    Compares the RFQ's requires[] against the company profile. Sortable.
-                    Not-eligible rows are still shown (sort by this column to group them).
-                    Currently uses an INVENTED company profile.
- #  Column          Notes
- 1  Request         Title of the request (agency shown beneath).
- 2  Category        Type of work, e.g. janitorial, security, HVAC.
- 3  Posting date    Date the request was posted.
- 4  End date        Bid due date. Also show due time and time zone.
- 5  Days left       datediff(today, end date), in days. Closed requests are marked "Closed".
- 6  Municipality    Federal / State / Local.
- 7  RFQ doc         Link to the RFQ / solicitation document.
- 8  Est. value      Dollar value. DEFAULT SORT: descending. Unpublished values sort last.
- 9  Details         ONE merged column (no separate scope column). Top to bottom:
-                    1) region, 2) flag chips, 3) one-line scope summary,
-                    4) "Show all requirements (n)" toggle that expands a full-width row of
-                    the key "shall" statements with section/page refs.
-                    Chips cover important facts that inform the bid decision:
-                    - State / region
-                    - Specific instructions, e.g. workers must be TSA-checked,
-                      licenses, bonds, mandatory pre-bid meetings, wage rules
-                    - Restriction flag, e.g. "GSA Schedule holders only", small business set-aside
-                    - Amended flag if the solicitation changed after posting
+                    devices or users. Needs a backend (see 2c).
+ 2  Request         Title of the request (agency shown beneath). ALL-CAPS titles from
+                    agencies are tidied to Title Case (acronyms kept upper case).
+ 3  Category        Type of work. NYC: City Record category. SAM.gov: "NAICS <code>".
+ 4  Can we bid?     Eligible / Not eligible (Needs: ...) / No data.
+                    Compares the RFQ's requires[] against the company profile
+                    (COMPANY.holds in data.js). "No data" when the profile is empty
+                    (currently the case: Israel has not provided it) or the RFQ's
+                    restriction could not be read. Sortable. Not-eligible rows are
+                    still shown. AI-read rows say "AI-extracted, please verify."
+ 5  Posted          Date the request was posted.
+ 6  End date        Bid due date plus due time and time zone. Due dates more than 3 years
+                    out are treated as placeholders: shown as "No real due date".
+ 7  Days left       Days from today to the end date. "Closed" if past, a dash if no real
+                    due date. Colored: 7 or fewer = red, 14 or fewer = orange, else green.
+ 8  Municipality    Federal / State / Local badge.
+ 9  RFQ doc         "Open RFQ" link to the solicitation (NYC City Record page or SAM.gov
+                    notice).
+10  Est. value      Dollar value, always labelled with where it came from, in this order:
+                    a) Published by the agency (contract amount in the notice).
+                    b) Stated in the notice: amount read by AI, with the quoted sentence
+                       under "Where from". Only kept if the quote really contains the
+                       amount. Flagged "AI-extracted, please verify".
+                    c) Estimate from similar past awards (NYC only): median with a
+                       25th-75th percentile range, from competitively bid City Record
+                       awards of the last 3 years (renewals, amendments, noncompetitive
+                       excluded). Tiers: same agency + category + title keywords;
+                       same category (any agency) + keywords; same agency + category
+                       with no keyword match ("broad estimate"). Needs at least 3
+                       awards. "How estimated" lists the method and 5 recent examples.
+                    d) "Not published" when none of the above exists.
+                    DEFAULT SORT: descending by this value; unknown values last.
+11  Details         ONE merged column. Top to bottom:
+                    1) region
+                    2) "Bid factors" box (see below)
+                    3) chips: "Restricted: ..." (red), Amended, warnings, plain
+                       requirement chips (e.g. selection method, mandatory pre-bid)
+                    4) scope summary, cut at 220 characters with Show more / Show less
+                    5) "Show all requirements (n)" toggle that opens a full-width row of
+                       the key "shall" statements with section/page refs and a link to
+                       the full RFQ. Only shown when shall[] is not empty.
+                    AI-read rows are labelled "AI-read, verify".
 
-Behavior
- - Default sort: Est. value, highest first. Any column header can be clicked to re-sort.
- - Search box, plus filters for Municipality and Category.
- - Closed requests hidden by default (toggle to show).
- - Deadlines colored by urgency: 7 days or fewer = red, 14 days or fewer = orange.
+Bid factors (box at the top of Details)
+ Chips for facts that commonly decide bid / no-bid. Detected by keyword (FACT_RULES in
+ index.html) from the scope, "shall" text, requirement chips and restriction. Hover a chip
+ to see the source sentence. Colors:
+   red   = gate: TSA-checked workers, security clearance, background checks /
+           fingerprinting, license / certification
+   amber = cost / effort: bonds, insurance minimums, prevailing / living wage, mandatory
+           site visit / pre-bid, 24/7 or after-hours
+   blue  = info: set-aside / preference, past performance / references, multi-year term
+ Bonds, pre-bid meetings and background checks are chips, not dedicated or filterable
+ fields (decided).
+
+Toolbar and behavior
+ - Search box (see below).
+ - Filters: Municipality (All levels / Federal / State / Local), Category, Status (All /
+   New / Interested / Bidding / Bid submitted / Passed).
+ - "Hide closed" (on by default).
+ - "Hide flagged" (on by default): hides notices with a warning, i.e. a placeholder
+   deadline (2099 or later, or more than 3 years out) or posted over a year ago.
+ - Count line: "n of N requests", source(s) and when the data was last updated.
+ - Paging: 10 at a time (Previous / Next), or "Show all".
+ - Click a header to sort; click again to reverse.
+ - Narrow screens (900px or less): each request becomes a labelled card.
+
+Search
+ Free-text words must all match (AND) anywhere in the request, including dates and values.
+ Plus optional structured pieces:
+   numbers:   "value > 300k", "value 100k-500k", "days left <= 7", "days left: 22".
+              Field names: value/price/amount/cost, days left, due/ends/closes/deadline,
+              posted/date. Operators: > < >= <= = != ; k/m/b suffixes; ranges.
+   dates:     "due < 2026-12-31", "posted >= 2026-10-01" (a bare date means due date).
+   column:    "municipality: local", "category: construction", "agency: ...",
+              "request: ...", "region: ...", "status: ...", "can we bid: eligible".
+   status:    keywords interested / bidding / submitted / passed filter by bid status.
+   "no due date" finds placeholder or missing deadlines.
+   A bare column name (e.g. "municipality") does not narrow the results.
 
 
 2. OPEN QUESTIONS / POSSIBLE GAPS (to confirm with Israel)
 ----------------------------------------------------------
- a. Eligibility: BUILT WITH INVENTED PROFILE (see "Can we bid?" column). Each RFQ has
-    requires[] (what an offeror must hold; null = could not be read); the company
-    profile has holds[]. Result: Eligible / Not eligible (+ what is missing) /
-    Unclear (check the RFQ). Not-eligible requests stay visible (no hide
-    toggle: the column already says so, and they may matter for teaming). STILL NEEDED FROM ISRAEL: the real list of lists,
-    certifications and licences Discover Group holds (replace window.COMPANY in
-    data.js). Also: how will requires[] be filled from each RFQ's restriction text?
+ a. Eligibility: BUILT, but with no company profile yet (COMPANY.holds = null, so the
+    column shows "No data"). STILL NEEDED FROM ISRAEL: the real list of lists,
+    certifications and licences Discover Group holds (put in data.js). requires[] is
+    filled per source:
+      - SAM.gov: mapped from the set-aside code; keyword scan of the description for
+        GSA Schedule, NASA SEWP, CIO-SP, Alliant when worded as a limit; then AI.
+      - NYC: AI read of the notice text (null = could not tell = No data).
+      - NYS: passed through from the source if present, else null.
     Original question: should the app answer "Can Discover Group actually bid on this?"
-    Needs a company profile: certifications (e.g. MWBE, small business) and the
-    vehicles/lists the company is on (e.g. GSA Schedule, NASA SEWP), matched
-    against what each RFQ is restricted to. Show "Eligible" / "Not eligible" + why.
- b. Bond requirements, mandatory pre-bid meetings and background checks: these can decide
-    bid or no-bid. DECIDED: shown as chips in a "Bid factors" box at the top of Details,
-    not as dedicated or filterable fields. Chips are colored: red = gate (TSA-checked
-    workers, clearance, background checks, licenses), amber = cost/effort (bonds, insurance,
-    wage rules, mandatory pre-bid/site visit, 24/7), blue = info (set-aside, past
-    performance, option years). Detected by keyword from scope + "shall" text
-    (FACT_RULES in index.html); hover a chip to see the source sentence.
- c. Bid status: DECIDED - dropdown with four statuses (interested, bidding, submitted, pass). See
-    column 0. OPEN: optional note per request (e.g. pass reason)? Won / Lost later?
-    Where to store statuses so they sync across devices/users?
+ b. Bonds, pre-bid meetings, background checks: DECIDED, shown as Bid factors chips
+    (section 1).
+ c. Bid status: DECIDED - dropdown with four statuses. OPEN: optional note per request
+    (e.g. pass reason)? Won / Lost later? Where to store statuses so they sync across
+    devices and users (today: this browser only)?
  d. Contact and submission method: who to ask questions, and where/how the bid is
     submitted (portal, email, in person).
  e. Contract length: the term of the contract (not the same as the bidding window).
- f. Amendments: should the app notify him (or show what changed) when a
-    solicitation is amended after he has looked at it?
+ f. Amendments: should the app notify him (or show what changed) when a solicitation is
+    amended after he has looked at it? Today only an "Amended" chip exists, and the
+    feeds do not set it.
  g. Which regions/categories does Discover Group serve? Should out-of-area or
     out-of-scope requests be hidden automatically?
- h. Which sources matter first (SAM.gov, NY state portals, NYC city portals, others)?
- i. "Shall" requirements: the contractor's obligations are written as "shall"
-    statements in the RFQ. DECIDED: show a one-line scope summary under each
-    request title, plus an expandable list of the key "shall" statements
-    (verbatim or near-verbatim, each with its RFQ section/page so it can be
-    checked). Chips in Details stay as quick flags. OPEN: how do we get this data
-    from each RFQ - read by hand, or have Claude extract it from the document?
-    How many "shall" statements are enough (3-5 key ones vs. all)? Data needed
-    per RFQ: scope (text), shall[] (text + section/page ref). See data.js.
- j. AI reading and billing: the AI read (fetch-nyc.js, fetch-sam.js via ai-extract.js) needs an
-    Anthropic API key (ANTHROPIC_API_KEY, set in the environment, never in a file). API usage
-    is billed separately from a Claude chat plan; about 200 Haiku calls per NYC refresh, no
-    caching yet. OPEN: who owns the Anthropic account and pays? Where does the key live once
-    refreshes run on a schedule? Until then, NYC rows have fewer Bid factors chips.
+ h. Which sources matter first? SAM.gov and NYC are live; NYS waits on a source.
+ i. "Shall" requirements: DECIDED - scope summary under each request plus an expandable
+    list of key "shall" statements, each with its RFQ section/page. Now filled by the AI
+    read (3-5 key points per notice, quoted near-verbatim) for NYC and SAM.gov rows
+    where the notice has enough text. OPEN: how many statements are enough, and whether
+    SAM.gov attachments (the full solicitation PDFs) should be read, not just the
+    notice description.
+ j. AI reading and billing: the AI read (ai-extract.js, used by fetch-nyc.js and
+    fetch-sam.js) uses Claude Haiku via an Anthropic API key (ANTHROPIC_API_KEY, set in
+    the environment, never in a file). API usage is billed separately from a Claude chat
+    plan. Each run prints and logs (ai-usage.log) calls, tokens and an ESTIMATED cost;
+    the Anthropic Console is the authoritative bill. Results are cached in ai-cache.json
+    by hash of the notice text, so unchanged notices cost nothing on the next refresh
+    (entries unseen for 60 days are dropped; delete the file after changing a prompt).
+    Without a key, NYC and SAM rows simply have fewer Bid factors chips and no AI value.
+    OPEN: who owns the Anthropic account and pays? Where does the key live once refreshes
+    run on a schedule?
 
 
-3. DATA INTEGRATION (LATER)
----------------------------
- - SAM.gov Opportunities is the main feed. Start there.
- - USAspending.gov (free) can add pricing / competitor context.
- - SAM.gov Entity API can check vendor registrations.
- - State / city sites, DIBBS and eBuy need logins or scraping. Add one at a time.
- - Data shape used by the app is documented at the top of data.js.
- - Sample RFQ documents live in rfq-docs/ (fictional, one per sample request; the
-   "shall" statements appear under the same section numbers the app cites). Real
-   data will link to the actual solicitation document instead.
+3. DATA INTEGRATION
+-------------------
+How it works: node scripts write live-*.js files; index.html loads whichever exist
+(live-sam.js, live-nyc.js, live-ny-state.js) and merges them. Re-run a script to refresh;
+there is no scheduler yet. The data shape is documented at the top of data.js.
+
+ - NYC City Record (fetch-nyc.js): LIVE. Open Procurement solicitations from NYC Open
+   Data, no key needed. Optional AI read (needs ANTHROPIC_API_KEY): stated amount,
+   requires, scope, key "shall" points. Then similar-award value estimates.
+   Run: node fetch-nyc.js [--max 500]
+ - SAM.gov Opportunities (fetch-sam.js): LIVE. Solicitations and combined
+   synopsis/solicitations posted in the last 30 days. Needs SAM_API_KEY (free; environment
+   only). Optional AI read as above. Run: node fetch-sam.js [--days 30 --max 300]
+ - NYS Contract Reporter (fetch-ny-state.js): NOT LIVE. The conversion, filters and file
+   writing are done, but there is no known API; waiting for a reply from the Contract
+   Reporter. Can be tested with: node fetch-ny-state.js --from-file notices.json
+ - Not started: USAspending.gov (pricing / competitor context), SAM.gov Entity API
+   (vendor registrations), DIBBS and eBuy (need logins or scraping). Add one at a time.
+ - Secrets and generated files stay out of git (.gitignore): keys, live-*.js,
+   ai-usage.log, ai-cache.json.
 
 Things that trip up newcomers (from notes)
  - Deadlines are date, time and time zone, plus the agency's clock rules.
@@ -121,5 +180,7 @@ Things that trip up newcomers (from notes)
 
 4. STATUS
 ---------
- - index.html + data.js built with 6 sample RFQs (sample data, not real).
- - Column 5 changed from posting-to-end window to days left from today.
+ - Table, filters, search, status tracking and Bid factors built (index.html, data.js).
+ - Live feeds: NYC and SAM.gov working; NYS stub.
+ - AI read with caching and cost reporting built.
+ - Waiting on Israel: company profile (holds), regions/categories served, billing owner.
