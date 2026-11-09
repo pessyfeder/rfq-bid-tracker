@@ -60,6 +60,9 @@ function toRfq(o) {
   const code = (o.typeOfSetAside || "").trim();
   const requires = code ? (SET_ASIDE[code] ? [SET_ASIDE[code]] : null) : null; // null -> "Unclear"
   const place = o.placeOfPerformance || {};
+  // Out of area: work performed outside the USA is hidden. Kept only when the country is missing or US.
+  const country = String((place.country && (place.country.code || place.country.name)) || "").trim().toUpperCase();
+  if (country && !["US", "USA", "UNITED STATES", "UNITED STATES OF AMERICA"].includes(country)) return null;
   const office = o.officeAddress || {};
   const region = [place.city && place.city.name, place.state && (place.state.code || place.state.name)].filter(Boolean).join(", ")
     || [office.city, office.state].filter(Boolean).join(", ") || "No data";

@@ -115,14 +115,15 @@ Search
     (section 1).
  c. Bid status: REMOVED from this app. Tracking which requests are pursued (interested / bidding /
     submitted / passed) is handled by the separate bidding app fed from the JSON feed.
- d. Contact and submission method: who to ask questions, and where/how the bid is
-    submitted (portal, email, in person).
+ d. (Dropped: contact and submission method are not a feature of this app.)
  e. Contract length: the term of the contract (not the same as the bidding window).
  f. Amendments: should the app notify him (or show what changed) when a solicitation is
     amended after he has looked at it? Today only an "Amended" chip exists, and the
     feeds do not set it.
  g. Regions and categories: DECIDED - all USA, all categories. Anything out of area
-    (outside the USA) or out of scope is HIDDEN automatically. NOT BUILT YET. OPEN:
+    (outside the USA) or out of scope is HIDDEN automatically. BUILT for out-of-area only (SAM.gov: place of performance
+    country not US is skipped in fetch-sam.js; notices already cached stay until they close).
+    Out of scope NOT BUILT. OPEN:
     what counts as out of scope when every category is wanted (e.g. a work type
     Discover Group does not do)? Needs Israel's definition.
  h. Sources: DECIDED - no source priority; all are wanted. Order the list by estimated
@@ -143,8 +144,7 @@ Search
     Without a key, NYC and SAM rows simply have fewer Bid factors chips and no AI value.
     OPEN: who owns the Anthropic account and pays? Where does the key live once refreshes
     run on a schedule?
- k. "Interested" follow-up: MOVED to the bidding app (no statuses here). The feed already carries rfqUrl;
-    a bidUrl / buyer contact would be new fetcher fields if the bidding app needs them.
+ k. "Interested" follow-up: DROPPED (no statuses here). The feed carries rfqUrl only.
  l. Multiple users: no longer applies to this app (no statuses, no logins). The reading machine is the only client.
     Whether ineligible requests stay visible is now the reading machine's filtering decision.
  m. Hosting: OPEN - to discuss with Israel, to keep the information safe. Assumed: own
