@@ -12,7 +12,7 @@ No secrets belong in git or in this file. Keys live in environment variables or 
 ## 1. What the service machine needs
 
 - Node.js, recent LTS (`node --version`; 18 or newer). No `npm install`: there are no dependencies.
-- Always on (or at least on around 02:00 and whenever the reader polls). If it was off at 02:00, it refreshes on start-up when the data is over a day old.
+- Always on (or at least on around 09:00 and whenever the reader polls). If it was off at 09:00, it refreshes on start-up when the data is over a day old.
 - Outbound internet to sam.gov, data.cityofnewyork.us, usaspending.gov, api.anthropic.com.
 - The reader machine must be able to reach the service on its port (default 8765): allow it in the firewall for the reader's address only.
 
@@ -62,7 +62,7 @@ Optional settings you can add to the same file (defaults shown):
 ```
 # PORT=8765
 # HOST=0.0.0.0          # use 127.0.0.1 to allow only this machine (then no token is needed)
-# REFRESH_AT=02:00      # local time, once a day
+# REFRESH_AT=09:00      # local time, once a day
 # SAM_DAILY_BUDGET=10   # see the note below
 ```
 

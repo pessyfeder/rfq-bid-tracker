@@ -34,7 +34,7 @@ const CFG = {
   host: process.env.HOST || "0.0.0.0",             // the reader is a different machine, so listen on the network
   port: Number(process.env.PORT || 8765),
   token: process.env.RFQ_API_TOKEN || "",          // shared secret the reading machine sends as a Bearer token
-  refreshAt: process.env.REFRESH_AT || "02:00",    // local time, HH:MM; daily
+  refreshAt: process.env.REFRESH_AT || "09:00",    // local time, HH:MM; daily
   fetchTimeoutMin: Number(process.env.FETCH_TIMEOUT_MIN || 45)
 };
 const isLoopback = (h) => h === "127.0.0.1" || h === "::1" || h === "localhost";
@@ -102,7 +102,7 @@ async function runRefresh(reason) {
 }
 
 // Schedule: once a day at REFRESH_AT (local). On start-up, refresh at once if the last successful
-// run of any schedulable source is missing or older than a day (e.g. the machine was off at 02:00).
+// run of any schedulable source is missing or older than a day (e.g. the machine was off at 09:00).
 function nextRun() {
   const [h, m] = CFG.refreshAt.split(":").map(Number);
   const t = new Date(); t.setHours(h, m, 0, 0);
@@ -209,7 +209,7 @@ if (process.argv.includes("--once")) {
       "or set HOST=127.0.0.1 to listen on this machine only.");
     process.exit(1);
   }
-  if (!/^\d{1,2}:\d{2}$/.test(CFG.refreshAt)) { console.error("REFRESH_AT must look like 02:00"); process.exit(1); }
+  if (!/^\d{1,2}:\d{2}$/.test(CFG.refreshAt)) { console.error("REFRESH_AT must look like 09:00"); process.exit(1); }
   server.listen(CFG.port, CFG.host, () => {
     log(`listening on http://${CFG.host}:${CFG.port} (token ${CFG.token ? "required" : "off, loopback only"})`);
     for (const s of feed.SOURCES.filter((x) => x.script)) {
