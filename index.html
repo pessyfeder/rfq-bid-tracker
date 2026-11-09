@@ -83,7 +83,6 @@
   tr.shall-row li { margin-bottom: 4px; max-width: 900px; }
   tr.shall-row .ref { color: var(--muted); font-size: 12px; white-space: nowrap; }
   .empty { padding: 24px; text-align: center; color: var(--muted); }
-  .pager { display: flex; gap: 12px; align-items: center; justify-content: center; margin: 0 24px 16px; color: var(--muted); }
   /* Narrow screens: each request becomes a card with its cells stacked vertically, labelled. */
   @media (max-width: 900px) {
     .wrap { margin: 0 12px 16px; overflow: visible; background: none; border: 0; }
@@ -107,11 +106,7 @@
     tbody tr:not(.shall-row) td:nth-child(11)::before { content: "Details"; }
     tbody tr:not(.shall-row) td:last-child { border-bottom: 0; }
     tr.shall-row td { display: block; padding-left: 12px; }
-    .pager { margin: 0 12px 12px; flex-wrap: wrap; }
   }
-  .pager:empty { display: none; }
-  .pager button { padding: 6px 12px; border: 1px solid var(--line); border-radius: 6px; background: #fff; font: inherit; color: var(--accent); cursor: pointer; }
-  .pager button:disabled { color: var(--muted); opacity: .5; cursor: default; }
 </style>
 </head>
 <body>
@@ -141,7 +136,6 @@
   <span class="sub" id="count"></span>
 </div>
 
-<div class="pager" id="pagerTop"></div>
 <div class="wrap">
   <table>
     <thead>
@@ -151,7 +145,6 @@
   </table>
   <div class="empty" id="empty" hidden>No requests match your filters.</div>
 </div>
-<div class="pager" id="pagerBottom"></div>
 
 <script src="data.js"></script>
 <script src="sample-data.js"></script>
@@ -228,7 +221,6 @@
 
   // Default sort: dollar value, descending (unknown values last).
   var sort = { key: "valueSort", dir: -1 };
-  var PAGE_SIZE = 10, page = 0;
   var expanded = {}; // request id -> true when its "shall" list is open
 
   // Bid status per request id. One of STATUSES, or absent = New.
@@ -490,18 +482,6 @@
       if (typeof x === "string") return x.localeCompare(y) * sort.dir;
       return (x - y) * sort.dir;
     });
-    var total = list.length;
-    var pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-    if (page >= pages) page = pages - 1;
-    if (page < 0) page = 0;
-    var from = page * PAGE_SIZE;
-    list = list.slice(from, from + PAGE_SIZE);
-    var pagerHtml = total <= PAGE_SIZE ? "" :
-      '<button class="pg-prev" aria-label="Show previous 10"' + (page === 0 ? " disabled" : "") + '>&larr; Previous 10</button>' +
-      "<span>Showing " + (from + 1) + "&ndash;" + (from + list.length) + " of " + total + "</span>" +
-      '<button class="pg-next" aria-label="Show next 10"' + (page >= pages - 1 ? " disabled" : "") + '>Next 10 &rarr;</button>';
-    $("pagerTop").innerHTML = pagerHtml;
-    $("pagerBottom").innerHTML = pagerHtml;
     $("body").innerHTML = list.map(function (r) {
       var open = expanded[r.id];
       var shallRow = open ? '<tr class="shall-row' + (r.daysLeft < 0 ? " closed" : "") + '"><td colspan="' + COLUMNS.length + '"><h4>Key requirements ("shall")' + (r.aiRead ? " &middot; AI-read, please verify" : "") + '</h4><ul>' +
@@ -546,23 +526,13 @@
     var th = e.target.closest("th"); if (!th || th.classList.contains("nosort")) return;
     var key = th.dataset.key;
     sort = sort.key === key ? { key: key, dir: -sort.dir } : { key: key, dir: key === "value" ? -1 : 1 };
-    page = 0;
     render();
   });
   ["q", "level", "category", "status", "hideClosed", "hideFlagged"].forEach(function (id) {
-    function onFilter() { page = 0; render(); }
+    function onFilter() { render(); }
     $(id).addEventListener("input", onFilter);
     $(id).addEventListener("change", onFilter);
   });
-  function onPager(e) {
-    var b = e.target.closest("button"); if (!b || b.disabled) return;
-    page +=b.classList.contains("pg-next") ? 1 : -1;
-    render();
-    window.scrollTo({ top: 0 });
-  }
-  $("pagerTop").addEventListener("click", onPager);
-  $("pagerBottom").addEventListener("click", onPager);
-
   render();
 })();
 </script>

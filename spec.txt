@@ -87,7 +87,7 @@ Toolbar and behavior
  - "Hide flagged" (on by default): hides notices with a warning, i.e. a placeholder
    deadline (2099 or later, or more than 3 years out) or posted over a year ago.
  - Count line: "n of N requests", source(s) and when the data was last updated.
- - Paging: 10 at a time (Previous / Next).
+ - No paging: all matching requests are always shown.
  - Click a header to sort; click again to reverse.
  - Narrow screens (900px or less): each request becomes a labelled card.
 
