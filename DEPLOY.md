@@ -70,7 +70,7 @@ Optional settings you can add to the same file (defaults shown):
 Notes:
 
 - **SAM_DAILY_BUDGET** is the most SAM.gov requests the service makes per UTC day. The default, 10, is a personal key's limit; an entity-linked key allows about 1,000, so set it to your key's real limit. The service only asks for new postings, reads each description once, and stops cleanly at the budget; leftover work continues the next day. `/api/status` shows `descriptionsWaiting` and `requestsUsedToday`. With a 10-a-day key the backlog will not clear: expect a few new federal requests per day to get full detail and the rest listed with basic fields only.
-- `HOST=127.0.0.1` keeps the service reachable from this machine only. Leave it as is. If you remove `HOST`, the service listens on every network interface and the API has no authentication.
+- `HOST=127.0.0.1` keeps the service reachable from this machine only. Leave it as is. If you remove `HOST`, the service still listens on this machine only (that is the default). It listens on other network interfaces only if you set `HOST` to `0.0.0.0` or another address (see section 9), and the API has no authentication.
 - Environment variables set in the system override the `.env` file.
 
 ## 5. Try it by hand

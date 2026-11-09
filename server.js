@@ -30,7 +30,7 @@ const LOG_FILE = path.join(DATA, "service.log");
 })();
 
 const CFG = {
-  host: process.env.HOST || "0.0.0.0",             // all interfaces unless HOST is set
+  host: process.env.HOST || "127.0.0.1",           // this machine only unless HOST is set (HOST=0.0.0.0 for all interfaces)
   port: Number(process.env.PORT || 8765),
   refreshAt: process.env.REFRESH_AT || "09:00",    // local time, HH:MM; daily
   fetchTimeoutMin: Number(process.env.FETCH_TIMEOUT_MIN || 45)
