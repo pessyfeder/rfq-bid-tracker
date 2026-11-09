@@ -45,7 +45,8 @@ ANTHROPIC_API_KEY=sk-ant-your-key
 
 Notes:
 
-- **SAM_API_KEY** from sam.gov > Account Details > API Key. A personal key allows roughly 10 requests a day, and a refresh uses many (one per notice description). If SAM shows rate-limit errors in `/api/status`, see the SAM limit note in spec 2n. Without the key SAM is skipped and NYC still works.
+- **SAM_API_KEY** from sam.gov > Account Details > API Key. Without it SAM is skipped and NYC still works.
+- **SAM_DAILY_BUDGET** (default 10, a personal key's limit): the most SAM.gov requests the service makes per UTC day. Set it to your key's real limit (about 1,000 for an entity-linked key). The SAM fetch only asks for new postings, reads each description once, and stops cleanly at the budget; leftover work continues the next day. `/api/status` shows `descriptionsWaiting` (requests not yet read in detail) and `requestsUsedToday`. With a 10-a-day key the backlog will not clear: expect a few new federal requests per day to get full detail, the rest listed with basic fields only. An entity-linked key removes this.
 - **ANTHROPIC_API_KEY**: a **new** key made for this machine (see `anthropic-key-setup.md`). Without it the feed works but `scope`, `requires` and `shall` are thin, which weakens the reader's filtering.
 - The service refuses to start on a network address with no `RFQ_API_TOKEN`.
 - Environment variables set in the system override the `.env` file.

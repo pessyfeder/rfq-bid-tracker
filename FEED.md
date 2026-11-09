@@ -101,4 +101,5 @@ If `more` is `true`, the page was cut off by `limit`; call again with `after=<cu
 
 - Without an Anthropic key on the service, `requires` is mostly `null` for NYC and `shall`/`scope` are thin. Filtering on eligibility works best with AI reading on.
 - Honor `active:false` and `dueAt < now`: a request can disappear or close between polls.
+- On a low SAM.gov request limit, `/api/status` shows for `sam`: `descriptionsWaiting` (requests listed with basic fields only so far, so `requires`/`scope`/`shall` are not read yet), `requestsUsedToday`, `dailyBudget`, and `searchComplete`. Treat a request with `requires: null` as unknown, not open.
 - SAM.gov is fetched as "posted in the last 30 days". A SAM request that ages out of that window stays `active` until its own deadline passes, then goes `active:false`.

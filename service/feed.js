@@ -131,6 +131,8 @@ function ingest(state, now = new Date()) {
     if (st.fetchedAt === live.meta.fetchedAt) continue; // nothing new from this source
     st.fetchedAt = live.meta.fetchedAt;
     st.count = live.rfqs.length;
+    // Quota-limited sources report a backlog: requests whose description has not been read yet.
+    for (const k of ["descriptionsWaiting", "requestsUsedToday", "dailyBudget", "searchComplete"]) if (live.meta[k] !== undefined) st[k] = live.meta[k];
 
     const seen = new Set();
     for (const raw of live.rfqs) {

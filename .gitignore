@@ -16,3 +16,5 @@ more notes.txt
 .claude/
 # Service state, snapshot and logs (generated)
 data/
+sam-cache.json
+sam-quota.json

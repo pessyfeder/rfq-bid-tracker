@@ -6,6 +6,10 @@
 //   node fetch-sam.js                 # last 30 days of postings
 //   node fetch-sam.js --days 14 --max 500
 //
+// Quota-aware: every SAM.gov request counts against SAM_DAILY_BUDGET (or --budget N; default 10, a personal
+// key's limit). Only new postings are searched, each description is read once, and the run stops cleanly at
+// the budget and resumes the next day. State is in sam-cache.json and sam-quota.json (git-ignored).
+//
 // Needs Node 18+ (built-in fetch). No dependencies.
 
 const fs = require("fs");
@@ -20,7 +24,7 @@ if (!KEY) {
 const args = process.argv.slice(2);
 const opt = (name, def) => { const i = args.indexOf("--" + name); return i >= 0 ? Number(args[i + 1]) : def; };
 const DAYS = opt("days", 30);
-const MAX = opt("max", 300);
+const MAX = opt("max", 5000); // most new notices added to the cache in one run
 
 // SAM.gov notice types: o = Solicitation, k = Combined Synopsis/Solicitation (where RFQs appear).
 const PTYPES = "o,k";
@@ -106,74 +110,153 @@ function restrictionsFromText(text) {
 }
 const code0 = (o) => (o.typeOfSetAside || "").trim() && !SET_ASIDE[(o.typeOfSetAside || "").trim()];
 
-async function getPage(from, to, offset) {
-  const u = new URL("https://api.sam.gov/opportunities/v2/search");
-  u.search = new URLSearchParams({ api_key: KEY, postedFrom: from, postedTo: to, ptype: PTYPES, limit: "100", offset: String(offset) });
-  const res = await fetch(u);
-  if (res.status === 429) throw new Error("SAM.gov rate limit hit. Try again later (daily request quota reached).");
+// ---- Quota-aware, incremental fetching ----------------------------------------------------------
+// SAM.gov limits requests per key per day (about 10 for a personal key, about 1,000 for an entity-linked
+// one). Every call below counts against SAM_DAILY_BUDGET (default 10, the personal-key limit).
+//  - sam-cache.json keeps every notice already fetched, so a notice's description is fetched ONCE.
+//  - Each run asks SAM.gov only for postings since the last completed search.
+//  - When the budget is used up (or SAM.gov answers 429) the run stops cleanly, keeps what it has, and the
+//    next run (after the daily reset) carries on with the notices still waiting for their description.
+// sam-quota.json counts the day's requests (UTC date) so several runs in a day share one budget.
+
+const CACHE_FILE = path.join(__dirname, "sam-cache.json");
+const QUOTA_FILE = path.join(__dirname, "sam-quota.json");
+const BUDGET = opt("budget", Number(process.env.SAM_DAILY_BUDGET || 10));
+const BASE = process.env.SAM_BASE || "https://api.sam.gov"; // overridable only for offline testing
+const todayUtc = () => new Date().toISOString().slice(0, 10);
+
+class QuotaHit extends Error {}
+
+function readJson(file, fallback) {
+  try { return JSON.parse(fs.readFileSync(file, "utf8")); } catch (e) { if (e.code !== "ENOENT") console.warn(file + " unreadable, starting fresh: " + e.message); return fallback; }
+}
+function writeJson(file, obj) { fs.writeFileSync(file + ".tmp", JSON.stringify(obj)); fs.renameSync(file + ".tmp", file); }
+
+const quota = readJson(QUOTA_FILE, {});
+if (quota.date !== todayUtc()) { quota.date = todayUtc(); quota.used = 0; }
+const left = () => Math.max(0, BUDGET - quota.used);
+function spend() { quota.used++; writeJson(QUOTA_FILE, quota); } // written before each call: a crash cannot lose the count
+async function samGet(url) {
+  if (left() <= 0) throw new QuotaHit("daily budget used");
+  spend();
+  const res = await fetch(url);
+  if (res.status === 429) { quota.used = Math.max(quota.used, BUDGET); writeJson(QUOTA_FILE, quota); throw new QuotaHit("SAM.gov answered 429 (its daily limit)"); }
   if (res.status === 401 || res.status === 403) throw new Error("SAM.gov rejected the API key (HTTP " + res.status + ").");
+  return res;
+}
+
+async function getPage(from, to, offset) {
+  const u = new URL(BASE + "/opportunities/v2/search");
+  u.search = new URLSearchParams({ api_key: KEY, postedFrom: from, postedTo: to, ptype: PTYPES, limit: "100", offset: String(offset) });
+  const res = await samGet(u);
   if (!res.ok) throw new Error("SAM.gov returned HTTP " + res.status);
   return res.json();
 }
 
-(async () => {
-  const to = new Date(), from = new Date(Date.now() - DAYS * 86400000);
-  const all = [];
-  for (let offset = 0; all.length < MAX; offset += 100) {
-    const page = await getPage(fmt(from), fmt(to), offset);
-    const items = page.opportunitiesData || [];
-    all.push(...items);
-    if (items.length < 100 || all.length >= (page.totalRecords || 0)) break;
+// Description text plus everything derived from it (restrictions, stated amount, AI read). Mutates r.
+async function enrich(r, o, text, AI_KEY) {
+  const found = restrictionsFromText(text);
+  if (found.length) {
+    r.requires = Array.from(new Set((r.requires || []).concat(found)));
+    r.details.restriction = r.details.restriction || found.join(", ") + " only";
+    found.forEach((f) => { if (r.details.requirements.indexOf(f) < 0) r.details.requirements.push(f); });
+  } else if (r.requires == null && !code0(o)) r.requires = []; // text read, no restriction found
+  // Always try a stated amount first (keyword pass, then AI); the USAspending estimate only fills what is left.
+  if (r.value == null) {
+    let a = require("./stated-amount").statedAmount(text);
+    if (!a && AI_KEY) a = await require("./ai-extract").extractAmount(text, AI_KEY).catch(() => null);
+    if (a) r.valueEst = { kind: "stated", amount: a.amount, quote: a.quote };
   }
-  const picked = all.slice(0, MAX);
-  const rfqs = [];
+  const ai = AI_KEY ? await require("./ai-extract").extract(text, AI_KEY) : null;
+  if (ai) {
+    const base = r.requires || [];
+    if (ai.requires !== null) r.requires = Array.from(new Set(base.concat(ai.requires)));
+    else if (!base.length) r.requires = null;
+    if (ai.scope) r.scope = ai.scope;
+    if (ai.shall.length) r.shall = ai.shall;
+    r.aiRead = true;
+    return true;
+  }
+  return false;
+}
+
+(async () => {
+  const today = todayUtc();
+  const cache = readJson(CACHE_FILE, { searchedThrough: null, resume: null, notices: {} });
+  const notices = cache.notices;
   const AI_KEY = process.env.ANTHROPIC_API_KEY;
   if (!AI_KEY) console.log("ANTHROPIC_API_KEY not set: skipping AI reading (requires/scope/key points stay as basic values).");
-  let aiOk = 0;
-  for (const o of picked) {
-    const r = toRfq(o);
-    if (!r) continue;
-    if (typeof o.description === "string" && /^https:\/\/api\.sam\.gov\//.test(o.description)) {
-      try {
-        const dres = await fetch(o.description + (o.description.includes("?") ? "&" : "?") + "api_key=" + encodeURIComponent(KEY));
-        const dj = dres.ok ? await dres.json().catch(() => null) : null;
-        // Keyword pass (no AI needed): flag well-known vehicle restrictions in the description text.
-        if (dj && typeof dj.description === "string") {
-          const found = restrictionsFromText(dj.description);
-          if (found.length) {
-            r.requires = Array.from(new Set((r.requires || []).concat(found)));
-            r.details.restriction = r.details.restriction || found.join(", ") + " only";
-            found.forEach((f) => { if (r.details.requirements.indexOf(f) < 0) r.details.requirements.push(f); });
-          } else if (r.requires == null && !code0(o)) r.requires = []; // text read, no restriction found
+  console.log(`SAM.gov budget: ${BUDGET}/day, ${quota.used} used so far today (UTC).`);
+  let stopped = null, added = 0, described = 0, aiOk = 0;
+
+  try {
+    // 1. Search for postings since the last completed search. Uses at most a quarter of the day's remaining
+    //    budget (at least one request) so descriptions, which carry the detail, are not starved.
+    const searchCap = Math.max(1, Math.floor(left() / 4));
+    const from = cache.resume ? cache.resume.from : cache.searchedThrough
+      ? new Date(Date.parse(cache.searchedThrough) - 86400000).toISOString().slice(0, 10) // 1 day overlap: catches late postings
+      : new Date(Date.now() - DAYS * 86400000).toISOString().slice(0, 10);
+    let offset = cache.resume ? cache.resume.offset : 0, pages = 0, finished = false;
+    if (left() > 0) {
+      while (pages < searchCap && added < MAX) {
+        const page = await getPage(fmt(new Date(from)), fmt(new Date(today)), offset);
+        pages++;
+        const items = page.opportunitiesData || [];
+        for (const o of items) {
+          const r = toRfq(o);
+          if (!r) continue;
+          const old = notices[r.id];
+          if (!old) {
+            notices[r.id] = { rfq: r, descUrl: typeof o.description === "string" && o.description.startsWith(BASE + "/") ? o.description : null, descDone: false, tries: 0, raw: { typeOfSetAside: o.typeOfSetAside || "" } };
+            added++;
+          } else if (old.rfq.due !== r.due || old.rfq.dueTime !== r.dueTime) { // deadline moved = amended
+            Object.assign(old.rfq, { due: r.due, dueTime: r.dueTime }); old.rfq.details.amended = true;
+          }
         }
-        // Always try a stated amount first (keyword pass, then AI); the USAspending estimate only fills what is left.
-        if (r.value == null && dj && typeof dj.description === "string") {
-          let a = require("./stated-amount").statedAmount(dj.description);
-          if (!a && AI_KEY) a = await require("./ai-extract").extractAmount(dj.description, AI_KEY).catch(() => null);
-          if (a) r.valueEst = { kind: "stated", amount: a.amount, quote: a.quote };
-        }
-        const ai = AI_KEY && dj && dj.description ? await require("./ai-extract").extract(dj.description, AI_KEY) : null;
-        if (ai) {
-          // requires: AI list plus any mapped set-aside. AI "null" (unsure) keeps the set-aside answer, else stays Unclear.
-          const base = r.requires || [];
-          if (ai.requires !== null) r.requires = Array.from(new Set(base.concat(ai.requires)));
-          else if (!base.length) r.requires = null;
-          if (ai.scope) r.scope = ai.scope;
-          if (ai.shall.length) r.shall = ai.shall;
-          r.aiRead = true;
-          aiOk++;
-        }
-      } catch (e) { console.error("AI read failed for one notice: " + e.message); }
+        offset += 100;
+        if (items.length < 100 || offset >= (page.totalRecords || 0)) { finished = true; break; }
+      }
+      if (finished) { cache.searchedThrough = today; cache.resume = null; }
+      else cache.resume = { from, offset }; // out of budget or hit --max: pick up at this page next run
     }
-    rfqs.push(r);
+
+    // 2. Descriptions for notices that have not had one yet, newest first, while budget lasts.
+    const pending = Object.values(notices).filter((n) => !n.descDone && n.descUrl && n.rfq.due >= today)
+      .sort((a, b) => (b.rfq.posted || "").localeCompare(a.rfq.posted || ""));
+    for (const n of pending) {
+      if (left() <= 0) break;
+      try {
+        const res = await samGet(n.descUrl + (n.descUrl.includes("?") ? "&" : "?") + "api_key=" + encodeURIComponent(KEY));
+        const dj = res.ok ? await res.json().catch(() => null) : null;
+        if (dj && typeof dj.description === "string") {
+          if (await enrich(n.rfq, n.raw, dj.description, AI_KEY)) aiOk++;
+          n.descDone = true; described++;
+        } else if (++n.tries >= 3) n.descDone = true; // give up on a notice whose description never loads
+      } catch (e) {
+        if (e instanceof QuotaHit) throw e;
+        console.error("Description/AI read failed for one notice: " + e.message);
+        if (++n.tries >= 3) n.descDone = true;
+      }
+    }
+  } catch (e) {
+    if (e instanceof QuotaHit) stopped = e.message; else throw e;
   }
-  if (AI_KEY) {
-    console.log(`AI read ${aiOk} of ${rfqs.length} notices.`);
-    require("./ai-extract").reportUsage("SAM.gov refresh");
-  }
-  await require("./sam-estimates").addEstimates(rfqs); // similar past awards from USAspending.gov
-  const meta = { source: "SAM.gov", fetchedAt: new Date().toISOString(), count: rfqs.length };
+
+  // 3. Drop notices long past due, estimate values for the new ones (USAspending: separate API, no SAM quota).
+  const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
+  for (const [id, n] of Object.entries(notices)) if (n.rfq.due < weekAgo) delete notices[id];
+  const open = Object.values(notices).filter((n) => n.rfq.due >= today);
+  const needEst = open.filter((n) => !n.estDone);
+  await require("./sam-estimates").addEstimates(needEst.map((n) => n.rfq));
+  needEst.forEach((n) => { n.estDone = true; });
+  if (AI_KEY && described) { console.log(`AI read ${aiOk} of ${described} new descriptions.`); require("./ai-extract").reportUsage("SAM.gov refresh"); }
+
+  writeJson(CACHE_FILE, cache);
+  const rfqs = open.map((n) => n.rfq);
+  const waiting = open.filter((n) => !n.descDone && n.descUrl).length;
+  const meta = { source: "SAM.gov", fetchedAt: new Date().toISOString(), count: rfqs.length, descriptionsWaiting: waiting, requestsUsedToday: quota.used, dailyBudget: BUDGET, searchComplete: !cache.resume };
   fs.writeFileSync(OUT, "// GENERATED by fetch-sam.js - do not edit. Public SAM.gov data.\n" +
     "(window.LIVE_SOURCES = window.LIVE_SOURCES || []).push({ meta: " + JSON.stringify(meta) + ", rfqs: " + JSON.stringify(rfqs, null, 1) + " });\n");
-  console.log(`Wrote ${rfqs.length} opportunities (of ${all.length} fetched) to live-sam.js`);
+  console.log(`Wrote ${rfqs.length} open opportunities to live-sam.js (${added} new, ${described} descriptions read, ${waiting} still waiting).`);
+  console.log(`Requests used today: ${quota.used}/${BUDGET}.` + (stopped ? ` Stopped early: ${stopped}. The rest continues on the next run after the daily reset.` : ""));
 })().catch((e) => { console.error(e.message); process.exit(1); });
