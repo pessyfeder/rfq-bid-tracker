@@ -70,7 +70,7 @@ Optional settings you can add to the same file (defaults shown):
 Notes:
 
 - **SAM_DAILY_BUDGET** is the most SAM.gov requests the service makes per UTC day. The default, 10, is a personal key's limit; an entity-linked key allows about 1,000, so set it to your key's real limit. The service only asks for new postings, reads each description once, and stops cleanly at the budget; leftover work continues the next day. `/api/status` shows `descriptionsWaiting` and `requestsUsedToday`. With a 10-a-day key the backlog will not clear: expect a few new federal requests per day to get full detail and the rest listed with basic fields only.
-- `HOST=127.0.0.1` keeps the service reachable from this machine only. Leave it as is. If you ever remove `HOST`, the service will refuse to start without `RFQ_API_TOKEN`.
+- `HOST=127.0.0.1` keeps the service reachable from this machine only. Leave it as is. If you remove `HOST`, the service listens on every network interface and the API has no authentication.
 - Environment variables set in the system override the `.env` file.
 
 ## 5. Try it by hand
@@ -156,24 +156,16 @@ The service reads `.env` itself, so no `EnvironmentFile=` is needed.
 
 Skip this unless another machine really needs the JSON. By default the service answers this machine only.
 
-1. Make a token that belongs to this service. Never reuse anyone else's, and never put it in chat or email. In a terminal in the project folder:
+1. In `.env`, change `HOST` (`0.0.0.0` listens on every network interface; or use this machine's own address to listen on one):
 
    ```
-   node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
-   ```
-
-2. In `.env`, set the token and change `HOST` (`0.0.0.0` listens on every network interface; or use this machine's own address to listen on one):
-
-   ```
-   RFQ_API_TOKEN=the-long-random-string
    HOST=0.0.0.0
    ```
 
-3. Allow inbound TCP on port 8765 from the other machine only (Windows Defender Firewall > Inbound Rules, or `sudo ufw allow from <other-machine-ip> to any port 8765`).
-4. Restart the service. Every `/api/*` call except `/api/health` now needs the header `Authorization: Bearer <token>` (see `FEED.md`). On this machine too: test with `curl.exe -H "Authorization: Bearer <token>" http://localhost:8765/api/status`.
-5. Give the token to the other machine's owner through a private channel, and store it there the same way as the keys in section 3.
+2. Allow inbound TCP on port 8765 from the other machine only (Windows Defender Firewall > Inbound Rules, or `sudo ufw allow from <other-machine-ip> to any port 8765`).
+3. Restart the service and test from the other machine: `curl http://<this-machine>:8765/api/status`.
 
-The table page (section 8) still opens on this machine only. The service is plain HTTP, so use this only on a trusted network or a VPN; across the internet, put a TLS reverse proxy (Caddy) in front. To rotate the token, change it in `.env`, restart, and give the new value to the other machine.
+The API has no authentication, so anyone who can reach the port can read the feed and `POST /api/refresh`. Keep the firewall rule narrow. The table page (section 8) still opens on this machine only. The service is plain HTTP.
 
 ## 10. Not built yet
 

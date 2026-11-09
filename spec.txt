@@ -159,7 +159,7 @@ Search
     commonly about 10 a day; an entity-linked key about 1,000 - check the account page).
     A higher limit would allow refreshing more than once a day, checking amendments on
     Interested notices, and pulling attachments for the AI summaries.
- o. Privacy: the feed is protected by a shared token (RFQ_API_TOKEN) and the page is served only on the service
+ o. Privacy: the feed data is not private, so the API has no authentication, and the page is served only on the service
     machine. No bid statuses are stored here. Agency text must be shown as plain text,
     never run as code: CHECKED 2026-11-09 with real data flowing in. Every field is HTML-escaped,
     links must be https (otherwise a dead "#"), and the service sends a Content-Security-Policy.

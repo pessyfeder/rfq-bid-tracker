@@ -10,7 +10,6 @@
 const fs = require("fs");
 const path = require("path");
 const http = require("http");
-const crypto = require("crypto");
 const { spawn } = require("child_process");
 const feed = require("./service/feed");
 
@@ -33,7 +32,6 @@ const LOG_FILE = path.join(DATA, "service.log");
 const CFG = {
   host: process.env.HOST || "0.0.0.0",             // all interfaces unless HOST is set
   port: Number(process.env.PORT || 8765),
-  token: process.env.RFQ_API_TOKEN || "",          // optional shared secret, sent as a Bearer token
   refreshAt: process.env.REFRESH_AT || "09:00",    // local time, HH:MM; daily
   fetchTimeoutMin: Number(process.env.FETCH_TIMEOUT_MIN || 45)
 };
@@ -123,13 +121,6 @@ function stale() {
 }
 
 // ---- HTTP ----------------------------------------------------------------------------------------
-function authorized(req) {
-  if (!CFG.token) return true; // only possible on a loopback-only bind (checked at start-up)
-  const m = /^Bearer (.+)$/.exec(req.headers.authorization || "");
-  if (!m) return false;
-  const a = crypto.createHash("sha256").update(m[1]).digest(), b = crypto.createHash("sha256").update(CFG.token).digest();
-  return crypto.timingSafeEqual(a, b);
-}
 const send = (res, code, body, type = "application/json") => {
   res.writeHead(code, { "Content-Type": type + "; charset=utf-8", "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" });
   res.end(typeof body === "string" ? body : JSON.stringify(body));
@@ -176,7 +167,6 @@ const server = http.createServer((req, res) => {
       return send(res, 200, { ok: true, lastSuccessfulRefresh: lastOk });
     }
     if (p.startsWith("/api/")) {
-      if (!authorized(req)) { res.setHeader("WWW-Authenticate", "Bearer"); return send(res, 401, { error: "missing or wrong token" }); }
       if (p === "/api/status" && req.method === "GET") return send(res, 200, statusBody());
       if (p === "/api/rfqs" && req.method === "GET") return send(res, 200, feed.query(state, url.searchParams));
       const one = /^\/api\/rfqs\/([^/]+)$/.exec(p);
@@ -203,15 +193,9 @@ const server = http.createServer((req, res) => {
 if (process.argv.includes("--once")) {
   runRefresh("--once").then(() => process.exit(0));
 } else {
-  if (!CFG.token && !isLoopback(CFG.host)) {
-    console.error("Refusing to start: RFQ_API_TOKEN is not set and HOST is " + CFG.host + ".\n" +
-      "Set RFQ_API_TOKEN to a long random string (clients send it as 'Authorization: Bearer <token>'),\n" +
-      "or set HOST=127.0.0.1 to listen on this machine only.");
-    process.exit(1);
-  }
   if (!/^\d{1,2}:\d{2}$/.test(CFG.refreshAt)) { console.error("REFRESH_AT must look like 09:00"); process.exit(1); }
   server.listen(CFG.port, CFG.host, () => {
-    log(`listening on http://${CFG.host}:${CFG.port} (token ${CFG.token ? "required" : "off, loopback only"})`);
+    log(`listening on http://${CFG.host}:${CFG.port} `);
     for (const s of feed.SOURCES.filter((x) => x.script)) {
       const miss = s.needsEnv.filter((k) => !process.env[k]);
       if (miss.length) log(`WARNING: ${s.label} will be skipped: ${miss.join(", ")} not set`);
