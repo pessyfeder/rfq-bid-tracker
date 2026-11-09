@@ -132,7 +132,7 @@ This install only refreshes the data. For several people with logins, the follow
 1. A small Node server (static page plus a statuses API) and a SQLite database, so statuses are shared instead of stored per-browser.
 2. Username/password login with an admin who creates accounts.
 3. A web server in front (Caddy or nginx) giving HTTPS, on a subdomain. If the server already has a web server, add a reverse proxy rule instead of installing a second one.
-4. The company profile (`COMPANY.holds` in `data.js`) editable in the app, once Israel provides it.
+4. The company profile (`company-profile.json`, currently empty: `holds: null`) editable in the app, **by admins only** (normal users see the eligibility results but cannot change the profile). Needs Israel's real list. Until the server exists, edit the file by hand and copy its list into `COMPANY.holds` in `data.js`.
 5. Run the new server as a service (systemd, or a Windows service via NSSM/pm2) and add the database file to backups.
 
 Until those exist, anyone opening `index.html` sees the data but keeps their own statuses in their own browser only.
