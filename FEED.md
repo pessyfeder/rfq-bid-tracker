@@ -1,6 +1,6 @@
-# RFQ feed API (for the machine that reads the results)
+# RFQ feed API (for clients of the service)
 
-The service (`server.js`) refreshes the data on a schedule and serves it as JSON. The reading machine polls it, filters for what applies to Israel, and passes those on to the bidding app. This service does **not** judge eligibility (see spec 2a); it passes on what each request says it requires.
+The service (`server.js`) refreshes the data on a schedule and serves it as JSON. This service does **not** judge eligibility (see spec 2a); it passes on what each request says it requires.
 
 Base URL: `http://<service-machine>:8765` (port set by `PORT`). Schema version: **1**.
 

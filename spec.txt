@@ -145,8 +145,7 @@ Search
     OPEN: who owns the Anthropic account and pays? Where does the key live once refreshes
     run on a schedule?
  k. "Interested" follow-up: DROPPED (no statuses here). The feed carries rfqUrl only.
- l. Multiple users: no longer applies to this app (no statuses, no logins). The reading machine is the only client.
-    Whether ineligible requests stay visible is now the reading machine's filtering decision.
+ l. Multiple users: no longer applies to this app (no statuses, no logins). 
  m. Hosting: OPEN - to discuss with Israel, to keep the information safe. Assumed: own
     server, multiple logins. Existing server or a new one? Recommendation: use the
     existing server only if it is well maintained (patched, backed up, HTTPS) and run
@@ -172,8 +171,8 @@ Search
 -------------------
 How it works: node scripts write live-*.js files; index.html loads whichever exist
 (live-sam.js, live-nyc.js, live-ny-state.js) and merges them. Re-run a script to refresh;
-server.js now runs them on a schedule and serves the merged result as JSON (FEED.md) to a
-separate reading machine (see DEPLOY.md). The data shape is documented at the top of data.js.
+server.js now runs them on a schedule and serves the merged result as JSON (FEED.md)
+(see DEPLOY.md). The data shape is documented at the top of data.js.
 
  - NYC City Record (fetch-nyc.js): LIVE. Open Procurement solicitations from NYC Open
    Data, no key needed. Optional AI read (needs ANTHROPIC_API_KEY): stated amount,
@@ -204,7 +203,7 @@ Things that trip up newcomers (from notes)
 ---------
  - Table, filters, search and Bid factors built (index.html, data.js). Bid status tracking was removed;
    it belongs to the separate bidding app.
- - Standalone service built (server.js): scheduled fetches + token-protected JSON feed for the reading machine
+ - Standalone service built (server.js): scheduled fetches + JSON feed
    (FEED.md, DEPLOY.md).
  - Live feeds: NYC and SAM.gov working; NYS stub.
  - AI read with caching and cost reporting built.

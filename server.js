@@ -31,9 +31,9 @@ const LOG_FILE = path.join(DATA, "service.log");
 })();
 
 const CFG = {
-  host: process.env.HOST || "0.0.0.0",             // the reader is a different machine, so listen on the network
+  host: process.env.HOST || "0.0.0.0",             // all interfaces unless HOST is set
   port: Number(process.env.PORT || 8765),
-  token: process.env.RFQ_API_TOKEN || "",          // shared secret the reading machine sends as a Bearer token
+  token: process.env.RFQ_API_TOKEN || "",          // optional shared secret, sent as a Bearer token
   refreshAt: process.env.REFRESH_AT || "09:00",    // local time, HH:MM; daily
   fetchTimeoutMin: Number(process.env.FETCH_TIMEOUT_MIN || 45)
 };
@@ -151,7 +151,7 @@ function statusBody() {
 }
 
 // The human page (index.html + live-*.js) is served to this machine only: statuses and bid interest
-// are private, and the remote reader uses the API.
+// are private, and other machines use the API.
 const STATIC_OK = /^\/(index\.html|data\.js|sample-data\.js|live-(nyc|sam|ny-state)\.js)?$/;
 function serveStatic(req, res, pathname) {
   const file = pathname === "/" ? "index.html" : pathname.slice(1);
@@ -205,7 +205,7 @@ if (process.argv.includes("--once")) {
 } else {
   if (!CFG.token && !isLoopback(CFG.host)) {
     console.error("Refusing to start: RFQ_API_TOKEN is not set and HOST is " + CFG.host + ".\n" +
-      "Set RFQ_API_TOKEN to a long random string (the reading machine sends it as 'Authorization: Bearer <token>'),\n" +
+      "Set RFQ_API_TOKEN to a long random string (clients send it as 'Authorization: Bearer <token>'),\n" +
       "or set HOST=127.0.0.1 to listen on this machine only.");
     process.exit(1);
   }

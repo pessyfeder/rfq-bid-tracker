@@ -1,9 +1,9 @@
 # Installing the RFQ service on Israel's machine
 
-This is a standalone service on **one machine** (the "service machine"). It fetches solicitations from NYC and SAM.gov on a schedule, keeps them in `data/`, and serves them as JSON. A **second machine** reads that JSON, filters it, and feeds the bidding app. The JSON contract is in `FEED.md`.
+This is a standalone service on **one machine** (the "service machine"). It fetches solicitations from NYC and SAM.gov on a schedule, keeps them in `data/`, and serves them as JSON. The JSON contract is in `FEED.md`.
 
 ```
- NYC / SAM.gov / USAspending / Anthropic  -->  [service machine: server.js]  -->  HTTP  -->  [reader machine]  -->  bidding app
+ NYC / SAM.gov / USAspending / Anthropic  -->  [service machine: server.js]  -->  JSON on localhost
                                                  fetchers, data/state.json
 ```
 
@@ -12,7 +12,7 @@ No secrets belong in this file. Keys live in environment variables or a `.env` f
 ## 1. What the service machine needs
 
 - Node.js, recent LTS (`node --version`; 18 or newer). No `npm install`: there are no dependencies.
-- Always on (or at least on around 09:00 and whenever the reader polls). If it was off at 09:00, it refreshes on start-up when the data is over a day old.
+- Always on (or at least on around 09:00). If it was off at 09:00, it refreshes on start-up when the data is over a day old.
 - Outbound internet to sam.gov, data.cityofnewyork.us, usaspending.gov, api.anthropic.com.
 - The service listens on this machine only (`HOST=127.0.0.1` in `.env`), so no firewall change is needed.
 
@@ -33,7 +33,7 @@ You need two values. They go in a `.env` file in the next step. Never email them
 | Value | Where it comes from |
 |---|---|
 | `SAM_API_KEY` | sam.gov > sign in > Account Details > API Key. Without it, SAM.gov is skipped and NYC still works. |
-| `ANTHROPIC_API_KEY` | A **new** key made for this machine only (see `anthropic-key-setup.md`). Do not reuse anyone else's key. Without it the feed works, but `scope`, `requires` and `shall` are thin, which weakens the reader's filtering. |
+| `ANTHROPIC_API_KEY` | A **new** key made for this machine only (see `anthropic-key-setup.md`). Do not reuse anyone else's key. Without it the feed works, but `scope`, `requires` and `shall` are thin. |
 
 ## 4. Create the `.env` file
 
@@ -127,18 +127,17 @@ The service reads `.env` itself, so no `EnvironmentFile=` is needed.
 
 ## 7. Look after it
 
-- **Freshness**: the reader should check `/api/status` (or `/api/health`'s `lastSuccessfulRefresh`) and alert if it is over ~26 hours old.
-- **Back up** `data/state.json` and `ai-cache.json`. The data itself rebuilds on the next refresh, but losing `state.json` resets the `seq` cursor (the reader would see everything as new), and losing `ai-cache.json` makes every notice be re-read and re-billed.
+- **Freshness**: check `/api/status` (or `/api/health`'s `lastSuccessfulRefresh`); if it is over ~26 hours old, something is wrong.
+- **Back up** `data/state.json` and `ai-cache.json`. The data itself rebuilds on the next refresh, but losing `state.json` resets the `seq` cursor, and losing `ai-cache.json` makes every notice be re-read and re-billed.
 - **Cost**: after the first daily run, check Anthropic Console > Usage; each run also appends to `ai-usage.log`.
 - **Key leaks**: delete the key on its service's site, make a new one, edit `.env`, restart the service.- **Manual refresh**: `POST /api/refresh`, or restart the service.
 - The service is HTTP, not HTTPS. Keep both machines on a trusted network or VPN; if they must talk across the internet, put a TLS reverse proxy (Caddy) in front.
 
 ## 8. The human page
 
-`http://localhost:8765/` on the service machine itself still serves the table page (`index.html`). It is not served to other machines: the reader uses the API. The page has no bid statuses and stores nothing, so it is a read-only view of the same data.
+`http://localhost:8765/` on the service machine itself still serves the table page (`index.html`). It is not served to other machines. The page has no bid statuses and stores nothing, so it is a read-only view of the same data.
 
 ## 9. Not built yet
 
 - NYS Contract Reporter (no source; see spec section 3).
-- Delivery by push (webhook) instead of polling: the reader polls `?after=<cursor>` today.
 - HTTPS.

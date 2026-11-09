@@ -113,7 +113,7 @@ function writeAtomic(file, text) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
   const tmp = file + ".tmp";
   fs.writeFileSync(tmp, text);
-  fs.renameSync(tmp, file); // a reader never sees a half-written file
+  fs.renameSync(tmp, file); // nobody sees a half-written file
 }
 
 // Merge the current live-*.js contents into state. Returns { added, changed, deactivated }.
@@ -148,10 +148,10 @@ function ingest(state, now = new Date()) {
         Object.assign(old, rec, { lastSeen: nowIso, updatedAt: nowIso, active: true, seq: ++state.seq, _h: h });
         stats.changed++;
       } else {
-        old.lastSeen = nowIso; // unchanged: no new seq, so incremental readers see nothing
+        old.lastSeen = nowIso; // unchanged: no new seq, so incremental clients see nothing
       }
     }
-    // Present before, gone from this source's latest successful fetch -> tombstone (kept for readers to learn of it).
+    // Present before, gone from this source's latest successful fetch -> tombstone (kept for clients to learn of it).
     for (const rec of Object.values(state.records)) {
       if (rec.source === src.id && rec.active && !seen.has(rec.id)) {
         // Windowed source: keep the record active until its own deadline passes.
@@ -180,7 +180,7 @@ function publicRecord(rec) {
 function query(state, params) {
   const num = (k) => (params.has(k) && params.get(k) !== "" && !isNaN(Number(params.get(k))) ? Number(params.get(k)) : null);
   const after = num("after");
-  const includeInactive = params.get("include_inactive") === "1" || after !== null; // incremental readers need tombstones
+  const includeInactive = params.get("include_inactive") === "1" || after !== null; // incremental clients need tombstones
   const level = params.get("level"), source = params.get("source");
   const minValue = num("min_value"), maxValue = num("max_value");
   const dueAfter = params.get("due_after"), dueBefore = params.get("due_before");
