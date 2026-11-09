@@ -7,7 +7,7 @@ This is a standalone service on **one machine** (the "service machine"). It fetc
                                                  fetchers, data/state.json
 ```
 
-No secrets belong in git or in this file. Keys live in environment variables or a git-ignored `.env` file on the service machine only.
+No secrets belong in this file. Keys live in environment variables or a `.env` file on the service machine only.
 
 ## 1. What the service machine needs
 
@@ -24,18 +24,11 @@ No secrets belong in git or in this file. Keys live in environment variables or 
 2. Right-click it > **Extract All**. This makes a folder called `rfq-bid-tracker`.
 3. Move that folder to `C:\` so the path is `C:\rfq-bid-tracker`. Any other location works too. Wherever you put it, that is "the project folder" in the steps below.
 
-**Or from git:**
-
-```powershell
-git clone <repo-url> C:\rfq-bid-tracker
-cd C:\rfq-bid-tracker
-```
-
-(Linux: `/opt/rfq-bid-tracker`.)
+(Linux: extract the zip to `/opt/rfq-bid-tracker`.)
 
 ## 3. Create your keys
 
-You need three values. They go in a `.env` file in the next step. Never email them, put them in git, or paste them in chat.
+You need three values. They go in a `.env` file in the next step. Never email them or paste them in chat.
 
 | Value | Where it comes from |
 |---|---|
@@ -45,7 +38,7 @@ You need three values. They go in a `.env` file in the next step. Never email th
 
 ## 4. Create the `.env` file
 
-1. Open the project folder in File Explorer. The zip already contains an empty `.env` file with the three names and no values. (If you cloned from git instead, there is none: create a new text file named exactly `.env`, with no `.txt` at the end. If Windows hides file extensions, turn on View > Show > File name extensions so you can check. Dot-files can also be hidden: turn on View > Show > Hidden items.)
+1. Open the project folder in File Explorer. The zip already contains an empty `.env` file with the three names and no values. (If you can't see it, Windows may be hiding dot-files: turn on View > Show > Hidden items. If it is missing, create a new text file named exactly `.env`, with no `.txt` at the end; turn on View > Show > File name extensions so you can check.)
 2. Right-click `.env` > Open with > Notepad.
 3. Type each value after its `=` sign, with no spaces or quotes:
 
@@ -141,7 +134,7 @@ The service reads `.env` itself, so no `EnvironmentFile=` is needed.
 
 - **Freshness**: the reader should check `/api/status` (or `/api/health`'s `lastSuccessfulRefresh`) and alert if it is over ~26 hours old.
 - **Back up** `data/state.json` and `ai-cache.json`. The data itself rebuilds on the next refresh, but losing `state.json` resets the `seq` cursor (the reader would see everything as new), and losing `ai-cache.json` makes every notice be re-read and re-billed.
-- **Cost**: after the first nightly run, check Anthropic Console > Usage; each run also appends to `ai-usage.log`.
+- **Cost**: after the first daily run, check Anthropic Console > Usage; each run also appends to `ai-usage.log`.
 - **Key leaks**: delete the key on its service's site, make a new one, edit `.env`, restart the service. To rotate `RFQ_API_TOKEN`, change it in `.env` and on the reader, then restart.
 - **Manual refresh**: `POST /api/refresh` with the token, or restart the service.
 - The service is HTTP, not HTTPS. Keep both machines on a trusted network or VPN; if they must talk across the internet, put a TLS reverse proxy (Caddy) in front.
