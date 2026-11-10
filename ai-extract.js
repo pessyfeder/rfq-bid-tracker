@@ -57,6 +57,9 @@ function track(body) {
   }
 }
 
+// The reply may start with a "thinking" block; the answer is the first block of type "text".
+const textOf = (body) => { const b = body && Array.isArray(body.content) && body.content.find((c) => c && c.type === "text"); return (b && b.text) || ""; };
+
 const money = (n) => "$" + (n < 0.01 ? n.toFixed(4) : n.toFixed(2));
 
 // Prints (and appends to ai-usage.log) what this run cost. label = which fetcher ran.
@@ -118,7 +121,7 @@ async function extract(html, apiKey) {
   if (!res.ok) throw new Error("Anthropic API returned HTTP " + res.status);
   const body = await res.json();
   track(body);
-  const out = body.content && body.content[0] && body.content[0].text || "";
+  const out = textOf(body);
   const m = out.match(/\{[\s\S]*\}/);
   if (!m) return null;
   try {
@@ -146,7 +149,7 @@ async function extractWithPdfs(html, pdfs, apiKey) {
   if (!res.ok) throw new Error("Anthropic API returned HTTP " + res.status);
   const body = await res.json();
   track(body);
-  const m = ((body.content && body.content[0] && body.content[0].text) || "").match(/\{[\s\S]*\}/);
+  const m = textOf(body).match(/\{[\s\S]*\}/);
   if (!m) return null;
   try {
     const r = validate(JSON.parse(m[0]));
@@ -197,7 +200,7 @@ async function extractAmount(html, apiKey) {
   if (!res.ok) throw new Error("Anthropic API returned HTTP " + res.status);
   const body = await res.json();
   track(body);
-  const out = (body.content && body.content[0] && body.content[0].text) || "";
+  const out = textOf(body);
   const m = out.match(/\{[\s\S]*\}/);
   if (!m) return null;
   try {
