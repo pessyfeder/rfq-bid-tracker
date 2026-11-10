@@ -107,16 +107,22 @@ async function addDocumentReads(list, prevById, adapter) {
         if (res.scope) r.scope = res.scope;
         if (res.shall.length) r.shall = res.shall;
         r.aiRead = true; r.docsV = DOCS_VERSION; read++;
+        if (r.details) delete r.details.readNote;
       } catch (e) {
-        const st = (/HTTP ([45][0-9][0-9])/.exec(e.message) || [])[1];
-        if (st) refused[st] = (refused[st] || 0) + 1; else { failed++; console.warn(`  read failed for ${r.id}: ${e.message}`); }
+        const st = /^BOTCHECK/.test(e.message) ? "bot check" : (/HTTP ([45][0-9][0-9])/.exec(e.message) || [])[1];
+        if (st) {
+          refused[st] = (refused[st] || 0) + 1;
+          // Say so on the row instead of leaving an old "Not stated": the documents were not read, and the next run tries again.
+          r.aiRead = false; delete r.docsV;
+          r.details = { ...(r.details || {}), readNote: `The portal refused the document download (HTTP ${st}), so the documents were not read. The next update retries.` };
+        } else { failed++; console.warn(`  read failed for ${r.id}: ${e.message}`); }
       }
     }));
   }
   const refusedN = Object.values(refused).reduce((a, b) => a + b, 0);
   if (noPage || emptyPage || shortPage || noAnswer || failed || refusedN) {
     const parts = [`${noPage} page unreadable/too large`, `${emptyPage} page empty (no text at all)`, `${shortPage} page had 1-199 characters of text`, `${noAnswer} model reply unusable`, `${failed} other errors`];
-    for (const [st, n] of Object.entries(refused)) parts.push(`${n} refused by the portal (HTTP ${st})`);
+    for (const [st, n] of Object.entries(refused)) parts.push(st === "bot check" ? `${n} refused by the portal's bot check (not worked around)` : `${n} refused by the portal (HTTP ${st})`);
     console.log(`  not read this run: ${parts.join(", ")}`);
     if (sample) console.log(`  example of a bad page (${sample.id}): ${sample.raw} bytes of HTML, text starts: "${sample.text}"`);
   }

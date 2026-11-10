@@ -14,6 +14,8 @@ const WANTED = /rf[pqi]|itb|ifb|solicitation|specification|scope of work|bid doc
 
 async function body(url, max) {
   const res = await http(url, { timeoutMs: 30000 }, 2);
+  // A WAF bot check answers HTTP 202 with an empty body (Nevada). It is a deliberate refusal of automated reads: not worked around.
+  if (res.headers.get("x-amzn-waf-action") === "challenge") throw new Error("BOTCHECK " + new URL(url).host);
   const len = Number(res.headers.get("content-length") || 0);
   if (len > max) return null;
   const buf = Buffer.from(await res.arrayBuffer());
@@ -88,6 +90,36 @@ function absorb(buf, label, got, depth = 0) {
   }
 }
 
+// The Indiana portal answers HTTP 403 to bursts of downloads. So: one download at a time (the caller reads three notices
+// in parallel, so the spacing is enforced here, not by the caller), a generous gap between them, a slow retry when refused
+// (honouring Retry-After), and a stop for the rest of the run after repeated refusals, so a block is never hammered.
+// The refusal is thrown as "HTTP 403", which the caller reports as "refused by the portal" and keeps the row as not read.
+const IN_GAP_MS = 2500, IN_RETRY_MS = [8000, 30000], IN_GIVE_UP_AFTER = 4;
+let inQueue = Promise.resolve(), inRefusedInARow = 0;
+function indianaZip(zipUrl) {
+  const run = async () => {
+    if (inRefusedInARow >= IN_GIVE_UP_AFTER) throw new Error("HTTP 403 for www.in.gov (stopped for this run after repeated refusals)");
+    for (let attempt = 0; ; attempt++) {
+      await sleep(IN_GAP_MS);
+      let res;
+      try { res = await fetch(zipUrl, { headers: { "User-Agent": "rfq-bid-tracker/1.0 (public procurement notices; polite, low-volume)" }, signal: AbortSignal.timeout(180000) }); } // some zips are 15+ MB
+      catch (e) { if (attempt >= IN_RETRY_MS.length) throw e; continue; }
+      if (res.ok) {
+        inRefusedInARow = 0;
+        const buf = Buffer.from(await res.arrayBuffer());
+        return buf.length > 30e6 ? null : { buf };
+      }
+      if (res.status !== 403 && res.status !== 429 && res.status !== 503) throw new Error(`HTTP ${res.status} for www.in.gov`);
+      if (attempt >= IN_RETRY_MS.length) { inRefusedInARow++; throw new Error(`HTTP ${res.status} for www.in.gov`); }
+      const ra = Number(res.headers.get("retry-after")) * 1000;
+      await sleep(Math.min(Math.max(ra || 0, IN_RETRY_MS[attempt]), 60000));
+    }
+  };
+  const p = inQueue.then(run, run);
+  inQueue = p.catch(() => {});
+  return p;
+}
+
 // -> { text: "page text", pdfs: [Buffer] } or null when nothing could be read.
 async function readNotice(url, r) {
   const got = { pdfs: [], docs: [] };
@@ -95,9 +127,10 @@ async function readNotice(url, r) {
   // Indiana's notice URL is the page listing every event, so the notice's own documents are its per-event zip.
   if (r && /^IN-/.test(r.id)) {
     const zipUrl = "https://www.in.gov/idoa/proc/solicitations/files/" + encodeURIComponent(r.id.slice(3)) + ".zip";
-    await sleep(400); // the portal answers HTTP 403 to bursts of downloads
-    const f = await body(zipUrl, 30e6);
+    const f = await indianaZip(zipUrl);
     if (f) absorb(f.buf, "zip", got);
+    // A missing zip comes back as the portal's HTML "not found" page: the agency posted no documents for this event.
+    if (f && !zip.isZip(f.buf) && r.details) r.details.readNote = "The Indiana portal has no documents posted for this notice, so there is nothing to read beyond the listing. Check the agency's contact.";
     if (!got.pdfs.length && !got.docs.length) return null; // some zips are missing (the portal serves a "not found" page): not read
     return { text: got.docs.join("\n\n") + "\n\n" + (r.scope || r.title || ""), pdfs: got.pdfs };
   }
