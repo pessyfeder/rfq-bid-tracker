@@ -57,17 +57,30 @@ robots.txt on these sites only blocks `/craft`.
 ## Not probed at all
 AR, VT (page 404 at the URL tried; `bgs.vermont.gov/purchasing-contracting` still to check), plus deeper pages for the LISTING states above.
 
-## Built (2026-11-09)
-`fetch-states.js` runs adapters in `states/`: DE (`delaware.js`) and NV, NJ, OR, IL (`bso.js`). Output: `live-states.js`,
-registered as source `states` in `service/feed.js`. First run: DE 30, NV 27, NJ 24, OR 179, IL 162 open notices (about 80 s).
-Known quirks: OR lists county and city bids too (all tagged level "State"); DE publishes dates only (no due time);
-the bso sites publish no dollar value. To add a state, write an adapter and list it in `fetch-states.js`.
+## Built
+`fetch-states.js` runs one adapter per state in `states/` and writes `live-states.js` (source `states` in `service/feed.js`).
+| State | Adapter | Open notices (2026-11-10) |
+|---|---|---|
+| DE | `delaware.js` (Socrata API) | 30 |
+| IN | `indiana.js` (HTML table) | 53 |
+| IA | `iowa.js` (JSON endpoint) | 47 |
+| LA | `louisiana.js` (one HTML page per category, about 100 s) | 126 |
+| MS | `mississippi.js` (DataTables POST, needs the full parameter set) | 76 |
+| SC | `southcarolina.js` (form POST plus session, 9 pages) | 132 |
+| ID | `idaho.js` (WordPress JSON; many close dates are only *anticipated*) | 10 |
+| NV, NJ, OR, IL, MA | `bso.js` (Periscope pages) | 27, 24, 179, 162, MA blocked (see below) |
+Quirks: OR lists county and city bids (all tagged "State"); DE and ID publish dates only; LA links to the solicitation PDF;
+IN links to its listing page. MA's portal is slow (about 10 s a page, 36 pages) and the local web filter blocks it near row 725.
+To add a state, write an adapter and list it in `fetch-states.js`.
 
-## Recommended build order
-1. DE (Socrata, proven, minutes of work).
-2. Periscope bso adapter: NV, NJ, OR, IL (MA after retest). Four states from one adapter.
-3. IN (static HTML).
-4. Confirm the LISTING states one at a time, starting with IA, MS, ID, WY, RI, SC, LA.
-5. Email the NO-BOTS and BLOCKED states asking for a feed; that is the only compliant free route.
-Expected free coverage: about 10 states soon, 15–20 with effort. All 50 is not realistic without a paid feed.
-Check each site's terms of use before building its adapter.
+## Tried and parked
+- OK: the open-data dataset only points to a search form at ok.gov that returned no list when posted.
+- RI: the public search is for quasi-state, city and town bids; state bids are in a login system.
+- MO: bids moved to the new MOVERS system (login). WY: Google Sites page with attached files.
+- CT, AK, HI, ND: ASP.NET form pages or other systems; each needs form-post reverse engineering for few notices.
+
+## Next
+1. Retest MA once the filter allows commbuys.com.
+2. Email the NO-BOTS and BLOCKED states asking for a feed; that is the only compliant free route.
+3. VT, AR and the parked states if more coverage is wanted.
+Expected free coverage: about 13 states now. All 50 is not realistic without a paid feed.

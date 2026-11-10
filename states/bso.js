@@ -38,6 +38,7 @@ function makeAdapter({ code, name, host, tz }) {
       cols.length = headers.length;
 
       let all = parseRows(html, headers);
+      let skipped = 0;
       for (let first = PAGE; first < total && first < PAGE * MAX_PAGES; first += PAGE) {
         await sleep(700);
         const cookie = [...jar].map(([k, v]) => k + "=" + v).join("; ");
@@ -57,7 +58,12 @@ function makeAdapter({ code, name, host, tz }) {
           return { xml, got: parseRows(xml, headers) };
         };
         let { xml, got } = await post();
-        if (/BlockPage|blocked by your filter/i.test(xml)) throw new Error(`Blocked by a network content filter at row ${first} of ${total}; ask IT to allow ${new URL(url).host}`);
+        if (/BlockPage|blocked by your filter/i.test(xml)) {
+          // A content filter may block individual pages. Skip a few and report the state as partial.
+          if (++skipped > 3) throw new Error(`Blocked by a network content filter at row ${first} of ${total}; ask IT to allow ${new URL(url).host}`);
+          console.error(`${code}: page at row ${first} blocked by a network content filter; skipped`);
+          continue;
+        }
         if (!got.length) { await sleep(4000); ({ xml, got } = await post()); } // slow portals sometimes return an empty page once
         if (!got.length) {
           if (process.env.BSO_DEBUG) console.error("EMPTY PAGE RESPONSE:", xml.slice(0, 600));
@@ -89,6 +95,7 @@ function makeAdapter({ code, name, host, tz }) {
         });
       }
       if (total > 0 && !out.length) throw new Error("No usable rows parsed from " + total + " results");
+      out.partialPages = skipped; // runner reports the state as partial when pages were skipped
       return out;
     }
   };

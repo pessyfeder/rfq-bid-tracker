@@ -13,7 +13,7 @@ const vm = require("vm");
 const { clean } = require("./states/common");
 
 const OUT = path.join(__dirname, "live-states.js");
-const ADAPTERS = [require("./states/delaware"), require("./states/indiana"), require("./states/iowa"), require("./states/louisiana"), ...require("./states/bso")];
+const ADAPTERS = [require("./states/delaware"), require("./states/indiana"), require("./states/iowa"), require("./states/louisiana"), require("./states/mississippi"), require("./states/southcarolina"), require("./states/idaho"),...require("./states/bso")];
 
 const isDate = (s) => /^\d{4}-\d{2}-\d{2}$/.test(s || "");
 
@@ -129,7 +129,8 @@ function readPrevious() {
       await addDocumentReads(mine, new Map(((prev && prev.rfqs) || []).map((r) => [r.id, r])));
       rfqs = rfqs.concat(mine);
       okNow.add(a.code);
-      results[a.code] = { ok: true, count: mine.length, fetchedAt: new Date().toISOString() };
+      results[a.code] = { ok: true, count: mine.length, fetchedAt: new Date().toISOString(), ...(raw.partialPages ? { partial: `${raw.partialPages} page(s) skipped` } : {}) };
+      if (raw.partialPages) console.error(`${a.code}: PARTIAL - ${raw.partialPages} page(s) could not be read`);
       console.log(`${a.code}: ${mine.length} open (of ${raw.length} read)`);
     } catch (e) {
       results[a.code] = { ...(prevStates[a.code] || {}), ok: false, error: String(e.message).slice(0, 200) };
