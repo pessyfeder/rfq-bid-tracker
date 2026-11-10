@@ -39,13 +39,13 @@ robots.txt on these sites only blocks `/craft`.
 | LA | wwwcfprd.doa.louisiana.gov/osp/lapac (by category or department) | LISTING; rows not found on the category index, need a deeper page |
 | RI | purchasing.ri.gov/bidding/ExternalBidSearch.aspx | ADAPTER (`states/rhodeisland.js`, 2026-11-10), PARTIAL: quasi-public, city/town, school, college and grant bids only (30 open); executive-branch state bids are in a login system and are not covered. Two requests per run (GET form, POST to ExternalBidListing.aspx with all entities and status Active). Addendum rows (e.g. 27-008A1) are folded into the parent with the latest deadline. |
 | SC | apps.sceis.sc.gov/SCSolicitationWeb/solicitationSearch.do | LISTING; no rows returned to my query, parameters need checking |
-| WY | ai.wyo.gov .../bid-opportunities | LISTING; rows not found in static HTML |
+| WY | ai.wyo.gov (Google Sites) -> publicpurchase.com/gems/wyominggsd,wy/buyer/public/publicInfo | ADAPTER (`states/wyoming.js`, 2026-11-10): 12 open. The Google Sites page only points to Public Purchase; its attached sheets are award history (not used). The Public Purchase listing is JavaScript-written with decoy spans; the adapter drops the ids named in the page's own `action(...)` hide calls and joins the rest, and fails loudly if the layout changes. Its robots.txt answered with a redirect; Public Purchase terms not reviewed. |
 | ID | purchasing.idaho.gov/open-and-future-solicitations | LISTING; rows not found in static HTML |
 | CT | portal.ct.gov/DAS/CTSource/BidBoard | LISTING; robots.txt blocks `/search-results/` only |
 | AK | aws.state.ak.us/OnlinePublicNotices | LISTING; search form |
 | HI | spo.hawaii.gov/for-vendors/bidding-opportunities | LISTING |
 | ND | omb.nd.gov/doing-business-state/bidders/bidding-opportunities-and-resources | LISTING |
-| WV | www.state.wv.us/admin/purchase/Bids/ | PARKED (checked 2026-11-10): the daily pages are "Bids Received on <date>": solicitation number, then bid PDFs and bidder names. They are bid openings (results), with no title, agency or deadline, so they list closed solicitations, not open ones. Open WV bids are in wvOASIS (not probed). |
+| WV | www.state.wv.us/admin/purchase/Bids/ | PARKED (checked 2026-11-10): the daily pages are "Bids Received on <date>": solicitation number, then bid PDFs and bidder names. They are bid openings (results), with no title, agency or deadline, so they list closed solicitations, not open ones. Open WV bids are in wvOASIS VSS (probed 2026-11-10): wvoasis.gov/vss/ links to prd311.wvoasis.gov/PRDVSS1X1ERP/Advantage4, a CGI Advantage single-page app. The public "View Published Solicitations" list works without login, but only as a stateful JSON/session app (no plain HTML or GET listing), so an adapter would mean replaying its action protocol. The host intermittently returns 503 (also for /robots.txt), and wvoasis.gov/robots.txt is a 404 (no rules). Still PARKED: feasible only with a browser-driven or reverse-engineered session client; not built. |
 | NY | www.nyscr.ny.gov/Ads/Search | ADAPTER (`states/newyork.js`, 2026-11-10). The earlier "no listing" note was wrong: the search is a server-rendered GET form (Status=Open, Top=50, Skip=n), no robots.txt, no bot check; 18 requests give all ~886 open ads. Kept: ads with a due date that can be bid on (General, Contractor Ads = subcontracting, discretionary/MWBE/continuous procurements; ~736). Dropped: sole-source, surplus, grant and RFI/RFC ads. Ad detail pages need a free login, so rows link to /Ads/Details/<CR#> and are not AI-read. Supersedes `fetch-ny-state.js` (removed). Logged-in reads are ruled out: the login form uses reCAPTCHA (v3), which we do not work around, so detail pages, deadline times and AI reads are not available. The site's /Home/Policies page says content is copyright-protected and copying needs written permission from ESD (case by case); it says nothing about automated access. Listing use stands on the pages being public with no robots.txt; no permission request has been sent. |
 
 ## Do not scrape / blocked
@@ -82,9 +82,16 @@ PA replied: eAlerts email is the only route; the user must subscribe first.
 
 PA (2026-11-10): `states/pennsylvania.js` reads the eAlert emails automatically over IMAP from a dedicated Gmail account when `PA_GMAIL_USER` and `PA_GMAIL_APP_PASSWORD` are set. WAITING: the app password has not been created yet (2-Step Verification step), so PA shows no notices; there is no manual route. The alert has no due date, so each notice gets the placeholder 2099-12-31, shown as "See eMarketplace", with a link built from the ID (`emarketplace.state.pa.us/Solicitations.aspx?SID=<ID>`). Pages are never fetched. Tested only against a fake IMAP server until the first real login.
 
+## Public-list probe (2026-11-10)
+- AZ: app.az.gov/robots.txt is `Disallow: /` (NO-BOTS). Do not scrape; request a feed.
+- MT: public events are on bids.sciquest.com (Jaggaer); its robots.txt is `Disallow: /` (NO-BOTS). One page was fetched before the robots.txt was read; nothing more was fetched.
+- WI: vendornet.wi.gov (no robots.txt) is a Blazor Server app, so no plain HTML/JSON listing; not built.
+- KS: supplier.sok.ks.gov PeopleSoft (no robots.txt) serves the bid page with a session cookie but the grid is empty until a search action POST (ICSID/ICStateNum/ICAction); not built, terms not reviewed.
+- FL (VBS archival since 2022-03-28) and VA (eVA open data is historical) are PARKED.
+
 ## Tried and parked
 - OK: the public list works (GET `ok.gov/dcs/solicit/app/solicitationSearch.php?status=open-pending`, then `?page=N` with the session cookie), but it holds only old items: of 155 rows, 153 are "Pending Award" and the 2 "Open" ones closed in 2020 and 2021. Current Oklahoma bids are not published there, so no adapter was built.
-- MO: bids moved to the new MOVERS system (login). WY: Google Sites page with attached files.
+- MO: bids moved to the new MOVERS system (login).
 - CT, AK, HI, ND: ASP.NET form pages or other systems; each needs form-post reverse engineering for few notices.
 
 ## Next

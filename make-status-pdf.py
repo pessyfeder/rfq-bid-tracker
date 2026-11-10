@@ -15,6 +15,7 @@ W=[("DE","Open-data API. 39 open."),("IN","HTML table. 54 open. Links go to the 
 ("MA","Periscope portal. 875 open at the last run. Slow (about 10 s a page). Earlier runs had one page (rows 725-749) blocked by the local network content filter. Document reads paced one every 5 s."),
 ("NY","NYS Contract Reporter: public listing (GET form), 736 open of 886 listed; sole-source, surplus, grant and RFI ads left out. Ad pages need a login behind reCAPTCHA, which we do not work around, so no document reads and no deadline times. Site terms require written permission to copy protected material; none requested."),
 ("RI","Form POST (ASP.NET). 30 open. Partial: covers quasi-state agencies, cities and towns, schools, colleges and grants only; executive-branch state bids are in a login system and are not covered."),
+("WY","Public Purchase (the Google Sites page only points to it). 12 open. The listing is scrambled with decoy text; we read it the way a browser does, by dropping the spans the page itself hides. One request per run."),
 ("TX","Automatic source only: TxDOT open-data dataset, 329 open. Texas replied: no feed, and automated page reads are not offered, so the other agencies stay off. The hand-exported CSV route was removed.")]
 ASK=[("PA","Replied: the free DGS e-Alert emails are the only route. Built: an automatic Gmail IMAP reader. Waiting on the Google app password (PA_GMAIL_USER, PA_GMAIL_APP_PASSWORD), so 0 notices so far. robots.txt forbids automated access to the site."),
 ("UT","robots.txt forbids all automated access (Bonfire). Email sent; reply pending."),
@@ -24,14 +25,16 @@ ASK=[("PA","Replied: the free DGS e-Alert emails are the only route. Built: an a
 ("NH","HTTP 403 to automated requests. Email sent; reply pending."),("TN","HTTP 403 to automated requests. Email sent; reply pending."),
 ("ME","HTTP 403, and login-only since October 2025. Email sent; reply pending."),("MN","Bot challenge. Email sent; reply pending.")]
 P=[("OK","The public list only holds old items: 153 of 155 rows are Pending Award; the 2 open ones closed in 2020 and 2021."),
-("MO","Bids moved to the new MOVERS system, which needs a login."),("WY","A Google Sites page with attached files."),
+("MO","Bids moved to the new MOVERS system, which needs a login."),
 ("CT","ASP.NET form pages; needs form-post work for few notices."),("AK","ASP.NET form pages or other system; needs form-post work for few notices."),
 ("HI","ASP.NET form pages or other system; needs form-post work for few notices."),("ND","ASP.NET form pages or other system; needs form-post work for few notices."),
+("FL","The old Vendor Bid System is archival only (ads posted before 28 March 2022). Current bids are in MyFloridaMarketPlace (JavaScript app, vendor login); no feed or open data found."),
+("VA","eVA Open Data Portal and data.virginia.gov hold historical procurement data only (yearly files, login to download), not open solicitations. No feed found."),
 ("AR","ARBuy shows 0 open bids while the state moves to Ariba in 2026. Recheck in a few months."),
-("WV","Public pages are Bids Received results (no title or deadline), so they list closed solicitations. Open bids are in wvOASIS, not checked.")]
-L=[("AZ","Redirects to login."),("NC","Dynamics portal, read-only offline shell."),("WA","JavaScript app."),("FL","JavaScript app."),
-("KY","Advantage VSS system."),("MI","Advantage VSS system."),("KS","Login or JavaScript."),("GA","Browser check."),("VA","eVA system."),
-("MT","Jaggaer system."),("NM","Bonfire or Jaggaer system."),("SD","ESM system."),("WI","Login."),("NE","The page came back empty.")]
+("WV","Public pages are Bids Received results (no title or deadline), so they list closed solicitations. Open bids are in wvOASIS, a login-free but JavaScript session app (no plain listing) that often returns 503, so it is not built yet.")]
+L=[("AZ","The public list is browsable, but app.az.gov robots.txt forbids all automated access, so no headless browser. Needs a feed request; none sent yet."),("NC","Dynamics portal, read-only offline shell."),("WA","JavaScript app."),
+("KY","Advantage VSS system."),("MI","Advantage VSS system."),("KS","Public bid page (PeopleSoft, no robots.txt) loads, but the grid is empty until a stateful search POST; not built, site terms not reviewed."),("GA","Browser check."),
+("MT","Public events are on the Jaggaer host bids.sciquest.com, whose robots.txt forbids all automated access. Needs a feed request; none sent yet."),("NM","Bonfire or Jaggaer system."),("SD","ESM system."),("WI","Public list needs no login but is a Blazor Server app (live websocket, no plain HTML or JSON). Not built."),("NE","The page came back empty.")]
 U=[("MD","Open data was last updated in 2019.")]
 groups=[("Working",W),("Asked for a feed",ASK),("Parked",P),("Login or JavaScript",L),("Unusable",U)]
 assert sum(len(g) for _,g in groups)==50
