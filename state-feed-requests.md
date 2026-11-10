@@ -28,13 +28,15 @@ Thank you,
 
 ## Where to send
 
-| State | Portal | Where to ask | Notes |
+Verified = the address appears on the state's own page when fetched on 2026-11-10.
+
+| State | Portal | Where to ask | Status |
 |---|---|---|---|
-| Texas | ESBD (txsmartbuy.gov/esbd) | ESBDsupport@cpa.texas.gov (512-463-3034, option 1); or spd.outreach@cpa.texas.gov | Comptroller's own listing. Texas's published APIs cover tax data, not ESBD. |
-| Pennsylvania | PA eMarketplace | The eMarketplace / IFB support address on the DGS "Business Inclusion and Supplier Development" page (844-724-7267) | I could not capture the email address; copy it from the page. Also ask about the free "e-Alerts" email notices. |
-| Utah | Utah Public Procurement Place (Bonfire) | U3PAdmin@utah.gov (U3P admin team); or the Division of Purchasing contact on purchasing.utah.gov | purchasingsolicitations@utah.gov appeared on an old form; unconfirmed. Bonfire vendor support (support@gobonfire.com) is not the right place for this. |
-| Ohio | OhioBuys | das.statepurchasing@das.ohio.gov (most current general address); or ohiobuys@das.ohio.gov | Sources disagreed and some are years old; confirm on procure.ohio.gov. |
-| Alabama | Alabama Buys | Alabamabuys@purchasing.alabama.gov, (334) 353-0700 | Vendors must register to respond; public listing may be readable once the state agrees. |
+| Texas | ESBD (txsmartbuy.gov/esbd) | ESBDsupport@cpa.texas.gov (512-463-3034, option 1); spd.outreach@cpa.texas.gov | Verified on comptroller.texas.gov/purchasing/contact/outreach.php. Texas's published APIs cover tax data, not ESBD. |
+| Pennsylvania | PA eMarketplace | gs-procure@state.pa.us (on emarketplace.state.pa.us); srmhelp@pa.gov for the supplier portal | Verified. **Free route that already exists:** DGS "e-Alert" emails notify the public of upcoming procurement opportunities (dgs.internet.state.pa.us/EAlerts_V2). |
+| Utah | Utah Public Procurement Place (Bonfire) | U3PAdmin@utah.gov (U3P admin team); or the contact form on purchasing.utah.gov/contact-us | Not verified: the site hides its addresses from automated reads. Use the contact form. |
+| Ohio | OhioBuys (now on an Ivalua login system) | OBM.ContactCenter@obm.ohio.gov (on the OhioBuys page); das.statepurchasing@das.ohio.gov | The first is verified but is a help desk for system problems. The second is from older documents, unverified. procure.ohio.gov no longer resolves. |
+| Alabama | Alabama Buys | Alabamabuys@purchasing.alabama.gov, (334) 353-0700 | Not verified: the state's pages showed no contact address when fetched; it came from search results. Phone is safest. |
 
 ## Also worth asking (blocked to automated requests, not forbidden)
 California (Cal eProcure), Colorado, Maine, New Hampshire, Tennessee, Minnesota returned errors or bot challenges.

@@ -7,6 +7,8 @@ live-*.js
 # Local AI cost log written by the fetchers
 ai-usage.log
 ai-cache.json
+# Personalized drafts with contact details (the repo is public)
+*.local.md
 # Personal notes and drafts for Israel (not part of the app)
 checklist-for-israel.*
 questions.md
