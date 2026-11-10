@@ -113,7 +113,7 @@ async function extract(html, apiKey) {
     headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01", "content-type": "application/json" },
     body: JSON.stringify({
       model: MODEL,
-      max_tokens: 1200,
+      max_tokens: 4000,
       system: PROMPT,
       messages: [{ role: "user", content: "<document>\n" + text + "\n</document>" }]
     })
@@ -144,7 +144,7 @@ async function extractWithPdfs(html, pdfs, apiKey) {
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-    body: JSON.stringify({ model: MODEL, max_tokens: 1200, system: PROMPT, messages: [{ role: "user", content }] })
+    body: JSON.stringify({ model: MODEL, max_tokens: 4000, system: PROMPT, messages: [{ role: "user", content }] })
   });
   if (!res.ok) throw new Error("Anthropic API returned HTTP " + res.status);
   const body = await res.json();
@@ -192,7 +192,7 @@ async function extractAmount(html, apiKey) {
     headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01", "content-type": "application/json" },
     body: JSON.stringify({
       model: MODEL,
-      max_tokens: 300,
+      max_tokens: 2000,
       system: AMOUNT_PROMPT,
       messages: [{ role: "user", content: "<document>\n" + text + "\n</document>" }]
     })
