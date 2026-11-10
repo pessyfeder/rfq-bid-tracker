@@ -13,7 +13,7 @@ const vm = require("vm");
 const { clean, requests } = require("./states/common");
 
 const OUT = path.join(__dirname, "live-states.js");
-const ADAPTERS = [require("./states/delaware"), require("./states/indiana"), require("./states/iowa"), require("./states/louisiana"), require("./states/mississippi"), require("./states/southcarolina"), require("./states/idaho"), require("./states/vermont"), require("./states/pennsylvania"), require("./states/txdot"), require("./states/rhodeisland"), ...require("./states/bso")];
+const ADAPTERS = [require("./states/delaware"), require("./states/indiana"), require("./states/iowa"), require("./states/louisiana"), require("./states/mississippi"), require("./states/southcarolina"), require("./states/idaho"), require("./states/vermont"), require("./states/pennsylvania"), require("./states/txdot"), require("./states/rhodeisland"), require("./states/newyork"), ...require("./states/bso")];
 
 const isDate = (s) => /^\d{4}-\d{2}-\d{2}$/.test(s || "");
 

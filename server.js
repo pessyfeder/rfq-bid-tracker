@@ -150,7 +150,7 @@ function statusBody() {
 
 // The human page (index.html + live-*.js) is served to this machine only: statuses and bid interest
 // are private.
-const STATIC_OK = /^\/(index\.html|facts\.js|data\.js|sample-data\.js|live-(nyc|sam|ny-state|states)\.js)?$/;
+const STATIC_OK = /^\/(index\.html|facts\.js|data\.js|sample-data\.js|live-(nyc|sam|states)\.js)?$/;
 const PAGE_HEADERS = {
   // Defence in depth: no inline event handlers, no remote scripts, no framing, even if agency text slipped through unescaped.
   "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'none'; form-action 'none'",

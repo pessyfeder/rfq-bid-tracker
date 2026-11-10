@@ -15,14 +15,12 @@ const SCHEMA_VERSION = 1;
 const KEEP_INACTIVE_DAYS = 90;
 
 // Sources the service knows about. `script` is the fetcher; `needsEnv` is checked before scheduling it.
-// NYS has no live source yet (see fetch-ny-state.js): it is read if its file exists but never scheduled.
 const SOURCES = [
   { id: "nyc", label: "NYC City Record", file: "live-nyc.js", script: "fetch-nyc.js", needsEnv: [] },
   // windowed: the fetch only looks back N days, so absence from it does not mean withdrawn.
   { id: "sam", label: "SAM.gov", file: "live-sam.js", script: "fetch-sam.js", needsEnv: ["SAM_API_KEY"], windowed: true },
-  { id: "nys", label: "NYS Contract Reporter", file: "live-ny-state.js", script: null, needsEnv: [] },
   // DE, IN, NV, NJ, OR, IL, MA (one adapter per state in states/; a failing state keeps its last notices).
-  { id: "states", label: "State portals (DE, IN, NV, NJ, OR, IL, MA, TX by CSV import)", file: "live-states.js", script: "fetch-states.js", needsEnv: [] }
+  { id: "states", label: "State portals (incl. NY)", file: "live-states.js", script: "fetch-states.js", needsEnv: [] }
 ];
 
 // ---- reading the fetchers' output ------------------------------------------------------------

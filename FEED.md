@@ -39,7 +39,7 @@ If `more` is `true`, the page was cut off by `limit`; call again with `after=<cu
 | `after=N` | Only records with `seq > N`; also includes `active:false` ones. |
 | `limit=N` | Page size (default 1000, max 5000). |
 | `level=Federal\|State\|Local` | |
-| `source=nyc\|sam\|nys` | |
+| `source=nyc\|sam\|states` | |
 | `open=0` | Include requests whose deadline has passed (default: hidden). |
 | `include_inactive=1` | Include records no longer in their source feed. |
 | `real_deadline=1` | Only requests with a real deadline (drops placeholder dates). |
@@ -62,7 +62,7 @@ If `more` is `true`, the page was cut off by `limit`; call again with `after=<cu
 |---|---|---|
 | `id` | string | Stable, unique across sources (`NYC-…`, SAM notice id). |
 | `seq` | int | Change counter (above). |
-| `source` | `nyc` \| `sam` \| `nys` | |
+| `source` | `nyc` \| `sam` \| `states` | |
 | `level` | `Federal` \| `State` \| `Local` | |
 | `title`, `agency`, `category` | string | Category is City Record category, or `NAICS <code>` for SAM.gov. Plain text: never render as HTML. |
 | `region` | string \| null | Place of performance / "New York City". |

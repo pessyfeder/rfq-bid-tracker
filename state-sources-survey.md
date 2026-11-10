@@ -46,7 +46,7 @@ robots.txt on these sites only blocks `/craft`.
 | HI | spo.hawaii.gov/for-vendors/bidding-opportunities | LISTING |
 | ND | omb.nd.gov/doing-business-state/bidders/bidding-opportunities-and-resources | LISTING |
 | WV | www.state.wv.us/admin/purchase/Bids/ | PARKED (checked 2026-11-10): the daily pages are "Bids Received on <date>": solicitation number, then bid PDFs and bidder names. They are bid openings (results), with no title, agency or deadline, so they list closed solicitations, not open ones. Open WV bids are in wvOASIS (not probed). |
-| NY | nyscr.ny.gov | Reachable, but no listing in the static page. State reply still pending. |
+| NY | www.nyscr.ny.gov/Ads/Search | ADAPTER (`states/newyork.js`, 2026-11-10). The earlier "no listing" note was wrong: the search is a server-rendered GET form (Status=Open, Top=50, Skip=n), no robots.txt, no bot check; 18 requests give all ~886 open ads. Kept: ads with a due date that can be bid on (General, Contractor Ads = subcontracting, discretionary/MWBE/continuous procurements; ~736). Dropped: sole-source, surplus, grant and RFI/RFC ads. Ad detail pages need a free login, so rows link to /Ads/Details/<CR#> and are not AI-read. Supersedes `fetch-ny-state.js`. |
 
 ## Do not scrape / blocked
 - NO-BOTS (robots.txt `Disallow: /` for all): TX (ESBD), PA (eMarketplace), UT (Bonfire), OH, AL.
