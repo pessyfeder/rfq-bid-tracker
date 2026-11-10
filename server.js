@@ -10,7 +10,10 @@
 const fs = require("fs");
 const path = require("path");
 const http = require("http");
+const zlib = require("zlib");
+const vm = require("vm");
 const { spawn } = require("child_process");
+const { computeFacts } = require("./facts");
 const feed = require("./service/feed");
 
 const ROOT = __dirname;
@@ -121,9 +124,13 @@ function stale() {
 }
 
 // ---- HTTP ----------------------------------------------------------------------------------------
+const wantsGzip = (res) => /\bgzip\b/.test((res.req && res.req.headers["accept-encoding"]) || "");
 const send = (res, code, body, type = "application/json") => {
-  res.writeHead(code, { "Content-Type": type + "; charset=utf-8", "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" });
-  res.end(typeof body === "string" ? body : JSON.stringify(body));
+  let buf = Buffer.from(typeof body === "string" ? body : JSON.stringify(body));
+  const headers = { "Content-Type": type + "; charset=utf-8", "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff", "Vary": "Accept-Encoding" };
+  if (buf.length > 1024 && wantsGzip(res)) { buf = zlib.gzipSync(buf); headers["Content-Encoding"] = "gzip"; }
+  res.writeHead(code, headers);
+  res.end(buf);
 };
 
 function statusBody() {
@@ -143,17 +150,61 @@ function statusBody() {
 
 // The human page (index.html + live-*.js) is served to this machine only: statuses and bid interest
 // are private.
-const STATIC_OK = /^\/(index\.html|data\.js|sample-data\.js|live-(nyc|sam|ny-state|states)\.js)?$/;
+const STATIC_OK = /^\/(index\.html|facts\.js|data\.js|sample-data\.js|live-(nyc|sam|ny-state|states)\.js)?$/;
+const PAGE_HEADERS = {
+  // Defence in depth: no inline event handlers, no remote scripts, no framing, even if agency text slipped through unescaped.
+  "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'none'; form-action 'none'",
+  "X-Content-Type-Options": "nosniff"
+};
+
+// The page gets a slim live-states.js: every notice without its long "shall" list (fetched per notice when opened, see
+// /shall/<id>) but with its bid factors already worked out from the full text, and compact JSON. Rebuilt only when the file changes.
+let slim = { mtime: 0, js: null, shall: new Map() };
+function slimStates() {
+  const p = path.join(ROOT, "live-states.js");
+  const mtime = fs.statSync(p).mtimeMs;
+  if (slim.js && slim.mtime === mtime) return slim;
+  const sandbox = { window: {} };
+  vm.runInNewContext(fs.readFileSync(p, "utf8"), sandbox, { timeout: 10000 }); // our own generated file
+  const entry = (sandbox.window.LIVE_SOURCES || [])[0];
+  if (!entry) throw new Error("live-states.js has no data");
+  const shall = new Map();
+  const rfqs = entry.rfqs.map((r) => {
+    const { shall: list, ...rest } = r;
+    rest.facts = computeFacts(r);
+    rest.shallCount = (list || []).length;
+    if (rest.shallCount) shall.set(r.id, list);
+    return rest;
+  });
+  const js = "(window.LIVE_SOURCES = window.LIVE_SOURCES || []).push(" + JSON.stringify({ meta: entry.meta, rfqs }) + ");\n";
+  slim = { mtime, js, shall, gz: null };
+  return slim;
+}
+
+const gzCache = new Map(); // file -> { mtime, gz }
 function serveStatic(req, res, pathname) {
   const file = pathname === "/" ? "index.html" : pathname.slice(1);
-  fs.readFile(path.join(ROOT, file), (err, buf) => {
-    if (err) return send(res, 404, { error: "not found" });
-    res.writeHead(200, { "Content-Type": file.endsWith(".html") ? "text/html; charset=utf-8" : "text/javascript; charset=utf-8", "Cache-Control": "no-store",
-      // Defence in depth: no inline event handlers, no remote scripts, no framing, even if agency text slipped through unescaped.
-      "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'none'; form-action 'none'",
-      "X-Content-Type-Options": "nosniff" });
-    res.end(buf);
-  });
+  const type = file.endsWith(".html") ? "text/html; charset=utf-8" : "text/javascript; charset=utf-8";
+  let buf, mtime;
+  try {
+    const full = path.join(ROOT, file);
+    mtime = fs.statSync(full).mtimeMs;
+    if (file === "live-states.js") { const s = slimStates(); buf = Buffer.from(s.js); mtime = s.mtime; }
+    else buf = fs.readFileSync(full);
+  } catch (e) {
+    return send(res, 404, { error: "not found" });
+  }
+  const etag = '"' + mtime.toString(36) + "-" + buf.length.toString(36) + '"';
+  // Revalidate each time (the files change when a refresh finishes) but skip the download when nothing changed.
+  const headers = { ...PAGE_HEADERS, "Content-Type": type, "Cache-Control": "no-cache", "ETag": etag, "Vary": "Accept-Encoding" };
+  if (req.headers["if-none-match"] === etag) { res.writeHead(304, headers); return res.end(); }
+  if (wantsGzip(res) && buf.length > 1024) {
+    let c = gzCache.get(file);
+    if (!c || c.etag !== etag) { c = { etag, gz: zlib.gzipSync(buf) }; gzCache.set(file, c); }
+    buf = c.gz; headers["Content-Encoding"] = "gzip";
+  }
+  res.writeHead(200, headers);
+  res.end(buf);
 }
 
 const server = http.createServer((req, res) => {
@@ -182,6 +233,11 @@ const server = http.createServer((req, res) => {
       return send(res, 404, { error: "unknown endpoint" });
     }
     if (req.method === "GET" && local && STATIC_OK.test(p)) return serveStatic(req, res, p);
+    const sh = /^\/shall\/([^/]+)$/.exec(p);
+    if (req.method === "GET" && local && sh) { // the long "shall" list of one notice, for the page
+      try { return send(res, 200, { shall: slimStates().shall.get(decodeURIComponent(sh[1])) || [] }); }
+      catch { return send(res, 404, { error: "not found" }); }
+    }
     send(res, 404, { error: "not found" });
   } catch (e) {
     log("request error: " + e.message);
