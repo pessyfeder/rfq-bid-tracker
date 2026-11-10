@@ -126,6 +126,7 @@
     </thead>
     <tbody id="body"></tbody>
   </table>
+  <button id="more" class="toggle" hidden style="margin:12px 24px"></button>
   <div class="empty" id="empty" hidden>No requests match your filters.</div>
 </div>
 
@@ -276,6 +277,7 @@
     var long = r.scope.length > SCOPE_MAX;
     var text = long && !open ? r.scope.slice(0, SCOPE_MAX - 3).trim() + "..." : r.scope;
     return '<div class="scope">' + esc(text) + "</div>" +
+      (r.aiRead ? '<div class="elig-note">AI-extracted, please verify.</div>' : "") +
       (long ? '<button class="toggle scope-toggle" data-id="' + esc(r.id) + '" aria-expanded="' + open + '">' + (open ? "Show less" : "Show more") + "</button> " : "");
   }
 
@@ -324,24 +326,29 @@
     }
     // A notice that was never read cannot be said to state no amount: say that it was not looked for.
     if (!r.aiRead) return '<td class="num"><span class="na">Not known</span><div class="val-note">Notice not read, so a stated amount was not looked for; too few similar past awards to estimate</div></td>';
-    return '<td class="num"><span class="na">Not published</span><div class="val-note">No stated amount found in the notice; too few similar past awards (federal needs a valid NAICS code)</div></td>';
+    return '<td class="num"><span class="na">Not published</span><div class="val-note">No stated amount found in the notice; too few similar past awards (federal needs a valid NAICS code) &middot; AI-read, please verify</div></td>';
   }
 
-  function matches(r) {
+  // Read the filter controls and parse the search text once per render (not once per row).
+  function makeFilter() {
     var q = $("q").value.trim().toLowerCase();
-    if ($("level").value && r.level !== $("level").value) return false;
-    if ($("category").value && r.category !== $("category").value) return false;
-    if ($("hideClosed").checked && r.daysLeft < 0) return false;
-    if ($("hideFlagged").checked && ((r.details.warnings || []).length || r.noDue)) return false;
-    if (q) {
-      var pq = parseQuery(q);
+    return { level: $("level").value, category: $("category").value, hideClosed: $("hideClosed").checked,
+      hideFlagged: $("hideFlagged").checked, pq: q ? parseQuery(q) : null };
+  }
+  function matches(r, f) {
+    if (f.level && r.level !== f.level) return false;
+    if (f.category && r.category !== f.category) return false;
+    if (f.hideClosed && r.daysLeft < 0) return false;
+    if (f.hideFlagged && ((r.details.warnings || []).length || r.noDue)) return false;
+    var pq = f.pq;
+    if (pq) {
       if (pq.noDue && !r.noDue) return false;
       for (var i = 0; i < pq.nums.length; i++) {
         var n = pq.nums[i], v = n.get ? n.get(r) : r[n.field];
         if (v == null || !n.test(v)) return false;
       }
       if (pq.terms.length) {
-        var hay = haystack(r);
+        var hay = r._hay || (r._hay = haystack(r));
         for (var j = 0; j < pq.terms.length; j++) if (hay.indexOf(pq.terms[j]) < 0) return false;
       }
     }
@@ -423,9 +430,11 @@
     return parts.join(" ").toLowerCase();
   }
 
+  var PAGE = 50, shownCount = PAGE;
   function render() {
     renderHead();
-    var list = rows.filter(matches);
+    var f = makeFilter();
+    var list = rows.filter(function (r) { return matches(r, f); });
     var k = sort.key;
     list.sort(function (a, b) {
       var x = a[k], y = b[k];
@@ -437,7 +446,8 @@
       return (x - y) * sort.dir;
     });
     var total = list.length;
-    $("body").innerHTML = list.map(function (r) {
+    var shown = list.slice(0, shownCount); // thousands of rows make every redraw slow, so show a page at a time
+    function rowHtml(r) {
       var open = expanded[r.id];
       var shallRow = open ? '<tr class="shall-row' + (r.daysLeft < 0 ? " closed" : "") + '"><td colspan="' + COLUMNS.length + '"><h4>Key requirements ("shall")' + (r.aiRead ? " &middot; AI-read, please verify" : "") + '</h4><ul>' +
         r.shall.map(function (s) { return "<li>" + esc(s.text) + (s.ref ? ' <span class="ref">[' + esc(s.ref) + "]</span>" : "") + "</li>"; }).join("") +
@@ -456,11 +466,25 @@
           scopeHtml(r, !!scopeOpen[r.id]) +
           (r.shall.length ? '<button class="toggle" data-id="' + esc(r.id) + '" aria-expanded="' + !!open + '">' + (open ? "Hide" : "Show") + " all requirements (" + r.shall.length + ")</button>" : "") +
           "</td></tr>" + shallRow;
-    }).join("");
+    }
+    var frag = document.createDocumentFragment();
+    shown.forEach(function (r) {
+      var sig = (expanded[r.id] ? "1" : "0") + (scopeOpen[r.id] ? "1" : "0");
+      if (!r._els || r._els.sig !== sig) { // built once per row (and again only when its Show/Hide state changes)
+        var t = document.createElement("tbody");
+        t.innerHTML = rowHtml(r);
+        r._els = { sig: sig, nodes: Array.prototype.slice.call(t.children) };
+      }
+      r._els.nodes.forEach(function (n) { frag.appendChild(n); });
+    });
+    $("body").replaceChildren(frag);
+    var more = $("more");
+    more.hidden = total <= shown.length;
+    more.textContent = "Show " + Math.min(PAGE, total - shown.length) + " more (" + (total - shown.length) + " not shown)";
     $("empty").hidden = total > 0;
     $("empty").textContent = rows.length ? "No requests match your filters." : "No data";
     var m = window.RFQS_META;
-    $("count").textContent = total + " of " + rows.length + " requests · " +
+    $("count").textContent = (shown.length < total ? "showing " + shown.length + " of " + total + " matching, " : total + " of ") + rows.length + " requests · " +
       (m ? "live from " + m.source + ", updated " + new Date(m.fetchedAt).toLocaleString("en-US") : "No data");
   }
 
@@ -470,18 +494,23 @@
     map[b.dataset.id] = !map[b.dataset.id];
     render();
   });
+  $("more").addEventListener("click", function () { shownCount += PAGE; render(); });
   $("head").addEventListener("click", function (e) {
     var th = e.target.closest("th"); if (!th || th.classList.contains("nosort")) return;
     var key = th.dataset.key;
     sort = sort.key === key ? { key: key, dir: -sort.dir } : { key: key, dir: key === "value" ? -1 : 1 };
+    shownCount = PAGE;
     render();
   });
   ["q", "level", "category", "hideClosed", "hideFlagged"].forEach(function (id) {
-    function onFilter() { render(); }
-    $(id).addEventListener("input", onFilter);
-    $(id).addEventListener("change", onFilter);
+    function onFilter() { shownCount = PAGE; render(); }
+    var timer;
+    $(id).addEventListener("input", function () { clearTimeout(timer); timer = setTimeout(onFilter, 0); }); // coalesce events from one keystroke
+    $(id).addEventListener("change", function () { clearTimeout(timer); onFilter(); });
   });
   render();
+  // Build every row's search text now, while the page is idle, so the first keystroke is not slower than the rest.
+  setTimeout(function () { rows.forEach(function (r) { if (!r._hay) r._hay = haystack(r); }); }, 0);
 })();
 </script>
 </body>
