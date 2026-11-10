@@ -43,4 +43,13 @@ function toEastern(y, mo, d, h, mi, tz) {
   return { due: `${p.year}-${p.month}-${p.day}`, dueTime: `${h12}:${p.minute} ${h24 >= 12 ? "PM" : "AM"} ET` };
 }
 
-module.exports = { http, sleep, clean, decodeEntities, toEastern };
+// A UTC instant (ms) -> the same { due, dueTime } in Eastern time.
+function instantToEastern(ms) {
+  const p = Object.fromEntries(new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York", hourCycle: "h23", year: "numeric", month: "2-digit", day: "2-digit", hour: "numeric", minute: "2-digit"
+  }).formatToParts(new Date(ms)).map((x) => [x.type, x.value]));
+  const h24 = Number(p.hour), h12 = h24 % 12 || 12;
+  return { due: `${p.year}-${p.month}-${p.day}`, dueTime: `${h12}:${p.minute} ${h24 >= 12 ? "PM" : "AM"} ET` };
+}
+
+module.exports = { http, sleep, clean, decodeEntities, toEastern, instantToEastern };

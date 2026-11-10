@@ -57,9 +57,11 @@ function makeAdapter({ code, name, host, tz }) {
           return { xml, got: parseRows(xml, headers) };
         };
         let { xml, got } = await post();
+        if (/BlockPage|blocked by your filter/i.test(xml)) throw new Error(`Blocked by a network content filter at row ${first} of ${total}; ask IT to allow ${new URL(url).host}`);
         if (!got.length) { await sleep(4000); ({ xml, got } = await post()); } // slow portals sometimes return an empty page once
         if (!got.length) {
           if (process.env.BSO_DEBUG) console.error("EMPTY PAGE RESPONSE:", xml.slice(0, 600));
+          if (/BlockPage|blocked by your filter/i.test(xml)) throw new Error(`Blocked by a network content filter at row ${first} of ${total}; ask IT to allow ${new URL(url).host}`);
           throw new Error(`Paging stopped at row ${first} of ${total}`);
         }
         all = all.concat(got);
