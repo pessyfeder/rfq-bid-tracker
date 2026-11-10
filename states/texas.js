@@ -127,6 +127,7 @@ function localDoc(id) {
 
 module.exports = {
   code: "TX", name: "Texas",
+  noPageReadsWhy: "ESBD does not allow automated reads",
   noPageReadsNote: "Texas ESBD does not allow automated reads. Open the notice on ESBD, or save it to imports/texas-notices/ to have it read.",
   localDoc, // used instead of fetching pages (see addDocumentReads)
   noPageReads: true, // robots.txt forbids automated reads of ESBD: the AI page read in fetch-states.js must not fetch these URLs

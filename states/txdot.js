@@ -7,7 +7,6 @@ const { http, clean, toEastern } = require("./common");
 
 const API = "https://data.texas.gov/resource/qh8x-rm8r.json";
 const PAGE_URL = "https://www.txdot.gov/business/letting-bids/project-letting.html"; // TxDOT's public letting information
-const usd = (n) => "$" + Math.round(n).toLocaleString("en-US");
 
 module.exports = {
   code: "TXDOT", name: "TxDOT",
@@ -39,7 +38,6 @@ module.exports = {
       const specs = [...new Set(items.map((x) => clean(x.specification_description)).filter(Boolean))].slice(0, 4);
       const bits = [
         r.let_type, r.district_division ? r.district_division + " District" : "",
-        est > 0 ? "Engineer's estimate " + usd(est) : "",
         r.bidder_prequalification_waiver === true ? "Prequalification waived" : r.bidder_prequalification_waiver === false ? "Prequalification required unless waived" : "",
         r.mandatory_pre_bidders === true ? "Mandatory pre-bid conference" : "",
         specs.length ? "Work includes: " + specs.join("; ") : ""
@@ -54,6 +52,7 @@ module.exports = {
         due: when.due, dueTime: when.dueTime,
         url: PAGE_URL,
         description: bits.join(". ") + ".",
+        value: est > 0 ? est : null, valueLabel: "Engineer's estimate, from TxDOT's open data",
         region: "Texas"
       });
     }

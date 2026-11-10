@@ -35,7 +35,8 @@ function toRfq(n, a) {
     dueTime: n.dueTime || "No data",
     level: "State",
     agency: clean(n.agency) || a.name + " agency",
-    value: null,
+    value: Number.isFinite(n.value) && n.value > 0 ? n.value : null, // only when the source publishes an amount
+    valueLabel: n.valueLabel || undefined,
     naics: n.naics || null, // internal: dropped before writing; only used to look up the estimate
     rfqUrl: url,
     details: { region: clean(n.region) || a.name, requirements: [], restriction: null, amended: false, warnings }
@@ -67,7 +68,7 @@ async function addStateEstimates(list) {
 const MAX_READS = Number(process.env.STATE_MAX_READS) || 60;
 async function addDocumentReads(list, prevById, adapter) {
   const key = process.env.ANTHROPIC_API_KEY;
-  if (adapter && adapter.noPageReads && adapter.noPageReadsNote) for (const r of list) r.details.readNote = adapter.noPageReadsNote; // shown whether or not a key is set
+  if (adapter && adapter.noPageReads) for (const r of list) { if (adapter.noPageReadsNote) r.details.readNote = adapter.noPageReadsNote; if (adapter.noPageReadsWhy) r.details.readWhy = adapter.noPageReadsWhy; } // shown whether or not a key is set
   if (!key) return;
   const local = adapter && adapter.noPageReads ? adapter.localDoc : null; // portal forbids reads: only files saved by hand
   if (adapter && adapter.noPageReads) {

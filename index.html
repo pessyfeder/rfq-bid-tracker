@@ -272,7 +272,7 @@
   var SCOPE_MAX = 220;
   var scopeOpen = {}; // request id -> true when full description is shown
   function scopeHtml(r, open) {
-    if (!r.scope) return '<div class="scope"><span class="na">No data</span></div>';
+    if (!r.scope) return '<div class="scope"><span class="na">' + esc(r.details && r.details.readWhy ? "Not read: " + r.details.readWhy + ". The source data has no description." : "No data") + "</span></div>";
     var long = r.scope.length > SCOPE_MAX;
     var text = long && !open ? r.scope.slice(0, SCOPE_MAX - 3).trim() + "..." : r.scope;
     return '<div class="scope">' + esc(text) + "</div>" +
@@ -292,7 +292,7 @@
   }
   function valueCell(r) {
     var e = r.valueEst;
-    if (r.value != null) return '<td class="num">' + money(r.value) + '<div class="val-note">Published by the agency</div></td>';
+    if (r.value != null) return '<td class="num">' + money(r.value) + '<div class="val-note">' + esc(r.valueLabel || "Published by the agency") + "</div></td>";
     if (e && e.kind === "stated") {
       return '<td class="num">' + money(e.amount) + '<div class="val-note">Stated in the notice &middot; AI-extracted, please verify</div>' +
         '<details class="val-ex"><summary>Where from</summary><div>Quoted from the notice: &ldquo;' + esc(e.quote) + "&rdquo;</div></details></td>";
@@ -322,7 +322,9 @@
           : "Matched on title keywords: " + esc(e.keywords.join(", ")) + ". ") +
         "Most recent:</div><ul>" + list + "</ul></details></td>";
     }
-    return '<td class="num"><span class="na">Not published</span><div class="val-note">No stated amount; too few similar past awards (federal needs a valid NAICS code)</div></td>';
+    // A notice that was never read cannot be said to state no amount: say that it was not looked for.
+    if (!r.aiRead) return '<td class="num"><span class="na">Not known</span><div class="val-note">Notice not read, so a stated amount was not looked for; too few similar past awards to estimate</div></td>';
+    return '<td class="num"><span class="na">Not published</span><div class="val-note">No stated amount found in the notice; too few similar past awards (federal needs a valid NAICS code)</div></td>';
   }
 
   function matches(r) {
