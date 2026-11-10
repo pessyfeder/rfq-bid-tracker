@@ -71,6 +71,9 @@ function stamp(dateStr, timeStr) {
 
 const isoDate = (s) => { const r = stamp(s, ""); return r ? r.due : null; };
 
+// The export gives only the agency/member NUMBER (e.g. 601), not a name.
+const agencyName = (a) => (!a ? "Texas agency" : /^\d+$/.test(a) ? `Texas agency ${a}` : a);
+
 function newestCsv() {
   let files = [];
   try { files = fs.readdirSync(DIR).filter((f) => /^texas.*\.csv$/i.test(f)); } catch { /* no folder */ }
@@ -94,7 +97,7 @@ function parse(text) {
     const titleCol = clean(get(r, "title")), desc = clean(get(r, "description"));
     out.push({
       id: id.replace(/[^A-Za-z0-9._-]+/g, "-"),
-      title: titleCol, agency: clean(get(r, "agency")) || "Texas agency",
+      title: titleCol, agency: agencyName(clean(get(r, "agency"))),
       category: clean(get(r, "category")) || "No data",
       posted: isoDate(get(r, "posted")),
       due: when.due, dueTime: when.dueTime,
