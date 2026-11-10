@@ -2,7 +2,7 @@
 
 These five states publish `Disallow: /` in robots.txt for their bid sites, so we should not scrape them.
 The compliant free route is to ask each for a feed, an API, a data download, or written permission to read the
-public bid list once a day. **These were sent by the user (as of 2026-11-10); replies pending.** Fill in the [bracketed] parts and
+public bid list once a day. **These were sent by the user (as of 2026-11-10); replies: TX and PA answered 2026-11-10 (see below); others pending.** Fill in the [bracketed] parts and
 confirm each address first, since several came from search results and some may be out of date.
 
 ## Template
@@ -41,3 +41,7 @@ Verified = the address appears on the state's own page when fetched on 2026-11-1
 ## Also worth asking (blocked to automated requests, not forbidden)
 California (Cal eProcure), Colorado, Maine, New Hampshire, Tennessee, Minnesota returned errors or bot challenges.
 The same template works; for these, ask for permission or a feed rather than a way around the block.
+
+## Replies received (2026-11-10)
+- **Texas (SPD, Comptroller):** no data feed from ESBD. Search results can be exported as CSV from the site (limit 20,000 rows). Posted solicitations can be listed on SmartBuy: Vendor > ESBD Bid Opportunities > Status = Posted (filter by start/end date). Route: manual CSV export, then import; no automated reads.
+- **Pennsylvania (DGS Supplier Services):** the only notification route is eAlerts (email of open solicitations). Sign-up instructions are on the Supplier Service Center page; the e-Alerts login is dgs.internet.state.pa.us/EAlerts_V2/Login.aspx, with an "E-Alerts Guide" PDF. Bidding help: srmhelp@pa.gov.

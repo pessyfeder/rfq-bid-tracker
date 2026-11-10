@@ -77,6 +77,9 @@ VT is also built: `vermont.js` reads the OPC "Current Bid Listings" page (9 open
 AR was checked and not built: ARBuy's Periscope page loads but lists 0 open bids (the state is moving to a new system).
 Draft emails for the states that forbid automated access are in `state-feed-requests.md` (sent by the user as of 2026-11-10; replies pending).
 
+TX replied: no feed; CSV export (max 20,000) from SmartBuy ESBD Bid Opportunities, Status = Posted. Built: `states/texas.js` reads a hand-exported CSV from `imports/` (git-ignored), then `node fetch-states.js TX`. Column names are matched by keyword because no sample export was available; check the first real file. Times are treated as Central.
+PA replied: eAlerts email is the only route; the user must subscribe first.
+
 Planned: read Pennsylvania's free DGS e-Alert emails automatically (needs a dedicated mailbox the app can read over IMAP;
 not built; the user cannot create a new mailbox because the provider needs a QR-code check and they have no smartphone). Personalized, ready-to-send emails are in `state-feed-requests.local.md` (git-ignored; the repo is public).
 
