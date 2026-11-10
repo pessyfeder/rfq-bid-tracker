@@ -264,7 +264,7 @@
   function factsHtml(r) {
     var f = keyFacts(r);
     if (!f.length) return "";
-    return '<div class="facts"><div class="facts-h">Bid factors' + (r.aiRead ? " &middot; AI-read, verify" : "") + "</div>" +
+    return '<div class="facts"><div class="facts-h">Bid factors' + (r.aiRead ? " &middot; AI read, please verify" : "") + "</div>" +
       f.map(function (k) {
         return '<span class="fact ' + k.sev + '" title="' + esc(k.why) + '">' + (k.sev === "hard" ? "&#9873; " : "") + esc(k.label) + "</span>";
       }).join("") + "</div>";
@@ -289,12 +289,12 @@
     var long = r.scope.length > SCOPE_MAX;
     var text = long && !open ? r.scope.slice(0, SCOPE_MAX - 3).trim() + "..." : r.scope;
     return '<div class="scope">' + esc(text) + "</div>" +
-      (r.aiRead ? '<div class="elig-note">AI-extracted, please verify.</div>' : "") +
+      (r.aiRead ? '<div class="elig-note">AI read, please verify.</div>' : "") +
       (long ? '<button class="toggle scope-toggle" data-id="' + esc(r.id) + '" aria-expanded="' + open + '">' + (open ? "Show less" : "Show more") + "</button> " : "");
   }
 
   function eligCell(r) {
-    var ai = r.aiRead ? '<div class="elig-note">AI-extracted, please verify.</div>' : "";
+    var ai = r.aiRead ? '<div class="elig-note">AI read, please verify.</div>' : "";
     if (r.requires == null) {
       // Page was read but never says who may bid (e.g. Delaware's pages hold only title, dates and a contact)
       if (r.aiRead) return '<td><span class="elig unclear">Not stated</span><div class="elig-note">' + esc((r.details && r.details.readNote) || "The notice was read but does not say who may bid. Check the agency's documents or contact.") + "</div>" + ai + "</td>";
@@ -312,7 +312,7 @@
     var e = r.valueEst;
     if (r.value != null) return '<td class="num">' + money(r.value) + '<div class="val-note">' + esc(r.valueLabel || "Published by the agency") + "</div></td>";
     if (e && e.kind === "stated") {
-      return '<td class="num">' + money(e.amount) + '<div class="val-note">Stated in the notice &middot; AI-extracted, please verify</div>' +
+      return '<td class="num">' + money(e.amount) + '<div class="val-note">Stated in the notice &middot; AI read, please verify</div>' +
         '<details class="val-ex"><summary>Where from</summary><div>Quoted from the notice: &ldquo;' + esc(e.quote) + "&rdquo;</div></details></td>";
     }
     if (e && e.kind === "similar") {
@@ -342,7 +342,7 @@
     }
     // A notice that was never read cannot be said to state no amount: say that it was not looked for.
     if (!r.aiRead) return '<td class="num"><span class="na">Not known</span><div class="val-note">Notice not read, so a stated amount was not looked for; too few similar past awards to estimate</div></td>';
-    return '<td class="num"><span class="na">Not published</span><div class="val-note">No stated amount found in the notice; too few similar past awards (federal needs a valid NAICS code) &middot; AI-read, please verify</div></td>';
+    return '<td class="num"><span class="na">Not published</span><div class="val-note">No stated amount found in the notice; too few similar past awards (federal needs a valid NAICS code) &middot; AI read, please verify</div></td>';
   }
 
   // Read the filter controls and parse the search text once per render (not once per row).
@@ -466,7 +466,7 @@
     var shown = list.slice(0, shownCount); // thousands of rows make every redraw slow, so show a page at a time
     function rowHtml(r) {
       var open = expanded[r.id];
-      var shallRow = open ? '<tr class="shall-row' + (r.daysLeft < 0 ? " closed" : "") + '"><td colspan="' + COLUMNS.length + '"><h4>Key requirements ("shall")' + (r.aiRead ? " &middot; AI-read, please verify" : "") + '</h4><ul>' +
+      var shallRow = open ? '<tr class="shall-row' + (r.daysLeft < 0 ? " closed" : "") + '"><td colspan="' + COLUMNS.length + '"><h4>Key requirements ("shall")' + (r.aiRead ? " &middot; AI read, please verify" : "") + '</h4><ul>' +
         r.shall.map(function (s) { return "<li>" + esc(s.text) + (s.ref ? ' <span class="ref">[' + esc(s.ref) + "]</span>" : "") + "</li>"; }).join("") +
         '</ul><a href="' + esc(safeUrl(r.rfqUrl)) + '" target="_blank" rel="noopener">Open the full RFQ document</a></td></tr>' : "";
       return '<tr class="' + (r.daysLeft < 0 ? "closed" : "") + '">' +
@@ -474,7 +474,7 @@
         "<td>" + esc(r.category).replace(/\//g, "/<wbr>") + "</td>" +
         eligCell(r) +
         "<td>" + fmtDate(r.posted) + "</td>" +
-        "<td>" + (r.noDue ? "No real due date" : fmtDate(r.due) + '<div class="agency">' + esc(r.dueTime) + "</div>") + "</td>" +
+        "<td>" + (r.noDue ? (/eMarketplace/.test(r.dueTime || "") ? esc(r.dueTime) : "No real due date") : fmtDate(r.due) + '<div class="agency">' + esc(r.dueTime) + "</div>") + "</td>" +
         leftCell(r) +
         '<td><span class="badge ' + esc(r.level) + '">' + esc(r.level) + "</span></td>" +
         '<td><a href="' + esc(safeUrl(r.rfqUrl)) + '" target="_blank" rel="noopener">Open RFQ</a></td>' +

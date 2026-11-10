@@ -66,6 +66,10 @@ async function addStateEstimates(list) {
 // "shall" points, the same as the NYC/SAM feeds. Needs ANTHROPIC_API_KEY; without it rows stay "Not read".
 // Notices already read on an earlier run are reused (no fetch, no cost); MAX_READS caps new reads per run.
 const MAX_READS = Number(process.env.STATE_MAX_READS) || 60;
+// Bump DOCS_VERSION when states/docs.js learns to reach more documents; rows read before that with no restriction found are read again.
+// Version 2: Periscope attachment downloads, Word (.docx) files, Indiana per-event zips.
+const DOCS_VERSION = 2;
+const REREAD_STATES = new Set(["NV", "NJ", "OR", "IL", "MA", "SC", "IN"]);
 async function addDocumentReads(list, prevById, adapter) {
   const key = process.env.ANTHROPIC_API_KEY;
   if (adapter && adapter.noPageReads) for (const r of list) { if (adapter.noPageReadsNote) r.details.readNote = adapter.noPageReadsNote; if (adapter.noPageReadsWhy) r.details.readWhy = adapter.noPageReadsWhy; } // shown whether or not a key is set
@@ -81,7 +85,12 @@ async function addDocumentReads(list, prevById, adapter) {
   const todo = [];
   for (const r of list) {
     const p = prevById.get(r.id);
-    if (p && p.aiRead) { r.requires = p.requires; r.scope = p.scope; r.shall = p.shall; r.aiRead = true; reused++; }
+    // A read that found no restriction is redone once when the reader improved (DOCS_VERSION), for states whose attachments it now reaches.
+    const stale = p && p.requires == null && (p.docsV || 0) < DOCS_VERSION && REREAD_STATES.has(adapter.code);
+    if (p && p.aiRead) { r.requires = p.requires; r.scope = p.scope; r.shall = p.shall; r.aiRead = true; if (p.docsV) r.docsV = p.docsV; } // a failed re-read keeps this
+    if (p && p.aiRead && !stale) reused++;
+    else if (stale) todo.push(r);
+    else if (process.env.STATE_REREAD_ONLY && !(p && p.aiRead)) continue; // re-read only notices that were already read once
     else if (!local || local(r.id.slice(adapter.code.length + 1))) todo.push(r); // local mode: only notices with a saved file
   }
   todo.sort((a, b) => a.due.localeCompare(b.due)); // soonest deadlines first
@@ -97,7 +106,7 @@ async function addDocumentReads(list, prevById, adapter) {
         if (res.requires !== null) r.requires = res.requires;
         if (res.scope) r.scope = res.scope;
         if (res.shall.length) r.shall = res.shall;
-        r.aiRead = true; read++;
+        r.aiRead = true; r.docsV = DOCS_VERSION; read++;
       } catch (e) {
         const st = (/HTTP ([45][0-9][0-9])/.exec(e.message) || [])[1];
         if (st) refused[st] = (refused[st] || 0) + 1; else { failed++; console.warn(`  read failed for ${r.id}: ${e.message}`); }
