@@ -45,7 +45,7 @@ robots.txt on these sites only blocks `/craft`.
 | AK | aws.state.ak.us/OnlinePublicNotices | LISTING; search form |
 | HI | spo.hawaii.gov/for-vendors/bidding-opportunities | LISTING |
 | ND | omb.nd.gov/doing-business-state/bidders/bidding-opportunities-and-resources | LISTING |
-| WV | state.wv.us/admin/purchase/Bids | Reachable; text only, listing not inspected |
+| WV | www.state.wv.us/admin/purchase/Bids/ | PARKED (checked 2026-11-10): the daily pages are "Bids Received on <date>": solicitation number, then bid PDFs and bidder names. They are bid openings (results), with no title, agency or deadline, so they list closed solicitations, not open ones. Open WV bids are in wvOASIS (not probed). |
 | NY | nyscr.ny.gov | Reachable, but no listing in the static page. State reply still pending. |
 
 ## Do not scrape / blocked
