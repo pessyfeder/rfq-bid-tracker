@@ -13,7 +13,7 @@ const vm = require("vm");
 const { clean, requests } = require("./states/common");
 
 const OUT = path.join(__dirname, "live-states.js");
-const ADAPTERS = [require("./states/delaware"), require("./states/indiana"), require("./states/iowa"), require("./states/louisiana"), require("./states/mississippi"), require("./states/southcarolina"), require("./states/idaho"), require("./states/vermont"), require("./states/texas"), ...require("./states/bso")];
+const ADAPTERS = [require("./states/delaware"), require("./states/indiana"), require("./states/iowa"), require("./states/louisiana"), require("./states/mississippi"), require("./states/southcarolina"), require("./states/idaho"), require("./states/vermont"), require("./states/texas"), require("./states/txdot"), ...require("./states/bso")];
 
 const isDate = (s) => /^\d{4}-\d{2}-\d{2}$/.test(s || "");
 
@@ -67,11 +67,11 @@ async function addStateEstimates(list) {
 const MAX_READS = Number(process.env.STATE_MAX_READS) || 60;
 async function addDocumentReads(list, prevById, adapter) {
   const key = process.env.ANTHROPIC_API_KEY;
+  if (adapter && adapter.noPageReads && adapter.noPageReadsNote) for (const r of list) r.details.readNote = adapter.noPageReadsNote; // shown whether or not a key is set
   if (!key) return;
   const local = adapter && adapter.noPageReads ? adapter.localDoc : null; // portal forbids reads: only files saved by hand
   if (adapter && adapter.noPageReads) {
-    if (adapter.noPageReadsNote) for (const r of list) r.details.readNote = adapter.noPageReadsNote;
-    if (!local) { console.log(`  ${adapter.code}: page reads skipped (the portal forbids automated reads); rows stay "Not read"`); return; }
+    if (!local) { console.log(`  ${adapter.code}: page reads skipped (${adapter.noPageReadsWhy || "the portal forbids automated reads"}); rows stay "Not read"`); return; }
   }
   const readNotice = local ? async (url, r) => local(r.id.slice(adapter.code.length + 1)) : require("./states/docs").readNotice;
   const ai = require("./ai-extract");
@@ -161,6 +161,14 @@ function readPrevious() {
     }
   }
   if (!okNow.size) { console.error("No state fetched successfully; leaving live-states.js unchanged."); process.exit(1); }
+
+  // TxDOT's open-data notices are the automatic source for ESBD's local-let notices (id "<CSJ>_<MMYY>"): drop the CSV copies.
+  const txdot = new Set(rfqs.filter((r) => r.id.startsWith("TXDOT-")).map((r) => r.id.slice(6)));
+  if (txdot.size) {
+    const before = rfqs.length;
+    rfqs = rfqs.filter((r) => !(r.id.startsWith("TX-") && txdot.has(r.id.slice(3).split("_")[0])));
+    if (before !== rfqs.length) console.log(`  dropped ${before - rfqs.length} Texas CSV notice(s) that TxDOT's open data already lists`);
+  }
 
   const meta = { source: "State procurement portals", fetchedAt: new Date().toISOString(), count: rfqs.length, states: results };
   const tmp = OUT + ".tmp";
