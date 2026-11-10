@@ -13,7 +13,7 @@ const vm = require("vm");
 const { clean, requests } = require("./states/common");
 
 const OUT = path.join(__dirname, "live-states.js");
-const ADAPTERS = [require("./states/delaware"), require("./states/indiana"), require("./states/iowa"), require("./states/louisiana"), require("./states/mississippi"), require("./states/southcarolina"), require("./states/idaho"), require("./states/vermont"), require("./states/pennsylvania"), require("./states/txdot"), ...require("./states/bso")];
+const ADAPTERS = [require("./states/delaware"), require("./states/indiana"), require("./states/iowa"), require("./states/louisiana"), require("./states/mississippi"), require("./states/southcarolina"), require("./states/idaho"), require("./states/vermont"), require("./states/pennsylvania"), require("./states/txdot"), require("./states/rhodeisland"), ...require("./states/bso")];
 
 const isDate = (s) => /^\d{4}-\d{2}-\d{2}$/.test(s || "");
 
@@ -94,8 +94,12 @@ async function addDocumentReads(list, prevById, adapter) {
     else if (!local || local(r.id.slice(adapter.code.length + 1))) todo.push(r); // local mode: only notices with a saved file
   }
   todo.sort((a, b) => a.due.localeCompare(b.due)); // soonest deadlines first
-  for (let i = 0; i < todo.length && budget > 0; i += 3) {
-    const batch = todo.slice(i, i + 3);
+  // Portals with a bot check (adapter.readPaceMs): one notice at a time with a pause, and stop for this run at the first refusal.
+  const pace = (adapter && adapter.readPaceMs) || 0, step = pace ? 1 : 3;
+  let botStop = false;
+  for (let i = 0; i < todo.length && budget > 0 && !botStop; i += step) {
+    if (pace && i > 0) await new Promise((res) => setTimeout(res, pace));
+    const batch = todo.slice(i, i + step);
     budget -= batch.length;
     await Promise.all(batch.map(async (r) => {
       try {
@@ -112,9 +116,13 @@ async function addDocumentReads(list, prevById, adapter) {
         const st = /^BOTCHECK/.test(e.message) ? "bot check" : (/HTTP ([45][0-9][0-9])/.exec(e.message) || [])[1];
         if (st) {
           refused[st] = (refused[st] || 0) + 1;
-          // Say so on the row instead of leaving an old "Not stated": the documents were not read, and the next run tries again.
-          r.aiRead = false; delete r.docsV;
-          r.details = { ...(r.details || {}), readNote: `The portal refused the document download (HTTP ${st}), so the documents were not read. The next update retries.` };
+          if (st === "bot check" && pace) botStop = true; // do not keep knocking: the next run tries again
+          // A row read on an earlier run keeps that read. Otherwise say so on the row instead of leaving an old "Not stated".
+          const p = prevById.get(r.id);
+          if (!(p && p.aiRead)) {
+            r.aiRead = false; delete r.docsV;
+            r.details = { ...(r.details || {}), readNote: `The portal refused the document download (HTTP ${st}), so the documents were not read. The next update retries.` };
+          }
         } else { failed++; console.warn(`  read failed for ${r.id}: ${e.message}`); }
       }
     }));

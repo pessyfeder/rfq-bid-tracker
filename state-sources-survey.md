@@ -37,7 +37,7 @@ robots.txt on these sites only blocks `/craft`.
 | MO | missouribuys.mo.gov/bid-board | LISTING; rows not in static HTML, probably loaded by JavaScript |
 | MS | ms.gov/dfa/contract_bid_search/Bid | LISTING; DataTables, likely loaded by JavaScript |
 | LA | wwwcfprd.doa.louisiana.gov/osp/lapac (by category or department) | LISTING; rows not found on the category index, need a deeper page |
-| RI | purchasing.ri.gov/bidding/ExternalBidSearch.aspx | LISTING; search form, results need a form post |
+| RI | purchasing.ri.gov/bidding/ExternalBidSearch.aspx | ADAPTER (`states/rhodeisland.js`, 2026-11-10), PARTIAL: quasi-public, city/town, school, college and grant bids only (30 open); executive-branch state bids are in a login system and are not covered. Two requests per run (GET form, POST to ExternalBidListing.aspx with all entities and status Active). Addendum rows (e.g. 27-008A1) are folded into the parent with the latest deadline. |
 | SC | apps.sceis.sc.gov/SCSolicitationWeb/solicitationSearch.do | LISTING; no rows returned to my query, parameters need checking |
 | WY | ai.wyo.gov .../bid-opportunities | LISTING; rows not found in static HTML |
 | ID | purchasing.idaho.gov/open-and-future-solicitations | LISTING; rows not found in static HTML |
@@ -84,7 +84,6 @@ PA (2026-11-10): `states/pennsylvania.js` reads the eAlert emails automatically 
 
 ## Tried and parked
 - OK: the public list works (GET `ok.gov/dcs/solicit/app/solicitationSearch.php?status=open-pending`, then `?page=N` with the session cookie), but it holds only old items: of 155 rows, 153 are "Pending Award" and the 2 "Open" ones closed in 2020 and 2021. Current Oklahoma bids are not published there, so no adapter was built.
-- RI: the public search is for quasi-state, city and town bids; state bids are in a login system.
 - MO: bids moved to the new MOVERS system (login). WY: Google Sites page with attached files.
 - CT, AK, HI, ND: ASP.NET form pages or other systems; each needs form-post reverse engineering for few notices.
 

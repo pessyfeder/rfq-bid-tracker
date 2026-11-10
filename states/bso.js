@@ -18,9 +18,9 @@ function parseRows(html, cols) {
   return rows;
 }
 
-function makeAdapter({ code, name, host, tz }) {
+function makeAdapter({ code, name, host, tz, readPaceMs }) {
   return {
-    code, name,
+    code, name, readPaceMs, // readPaceMs: slow, one-at-a-time document reads for portals whose bot check trips at volume
     async fetch() {
       const url = `${host}/bso/view/search/external/advancedSearchBid.xhtml?openBids=true`;
       const res = await http(url, { timeoutMs: 60000 }, 3);
@@ -104,7 +104,7 @@ function makeAdapter({ code, name, host, tz }) {
 module.exports = [
   makeAdapter({ code: "NV", name: "Nevada", host: "https://nevadaepro.com", tz: "America/Los_Angeles" }),
   makeAdapter({ code: "NJ", name: "New Jersey", host: "https://www.njstart.gov", tz: "America/New_York" }),
-  makeAdapter({ code: "OR", name: "Oregon", host: "https://oregonbuys.gov", tz: "America/Los_Angeles" }),
-  makeAdapter({ code: "IL", name: "Illinois", host: "https://www.bidbuy.illinois.gov", tz: "America/Chicago" }),
-  makeAdapter({ code: "MA", name: "Massachusetts", host: "https://www.commbuys.com", tz: "America/New_York" })
+  makeAdapter({ code: "OR", name: "Oregon", host: "https://oregonbuys.gov", tz: "America/Los_Angeles", readPaceMs: 5000 }),
+  makeAdapter({ code: "IL", name: "Illinois", host: "https://www.bidbuy.illinois.gov", tz: "America/Chicago", readPaceMs: 5000 }),
+  makeAdapter({ code: "MA", name: "Massachusetts", host: "https://www.commbuys.com", tz: "America/New_York", readPaceMs: 5000 })
 ];
