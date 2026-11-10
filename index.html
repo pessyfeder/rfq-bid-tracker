@@ -306,7 +306,7 @@
         return '<td class="num">~' + compact(e.median) + '<div class="val-range">range ' + compact(e.low) + "&ndash;" + compact(e.high) + "</div>" +
           '<div class="val-note">' + (e.basis === "naics" ? "Broad estimate: recent federal awards in this NAICS code, no keyword match" : "Estimate from past federal awards with matching keywords") + "</div>" +
           '<details class="val-ex"><summary>How estimated</summary><div>Not the agency&rsquo;s figure and not read from this notice. ' +
-          "Median and 25th&ndash;75th percentile of " + e.n + " contract awards (purchase orders, delivery orders, definitive contracts) in " + esc(r.category) +
+          "Median and 25th&ndash;75th percentile of " + e.n + " contract awards (purchase orders, delivery orders, definitive contracts) in " + esc(e.naics ? "NAICS " + e.naics + " (mapped from this notice’s UNSPSC codes)" : r.category) +
           " from any agency over the last " + e.years + " years, from USAspending.gov. " +
           (e.basis === "naics" ? "Too few award descriptions shared keywords with this title, so this is the typical size of awards in this NAICS code. " : "Matched on title keywords: " + esc(e.keywords.join(", ")) + ". ") +
           "Federal award sizes vary widely; treat as a rough guide. Most recent:</div><ul>" + list + "</ul></details></td>";

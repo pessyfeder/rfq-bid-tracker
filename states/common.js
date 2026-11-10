@@ -5,10 +5,11 @@
 const UA = "rfq-bid-tracker/1.0 (public procurement notices; polite, low-volume)";
 
 async function http(url, opts = {}, tries = 2) {
+  const { timeoutMs = 30000, ...fetchOpts } = opts;
   let last;
   for (let i = 0; i < tries; i++) {
     try {
-      const res = await fetch(url, { ...opts, headers: { "User-Agent": UA, ...(opts.headers || {}) }, signal: AbortSignal.timeout(30000) });
+      const res = await fetch(url, { ...fetchOpts, headers: { "User-Agent": UA, ...(fetchOpts.headers || {}) }, signal: AbortSignal.timeout(timeoutMs) });
       if (!res.ok) throw new Error(`HTTP ${res.status} for ${new URL(url).host}`);
       return res;
     } catch (e) { last = e; await sleep(1500); }

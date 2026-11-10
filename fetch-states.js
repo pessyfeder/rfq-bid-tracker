@@ -13,7 +13,7 @@ const vm = require("vm");
 const { clean } = require("./states/common");
 
 const OUT = path.join(__dirname, "live-states.js");
-const ADAPTERS = [require("./states/delaware"), ...require("./states/bso")];
+const ADAPTERS = [require("./states/delaware"), require("./states/indiana"), ...require("./states/bso")];
 
 const isDate = (s) => /^\d{4}-\d{2}-\d{2}$/.test(s || "");
 
@@ -36,9 +36,29 @@ function toRfq(n, a) {
     level: "State",
     agency: clean(n.agency) || a.name + " agency",
     value: null,
+    naics: n.naics || null, // internal: dropped before writing; only used to look up the estimate
     rfqUrl: url,
     details: { region: clean(n.region) || a.name, requirements: [], restriction: null, amended: false, warnings }
   };
+}
+
+// Estimated value from similar past awards (USAspending), looked up by the NAICS prefix mapped from the notice's UNSPSC codes.
+// Same shape as the federal estimate; best effort, a failed lookup just leaves "Not published".
+async function addStateEstimates(list) {
+  const { awardsForNaics, estimate } = require("./sam-estimates");
+  const cache = new Map();
+  let n = 0;
+  for (const r of list) {
+    const code = r.naics; delete r.naics;
+    if (!code) continue;
+    if (!cache.has(code)) {
+      try { cache.set(code, await awardsForNaics(code)); } catch (e) { console.warn(`USAspending lookup failed for NAICS ${code}: ${e.message}`); cache.set(code, null); }
+    }
+    const awards = cache.get(code);
+    const est = awards && estimate(r, awards);
+    if (est) { r.valueEst = { ...est, naics: code }; n++; }
+  }
+  if (cache.size) console.log(`  value estimates for ${n} of ${list.length} (NAICS lookups: ${[...cache.keys()].join(", ")})`);
 }
 
 function readPrevious() {
@@ -57,6 +77,7 @@ function readPrevious() {
   const prevStates = (prev && prev.meta && prev.meta.states) || {};
   const results = {};
   let rfqs = [];
+  const okNow = new Set(); // states fetched successfully in THIS run
 
   for (const a of ADAPTERS) {
     if (wanted.length && !wanted.includes(a.code)) { results[a.code] = prevStates[a.code] || { ok: false, error: "not run" }; continue; }
@@ -67,7 +88,9 @@ function readPrevious() {
         if (!r || r.due < today || seen.has(r.id)) return false;
         seen.add(r.id); return true;
       });
+      await addStateEstimates(mine);
       rfqs = rfqs.concat(mine);
+      okNow.add(a.code);
       results[a.code] = { ok: true, count: mine.length, fetchedAt: new Date().toISOString() };
       console.log(`${a.code}: ${mine.length} open (of ${raw.length} read)`);
     } catch (e) {
@@ -76,7 +99,6 @@ function readPrevious() {
     }
   }
   // Carry over previous notices for states that did not succeed this time (still-future deadlines only).
-  const okNow = new Set(ADAPTERS.filter((a) => results[a.code] && results[a.code].ok && results[a.code].fetchedAt && Date.now() - Date.parse(results[a.code].fetchedAt) < 600000).map((a) => a.code));
   if (prev) {
     for (const r of prev.rfqs) {
       const code = String(r.id).split("-")[0];

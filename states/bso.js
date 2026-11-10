@@ -23,7 +23,7 @@ function makeAdapter({ code, name, host, tz }) {
     code, name,
     async fetch() {
       const url = `${host}/bso/view/search/external/advancedSearchBid.xhtml?openBids=true`;
-      const res = await http(url);
+      const res = await http(url, { timeoutMs: 60000 }, 3);
       const jar = new Map();
       const remember = (r) => { for (const c of r.headers.getSetCookie ? r.headers.getSetCookie() : []) { const [kv] = c.split(";"); const i = kv.indexOf("="); jar.set(kv.slice(0, i), kv.slice(i + 1)); } };
       remember(res);
@@ -49,12 +49,19 @@ function makeAdapter({ code, name, host, tz }) {
           "bidSearchResultsForm:bidResultId_skipChildren": "true", "bidSearchResultsForm:bidResultId_encodeFeature": "true",
           "bidSearchResultsForm": "bidSearchResultsForm", "javax.faces.ViewState": view[1]
         });
-        const r = await http(url, { method: "POST", body, headers: {
-          "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8", "Faces-Request": "partial/ajax", "X-Requested-With": "XMLHttpRequest",
-          "X-XSRF-TOKEN": jar.get("XSRF-TOKEN") || "", Cookie: cookie } });
-        const xml = await r.text();
-        const got = parseRows(xml, headers);
-        if (!got.length) throw new Error(`Paging stopped at row ${first} of ${total}`);
+        const post = async () => {
+          const r = await http(url, { method: "POST", body, timeoutMs: 60000, headers: {
+            "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8", "Faces-Request": "partial/ajax", "X-Requested-With": "XMLHttpRequest",
+            "X-XSRF-TOKEN": jar.get("XSRF-TOKEN") || "", Cookie: cookie } }, 3);
+          const xml = await r.text();
+          return { xml, got: parseRows(xml, headers) };
+        };
+        let { xml, got } = await post();
+        if (!got.length) { await sleep(4000); ({ xml, got } = await post()); } // slow portals sometimes return an empty page once
+        if (!got.length) {
+          if (process.env.BSO_DEBUG) console.error("EMPTY PAGE RESPONSE:", xml.slice(0, 600));
+          throw new Error(`Paging stopped at row ${first} of ${total}`);
+        }
         all = all.concat(got);
       }
 
@@ -89,5 +96,6 @@ module.exports = [
   makeAdapter({ code: "NV", name: "Nevada", host: "https://nevadaepro.com", tz: "America/Los_Angeles" }),
   makeAdapter({ code: "NJ", name: "New Jersey", host: "https://www.njstart.gov", tz: "America/New_York" }),
   makeAdapter({ code: "OR", name: "Oregon", host: "https://oregonbuys.gov", tz: "America/Los_Angeles" }),
-  makeAdapter({ code: "IL", name: "Illinois", host: "https://www.bidbuy.illinois.gov", tz: "America/Chicago" })
+  makeAdapter({ code: "IL", name: "Illinois", host: "https://www.bidbuy.illinois.gov", tz: "America/Chicago" }),
+  makeAdapter({ code: "MA", name: "Massachusetts", host: "https://www.commbuys.com", tz: "America/New_York" })
 ];

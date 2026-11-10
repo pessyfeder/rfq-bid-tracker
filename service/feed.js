@@ -21,8 +21,8 @@ const SOURCES = [
   // windowed: the fetch only looks back N days, so absence from it does not mean withdrawn.
   { id: "sam", label: "SAM.gov", file: "live-sam.js", script: "fetch-sam.js", needsEnv: ["SAM_API_KEY"], windowed: true },
   { id: "nys", label: "NYS Contract Reporter", file: "live-ny-state.js", script: null, needsEnv: [] },
-  // DE, NV, NJ, OR, IL (one adapter per state in states/; a failing state keeps its last notices).
-  { id: "states", label: "State portals (DE, NV, NJ, OR, IL)", file: "live-states.js", script: "fetch-states.js", needsEnv: [] }
+  // DE, IN, NV, NJ, OR, IL, MA (one adapter per state in states/; a failing state keeps its last notices).
+  { id: "states", label: "State portals (DE, IN, NV, NJ, OR, IL, MA)", file: "live-states.js", script: "fetch-states.js", needsEnv: [] }
 ];
 
 // ---- reading the fetchers' output ------------------------------------------------------------

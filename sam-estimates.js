@@ -102,7 +102,7 @@ async function addEstimates(rfqs) {
   return n;
 }
 
-module.exports = { addEstimates };
+module.exports = { addEstimates, awardsForNaics, estimate };
 
 // CLI: refresh the estimates in the existing live-sam.js
 if (require.main === module) {
