@@ -12,7 +12,8 @@ const MODEL = "claude-haiku-5-5";
 // If the model or its price changes, update these two numbers: the cost shown is an ESTIMATE
 // from the token counts the API reports; the Anthropic Console is the authoritative bill.
 const PRICE_IN_PER_M = 0.10, PRICE_OUT_PER_M = 0.50;
-const usage = { calls: 0, input: 0, output: 0, hits: 0 };
+const usage = { calls: 0, input: 0, output: 0, hits: 0, skipped: 0 };
+const MIN_TEXT = 200; // below this a notice is not read: see extract()
 
 // ---- Result cache ------------------------------------------------------------------------
 // Most notices are the same as on the previous refresh, so a result is stored under a hash of
@@ -65,10 +66,11 @@ const money = (n) => "$" + (n < 0.01 ? n.toFixed(4) : n.toFixed(2));
 // Prints (and appends to ai-usage.log) what this run cost. label = which fetcher ran.
 function reportUsage(label) {
   saveCache();
-  if (!usage.calls && !usage.hits) return;
+  if (!usage.calls && !usage.hits && !usage.skipped) return;
   const cost = (usage.input * PRICE_IN_PER_M + usage.output * PRICE_OUT_PER_M) / 1e6;
   const line = `AI usage (${label}): ${usage.calls} calls (${usage.hits} reused from cache), ${usage.input.toLocaleString("en-US")} input + ${usage.output.toLocaleString("en-US")} output tokens, est. cost ${money(cost)} (${MODEL})`;
   console.log(line);
+  if (usage.skipped) console.log(`  ${usage.skipped} notice(s) were not AI-read: under ${MIN_TEXT} characters of text (often just a project ID), too little to read reliably without guessing. They keep their basic values.`);
   try {
     require("fs").appendFileSync(require("path").join(__dirname, "ai-usage.log"),
       new Date().toISOString() + "  " + line + "\n");
@@ -105,7 +107,10 @@ function validate(o) {
 // html: raw solicitation text (HTML or plain). Returns {requires, scope, shall} or null if it could not be read.
 async function extract(html, apiKey) {
   const text = stripHtml(html).slice(0, 60000);
-  if (text.length < 200) return null; // too little text to judge: leave as "Unclear"
+  // Too little text to judge. The prompt asks for a scope and 3-5 obligations and treats requires:[] as "open to all", so with
+  // a line or two (often just a project ID) the model would pad or guess, and a wrong value shown in the app is worse than a
+  // blank one. Leave the basic values and count it so the run summary can say why.
+  if (text.length < MIN_TEXT) { usage.skipped++; return null; }
   const key = cacheKey("extract", PROMPT, text), hit = cacheGet(key);
   if (hit !== undefined) return hit;
   const res = await fetch("https://api.anthropic.com/v1/messages", {
