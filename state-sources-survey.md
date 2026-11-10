@@ -57,6 +57,12 @@ robots.txt on these sites only blocks `/craft`.
 ## Not probed at all
 AR, VT (page 404 at the URL tried; `bgs.vermont.gov/purchasing-contracting` still to check), plus deeper pages for the LISTING states above.
 
+## Built (2026-11-09)
+`fetch-states.js` runs adapters in `states/`: DE (`delaware.js`) and NV, NJ, OR, IL (`bso.js`). Output: `live-states.js`,
+registered as source `states` in `service/feed.js`. First run: DE 30, NV 27, NJ 24, OR 179, IL 162 open notices (about 80 s).
+Known quirks: OR lists county and city bids too (all tagged level "State"); DE publishes dates only (no due time);
+the bso sites publish no dollar value. To add a state, write an adapter and list it in `fetch-states.js`.
+
 ## Recommended build order
 1. DE (Socrata, proven, minutes of work).
 2. Periscope bso adapter: NV, NJ, OR, IL (MA after retest). Four states from one adapter.
