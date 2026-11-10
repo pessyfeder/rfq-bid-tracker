@@ -32,11 +32,18 @@ P=[("OK","The public list only holds old items: 153 of 155 rows are Pending Awar
 ("VA","eVA Open Data Portal and data.virginia.gov hold historical procurement data only (yearly files, login to download), not open solicitations. No feed found."),
 ("AR","ARBuy shows 0 open bids while the state moves to Ariba in 2026. Recheck in a few months."),
 ("WV","Public pages are Bids Received results (no title or deadline), so they list closed solicitations. Open bids are in wvOASIS, a login-free but JavaScript session app (no plain listing) that often returns 503, so it is not built yet.")]
-L=[("AZ","The public list is browsable, but app.az.gov robots.txt forbids all automated access, so no headless browser. Needs a feed request; none sent yet."),("NC","Dynamics portal, read-only offline shell."),("WA","JavaScript app."),
-("KY","Advantage VSS system."),("MI","Advantage VSS system."),("KS","Public bid page (PeopleSoft, no robots.txt) loads, but the grid is empty until a stateful search POST; not built, site terms not reviewed."),("GA","Browser check."),
-("MT","Public events are on the Jaggaer host bids.sciquest.com, whose robots.txt forbids all automated access. Needs a feed request; none sent yet."),("NM","Bonfire or Jaggaer system."),("SD","ESM system."),("WI","Public list needs no login but is a Blazor Server app (live websocket, no plain HTML or JSON). Not built."),("NE","The page came back empty.")]
+E=[("AZ","Not scrapable: app.az.gov robots.txt forbids all automated access. Route: supplier registration with commodity codes, email alerts. Not subscribed yet."),
+("MT","Not scrapable: bids.sciquest.com robots.txt forbids all automated access. Route: eMACS vendor registration, email notices by commodity code. Not subscribed yet."),
+("WA","WEBS: free registration, email alerts by commodity code. Not subscribed yet."),
+("MI","SIGMA VSS: profile commodity codes drive email alerts. Not subscribed yet."),
+("KY","VSS: email notifications for registered vendors; setup details unconfirmed. Not subscribed yet."),
+("NC","eVP: nightly consolidated email from vendor@nc.gov; system is mid-migration. Not subscribed yet."),
+("WI","eSupplier: NIGP-code email alerts. The public list is a Blazor app, so not scrapable. Not subscribed yet."),
+("GA","Georgia Procurement Registry: email notifications listed, steps unconfirmed; browser check blocks scripts. Not subscribed yet.")]
+L=[("KS","Public bid page (PeopleSoft, no robots.txt) loads, but the grid is empty until a stateful search POST; not built, site terms not reviewed."),
+("NM","Bonfire or Jaggaer system."),("SD","ESM system."),("NE","The page came back empty.")]
 U=[("MD","Open data was last updated in 2019.")]
-groups=[("Working",W),("Asked for a feed",ASK),("Parked",P),("Login or JavaScript",L),("Unusable",U)]
+groups=[("Working",W),("Asked for a feed",ASK),("Parked",P),("Email alerts to set up",E),("Login or JavaScript",L),("Unusable",U)]
 assert sum(len(g) for _,g in groups)==50
 
 ss=getSampleStyleSheet()
