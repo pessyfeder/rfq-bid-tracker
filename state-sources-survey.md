@@ -73,8 +73,12 @@ Quirks: OR lists county and city bids (all tagged "State"); DE and ID publish da
 IN links to its listing page. MA's portal is slow (about 10 s a page, 36 pages) and the local web filter blocks it near row 725.
 To add a state, write an adapter and list it in `fetch-states.js`.
 
+VT is also built: `vermont.js` reads the OPC "Current Bid Listings" page (9 open on 2026-11-10); each notice links to its solicitation PDF.
+AR was checked and not built: ARBuy's Periscope page loads but lists 0 open bids (the state is moving to a new system).
+Draft emails for the states that forbid automated access are in `state-feed-requests.md` (nothing sent).
+
 ## Tried and parked
-- OK: the open-data dataset only points to a search form at ok.gov that returned no list when posted.
+- OK: the public list works (GET `ok.gov/dcs/solicit/app/solicitationSearch.php?status=open-pending`, then `?page=N` with the session cookie), but it holds only old items: of 155 rows, 153 are "Pending Award" and the 2 "Open" ones closed in 2020 and 2021. Current Oklahoma bids are not published there, so no adapter was built.
 - RI: the public search is for quasi-state, city and town bids; state bids are in a login system.
 - MO: bids moved to the new MOVERS system (login). WY: Google Sites page with attached files.
 - CT, AK, HI, ND: ASP.NET form pages or other systems; each needs form-post reverse engineering for few notices.
