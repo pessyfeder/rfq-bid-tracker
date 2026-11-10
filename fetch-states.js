@@ -61,6 +61,43 @@ async function addStateEstimates(list) {
   if (cache.size) console.log(`  value estimates for ${n} of ${list.length} (NAICS lookups: ${[...cache.keys()].join(", ")})`);
 }
 
+// AI read of each notice's page and PDF attachments: fills eligibility (requires), a one-line scope and key
+// "shall" points, the same as the NYC/SAM feeds. Needs ANTHROPIC_API_KEY; without it rows stay "Not read".
+// Notices already read on an earlier run are reused (no fetch, no cost); MAX_READS caps new reads per run.
+const MAX_READS = Number(process.env.STATE_MAX_READS) || 60;
+async function addDocumentReads(list, prevById) {
+  const key = process.env.ANTHROPIC_API_KEY;
+  if (!key) return;
+  const { readNotice } = require("./states/docs");
+  const ai = require("./ai-extract");
+  let reused = 0, read = 0, budget = MAX_READS;
+  const todo = [];
+  for (const r of list) {
+    const p = prevById.get(r.id);
+    if (p && p.aiRead) { r.requires = p.requires; r.scope = p.scope; r.shall = p.shall; r.aiRead = true; reused++; }
+    else todo.push(r);
+  }
+  todo.sort((a, b) => a.due.localeCompare(b.due)); // soonest deadlines first
+  for (let i = 0; i < todo.length && budget > 0; i += 3) {
+    const batch = todo.slice(i, i + 3);
+    budget -= batch.length;
+    await Promise.all(batch.map(async (r) => {
+      try {
+        const doc = await readNotice(r.rfqUrl);
+        if (!doc) return;
+        const res = await ai.extractWithPdfs(doc.text, doc.pdfs, key);
+        if (!res) return;
+        if (res.requires !== null) r.requires = res.requires;
+        if (res.scope) r.scope = res.scope;
+        if (res.shall.length) r.shall = res.shall;
+        r.aiRead = true; read++;
+      } catch (e) { console.warn(`  read failed for ${r.id}: ${e.message}`); }
+    }));
+  }
+  console.log(`  document reads: ${read} new, ${reused} reused, ${Math.max(0, todo.length - read)} not read yet`);
+  ai.reportUsage("State portals");
+}
+
 function readPrevious() {
   try {
     const sandbox = { window: {} };
@@ -89,6 +126,7 @@ function readPrevious() {
         seen.add(r.id); return true;
       });
       await addStateEstimates(mine);
+      await addDocumentReads(mine, new Map(((prev && prev.rfqs) || []).map((r) => [r.id, r])));
       rfqs = rfqs.concat(mine);
       okNow.add(a.code);
       results[a.code] = { ok: true, count: mine.length, fetchedAt: new Date().toISOString() };
