@@ -109,6 +109,7 @@
 
 <div class="toolbar">
   <input type="search" id="q" placeholder="Search: filter by specification">
+  <select id="st"><option value="">All states</option></select>
   <select id="level">
     <option value="">All levels</option>
     <option>Federal</option><option>State</option><option>Local</option>
@@ -141,7 +142,12 @@
 (function () {
   var src = window.LIVE_SOURCES || [];
   if (!src.length) return;
-  window.RFQS = src.reduce(function (a, s) { return a.concat(s.rfqs); }, []);
+  // Show only the states in the State fetch status snapshot (TxDOT counts as TX); federal and NYC feeds are left out.
+  var STATES = { DE: 1, IN: 1, IA: 1, LA: 1, MS: 1, SC: 1, ID: 1, VT: 1, NV: 1, NJ: 1, OR: 1, IL: 1, MA: 1, TX: 1, TXDOT: 1 };
+  src = src.filter(function (s) { return s.meta.states; }); // only the state-portal feed carries a states list
+  window.RFQS = src.reduce(function (a, s) {
+    return a.concat(s.rfqs.filter(function (r) { return STATES[String(r.id).split("-")[0]]; }));
+  }, []);
   window.RFQS_META = { source: src.map(function (s) { return s.meta.source; }).join(" + "),
     fetchedAt: src.map(function (s) { return s.meta.fetchedAt; }).sort()[0] };
 })();
@@ -183,6 +189,7 @@
   var rows = window.RFQS.map(function (r) {
     var noDue = hasNoRealDue(r);
     return Object.assign({}, r, {
+      st: String(r.id).split("-")[0].replace("TXDOT", "TX"), // state code from the id prefix
       noDue: noDue,
       dueSort: noDue ? null : r.due,
       daysLeft: noDue ? null : diffDays(todayStr, r.due),
@@ -198,6 +205,11 @@
   var expanded = {}; // request id -> true when its "shall" list is open
 
   var $ = function (id) { return document.getElementById(id); };
+
+  // State filter options (only ids that look like a state code)
+  Array.from(new Set(rows.map(function (r) { return r.st; }))).filter(function (s) { return /^[A-Z]{2}$/.test(s); }).sort().forEach(function (s) {
+    var o = document.createElement("option"); o.textContent = s; $("st").appendChild(o);
+  });
 
   // Category filter options
   Array.from(new Set(rows.map(function (r) { return r.category; }))).sort().forEach(function (c) {
@@ -283,7 +295,11 @@
 
   function eligCell(r) {
     var ai = r.aiRead ? '<div class="elig-note">AI-extracted, please verify.</div>' : "";
-    if (r.requires == null) return '<td><span class="elig unclear">Not read</span><div class="elig-note">' + esc((r.details && r.details.readNote) || "Restriction not read from the RFQ; check the document.") + "</div>" + ai + "</td>";
+    if (r.requires == null) {
+      // Page was read but never says who may bid (e.g. Delaware's pages hold only title, dates and a contact)
+      if (r.aiRead) return '<td><span class="elig unclear">Not stated</span><div class="elig-note">' + esc((r.details && r.details.readNote) || "The notice was read but does not say who may bid. Check the agency's documents or contact.") + "</div>" + ai + "</td>";
+      return '<td><span class="elig unclear">Not read</span><div class="elig-note">' + esc((r.details && r.details.readNote) || "Restriction not read from the RFQ; check the document.") + "</div></td>";
+    }
     if (!r.requires.length) return '<td><span class="elig yes">No requirements found</span>' + ai + "</td>";
     return "<td>" + r.requires.map(function (q) { return '<span class="elig chip">' + esc(q) + "</span>"; }).join(" ") + ai + "</td>";
   }
@@ -332,10 +348,11 @@
   // Read the filter controls and parse the search text once per render (not once per row).
   function makeFilter() {
     var q = $("q").value.trim().toLowerCase();
-    return { level: $("level").value, category: $("category").value, hideClosed: $("hideClosed").checked,
+    return { st: $("st").value, level: $("level").value, category: $("category").value, hideClosed: $("hideClosed").checked,
       hideFlagged: $("hideFlagged").checked, pq: q ? parseQuery(q) : null };
   }
   function matches(r, f) {
+    if (f.st && r.st !== f.st) return false;
     if (f.level && r.level !== f.level) return false;
     if (f.category && r.category !== f.category) return false;
     if (f.hideClosed && r.daysLeft < 0) return false;
@@ -502,7 +519,7 @@
     shownCount = PAGE;
     render();
   });
-  ["q", "level", "category", "hideClosed", "hideFlagged"].forEach(function (id) {
+  ["q", "st", "level", "category", "hideClosed", "hideFlagged"].forEach(function (id) {
     function onFilter() { shownCount = PAGE; render(); }
     var timer;
     $(id).addEventListener("input", function () { clearTimeout(timer); timer = setTimeout(onFilter, 0); }); // coalesce events from one keystroke
