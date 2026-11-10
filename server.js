@@ -142,7 +142,7 @@ function statusBody() {
 }
 
 // The human page (index.html + live-*.js) is served to this machine only: statuses and bid interest
-// are private, and other machines use the API.
+// are private.
 const STATIC_OK = /^\/(index\.html|data\.js|sample-data\.js|live-(nyc|sam|ny-state|states)\.js)?$/;
 function serveStatic(req, res, pathname) {
   const file = pathname === "/" ? "index.html" : pathname.slice(1);
