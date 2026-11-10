@@ -45,8 +45,19 @@ function cacheSet(key, result) { loadCache()[key] = { seen: today(), result }; }
 
 function saveCache() {
   const c = loadCache(), cutoff = new Date(Date.now() - CACHE_DAYS * 86400000).toISOString().slice(0, 10);
+  // Several fetchers may run at once (e.g. one started by hand during a service refresh). Each loaded the file at its own
+  // start, so writing only our copy would erase what the others saved meanwhile. Re-read the file now and merge: entries
+  // we do not have are kept, and where both have one the more recently seen wins.
+  try {
+    const disk = JSON.parse(fs.readFileSync(CACHE_FILE, "utf8"));
+    if (disk && typeof disk === "object" && !Array.isArray(disk))
+      for (const [k, v] of Object.entries(disk)) if (v && (!c[k] || (v.seen || "") > (c[k].seen || ""))) c[k] = v;
+  } catch (e) { /* no file yet, or unreadable: just write ours */ }
   for (const k of Object.keys(c)) if (!c[k] || !(c[k].seen >= cutoff)) delete c[k];
-  try { fs.writeFileSync(CACHE_FILE, JSON.stringify(c)); } catch (e) { /* caching is optional */ }
+  try {
+    const tmp = CACHE_FILE + "." + process.pid + ".tmp"; // write then rename, so a reader never sees half a file
+    fs.writeFileSync(tmp, JSON.stringify(c)); fs.renameSync(tmp, CACHE_FILE);
+  } catch (e) { /* caching is optional */ }
 }
 
 function track(body) {
@@ -217,4 +228,6 @@ async function extractAmount(html, apiKey) {
   } catch (e) { return null; }
 }
 
-module.exports = { extract, extractWithPdfs, extractAmount, reportUsage };
+const plainLength = (html) => stripHtml(html).length;
+
+module.exports = { plainLength, extract, extractWithPdfs, extractAmount, reportUsage };

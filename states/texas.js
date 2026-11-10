@@ -112,6 +112,7 @@ function parse(text) {
 
 module.exports = {
   code: "TX", name: "Texas",
+  noPageReads: true, // robots.txt forbids automated reads of ESBD: the AI page read in fetch-states.js must not fetch these URLs
   async fetch() {
     const file = newestCsv();
     const text = fs.readFileSync(path.join(DIR, file), "utf8");

@@ -65,12 +65,14 @@ async function addStateEstimates(list) {
 // "shall" points, the same as the NYC/SAM feeds. Needs ANTHROPIC_API_KEY; without it rows stay "Not read".
 // Notices already read on an earlier run are reused (no fetch, no cost); MAX_READS caps new reads per run.
 const MAX_READS = Number(process.env.STATE_MAX_READS) || 60;
-async function addDocumentReads(list, prevById) {
+async function addDocumentReads(list, prevById, adapter) {
   const key = process.env.ANTHROPIC_API_KEY;
   if (!key) return;
+  if (adapter && adapter.noPageReads) { console.log(`  ${adapter.code}: page reads skipped (the portal forbids automated reads); rows stay "Not read"`); return; }
   const { readNotice } = require("./states/docs");
   const ai = require("./ai-extract");
-  let reused = 0, read = 0, budget = MAX_READS;
+  let reused = 0, read = 0, budget = MAX_READS, noPage = 0, shortPage = 0, noAnswer = 0, failed = 0, emptyPage = 0, sample = null;
+  const refused = {}; // HTTP errors by status, e.g. 401 from the portal
   const todo = [];
   for (const r of list) {
     const p = prevById.get(r.id);
@@ -84,15 +86,25 @@ async function addDocumentReads(list, prevById) {
     await Promise.all(batch.map(async (r) => {
       try {
         const doc = await readNotice(r.rfqUrl);
-        if (!doc) return;
+        if (!doc) { noPage++; return; }
         const res = await ai.extractWithPdfs(doc.text, doc.pdfs, key);
-        if (!res) return;
+        if (!res) { if (!doc.pdfs.length && ai.plainLength(doc.text) < 200) { if (!sample) sample = { id: r.id, raw: doc.text.length, text: doc.text.replace(/<[^>]*>/g, " ").replace(/s+/g, " ").trim().slice(0, 150) }; if (ai.plainLength(doc.text) === 0) emptyPage++; else shortPage++; } else noAnswer++; return; }
         if (res.requires !== null) r.requires = res.requires;
         if (res.scope) r.scope = res.scope;
         if (res.shall.length) r.shall = res.shall;
         r.aiRead = true; read++;
-      } catch (e) { console.warn(`  read failed for ${r.id}: ${e.message}`); }
+      } catch (e) {
+        const st = (/HTTP ([45][0-9][0-9])/.exec(e.message) || [])[1];
+        if (st) refused[st] = (refused[st] || 0) + 1; else { failed++; console.warn(`  read failed for ${r.id}: ${e.message}`); }
+      }
     }));
+  }
+  const refusedN = Object.values(refused).reduce((a, b) => a + b, 0);
+  if (noPage || emptyPage || shortPage || noAnswer || failed || refusedN) {
+    const parts = [`${noPage} page unreadable/too large`, `${emptyPage} page empty (no text at all)`, `${shortPage} page had 1-199 characters of text`, `${noAnswer} model reply unusable`, `${failed} other errors`];
+    for (const [st, n] of Object.entries(refused)) parts.push(`${n} refused by the portal (HTTP ${st})`);
+    console.log(`  not read this run: ${parts.join(", ")}`);
+    if (sample) console.log(`  example of a bad page (${sample.id}): ${sample.raw} bytes of HTML, text starts: "${sample.text}"`);
   }
   console.log(`  document reads: ${read} new, ${reused} reused, ${Math.max(0, todo.length - read)} not read yet`);
   ai.reportUsage("State portals");
@@ -126,7 +138,7 @@ function readPrevious() {
         seen.add(r.id); return true;
       });
       await addStateEstimates(mine);
-      await addDocumentReads(mine, new Map(((prev && prev.rfqs) || []).map((r) => [r.id, r])));
+      await addDocumentReads(mine, new Map(((prev && prev.rfqs) || []).map((r) => [r.id, r])), a);
       rfqs = rfqs.concat(mine);
       okNow.add(a.code);
       results[a.code] = { ok: true, count: mine.length, fetchedAt: new Date().toISOString(), ...(raw.partialPages ? { partial: `${raw.partialPages} page(s) skipped` } : {}) };
