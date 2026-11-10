@@ -13,7 +13,7 @@ const vm = require("vm");
 const { clean, requests } = require("./states/common");
 
 const OUT = path.join(__dirname, "live-states.js");
-const ADAPTERS = [require("./states/delaware"), require("./states/indiana"), require("./states/iowa"), require("./states/louisiana"), require("./states/mississippi"), require("./states/southcarolina"), require("./states/idaho"), require("./states/vermont"), require("./states/texas"), require("./states/txdot"), ...require("./states/bso")];
+const ADAPTERS = [require("./states/delaware"), require("./states/indiana"), require("./states/iowa"), require("./states/louisiana"), require("./states/mississippi"), require("./states/southcarolina"), require("./states/idaho"), require("./states/vermont"), require("./states/pennsylvania"), require("./states/txdot"), ...require("./states/bso")];
 
 const isDate = (s) => /^\d{4}-\d{2}-\d{2}$/.test(s || "");
 
@@ -155,21 +155,14 @@ function readPrevious() {
     }
   }
   // Carry over previous notices for states that did not succeed this time (still-future deadlines only).
+  const known = new Set(ADAPTERS.map((a) => a.code));
   if (prev) {
     for (const r of prev.rfqs) {
       const code = String(r.id).split("-")[0];
-      if (!okNow.has(code) && r.due >= today) rfqs.push(r);
+      if (known.has(code) && !okNow.has(code) && r.due >= today) rfqs.push(r); // rows of a removed adapter (TX) are dropped
     }
   }
   if (!okNow.size) { console.error("No state fetched successfully; leaving live-states.js unchanged."); process.exit(1); }
-
-  // TxDOT's open-data notices are the automatic source for ESBD's local-let notices (id "<CSJ>_<MMYY>"): drop the CSV copies.
-  const txdot = new Set(rfqs.filter((r) => r.id.startsWith("TXDOT-")).map((r) => r.id.slice(6)));
-  if (txdot.size) {
-    const before = rfqs.length;
-    rfqs = rfqs.filter((r) => !(r.id.startsWith("TX-") && txdot.has(r.id.slice(3).split("_")[0])));
-    if (before !== rfqs.length) console.log(`  dropped ${before - rfqs.length} Texas CSV notice(s) that TxDOT's open data already lists`);
-  }
 
   const meta = { source: "State procurement portals", fetchedAt: new Date().toISOString(), count: rfqs.length, states: results };
   const tmp = OUT + ".tmp";

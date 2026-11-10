@@ -43,5 +43,5 @@ California (Cal eProcure), Colorado, Maine, New Hampshire, Tennessee, Minnesota 
 The same template works; for these, ask for permission or a feed rather than a way around the block.
 
 ## Replies received (2026-11-10)
-- **Texas (SPD, Comptroller):** no data feed from ESBD. Search results can be exported as CSV from the site (limit 20,000 rows). Posted solicitations can be listed on SmartBuy: Vendor > ESBD Bid Opportunities > Status = Posted (filter by start/end date). Route: manual CSV export, then import; no automated reads.
+- **Texas (SPD, Comptroller):** no data feed from ESBD. Search results can be exported as CSV from the site (limit 20,000 rows). Posted solicitations can be listed on SmartBuy: Vendor > ESBD Bid Opportunities > Status = Posted (filter by start/end date). The CSV export is manual, so it is not used (policy: only automatic sources). TxDOT notices are read automatically from Texas open data instead.
 - **Pennsylvania (DGS Supplier Services):** the only notification route is eAlerts (email of open solicitations). Sign-up instructions are on the Supplier Service Center page; the e-Alerts login is dgs.internet.state.pa.us/EAlerts_V2/Login.aspx, with an "E-Alerts Guide" PDF. Bidding help: srmhelp@pa.gov.

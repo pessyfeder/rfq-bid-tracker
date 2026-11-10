@@ -2,7 +2,7 @@
 // data.texas.gov dataset qh8x-rm8r "Official and Unofficial Bid Items" (Socrata API, meant for programmatic use,
 // refreshed daily). It has one row per bid item, so rows are grouped into one notice per project (CSJ).
 // This is the automatic route to the TxDOT notices that ESBD (which forbids automated reads) also lists.
-// ESBD's local-let notices use the id "<CSJ>_<MMYY>", so fetch-states.js drops the matching Texas CSV rows.
+// ESBD local-let notices use the id "<CSJ>_<MMYY>". (The manual ESBD CSV import was removed: only automatic sources are kept.)
 const { http, clean, toEastern } = require("./common");
 
 const API = "https://data.texas.gov/resource/qh8x-rm8r.json";

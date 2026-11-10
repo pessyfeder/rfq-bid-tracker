@@ -42,6 +42,7 @@ You need two values. They go in a `.env` file in the next step. Never email them
 |---|---|
 | `SAM_API_KEY` | sam.gov > sign in > Account Details > API Key. Without it, SAM.gov is skipped and NYC still works. |
 | `ANTHROPIC_API_KEY` | A **new** key made for this machine only (see `anthropic-key-setup.md`). Do not reuse anyone else's key. Without it the feed works, but `scope`, `requires` and `shall` are thin. |
+| `PA_GMAIL_USER`, `PA_GMAIL_APP_PASSWORD` | Optional. The Gmail account that receives the Pennsylvania eAlert emails, and a Google app password for it (Google Account > Security > 2-Step Verification, then App passwords; IMAP must be on). Read-only: only emails from RA-paealerts@pa.gov in the last 90 days are read. Without them Pennsylvania shows no notices (there is no manual route). |
 
 ## 4. Create the `.env` file
 
@@ -54,6 +55,8 @@ You need two values. They go in a `.env` file in the next step. Never email them
 ```
 SAM_API_KEY=your-sam-key
 ANTHROPIC_API_KEY=sk-ant-your-key
+PA_GMAIL_USER=your-alerts-account@gmail.com
+PA_GMAIL_APP_PASSWORD=your-16-character-app-password
 HOST=127.0.0.1
 ```
 
