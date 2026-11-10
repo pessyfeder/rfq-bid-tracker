@@ -281,7 +281,7 @@
 
   function eligCell(r) {
     var ai = r.aiRead ? '<div class="elig-note">AI-extracted, please verify.</div>' : "";
-    if (r.requires == null) return '<td><span class="elig unclear">Not read</span><div class="elig-note">Restriction not read from the RFQ; check the document.</div>' + ai + "</td>";
+    if (r.requires == null) return '<td><span class="elig unclear">Not read</span><div class="elig-note">' + esc((r.details && r.details.readNote) || "Restriction not read from the RFQ; check the document.") + "</div>" + ai + "</td>";
     if (!r.requires.length) return '<td><span class="elig yes">No requirements found</span>' + ai + "</td>";
     return "<td>" + r.requires.map(function (q) { return '<span class="elig chip">' + esc(q) + "</span>"; }).join(" ") + ai + "</td>";
   }

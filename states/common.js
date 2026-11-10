@@ -4,11 +4,15 @@
 //     url (https), description, region }
 const UA = "rfq-bid-tracker/1.0 (public procurement notices; polite, low-volume)";
 
+// Every outgoing request attempt, by host, so a run can say exactly which sites it contacted and how often.
+const requests = {};
+
 async function http(url, opts = {}, tries = 2) {
   const { timeoutMs = 30000, ...fetchOpts } = opts;
   let last;
   for (let i = 0; i < tries; i++) {
     try {
+      { const h = new URL(url).host; requests[h] = (requests[h] || 0) + 1; }
       const res = await fetch(url, { ...fetchOpts, headers: { "User-Agent": UA, ...(fetchOpts.headers || {}) }, signal: AbortSignal.timeout(timeoutMs) });
       if (!res.ok) throw new Error(`HTTP ${res.status} for ${new URL(url).host}`);
       return res;
@@ -52,4 +56,4 @@ function instantToEastern(ms) {
   return { due: `${p.year}-${p.month}-${p.day}`, dueTime: `${h12}:${p.minute} ${h24 >= 12 ? "PM" : "AM"} ET` };
 }
 
-module.exports = { http, sleep, clean, decodeEntities, toEastern, instantToEastern };
+module.exports = { requests, http, sleep, clean, decodeEntities, toEastern, instantToEastern };

@@ -10,7 +10,7 @@
 const fs = require("fs");
 const path = require("path");
 const vm = require("vm");
-const { clean } = require("./states/common");
+const { clean, requests } = require("./states/common");
 
 const OUT = path.join(__dirname, "live-states.js");
 const ADAPTERS = [require("./states/delaware"), require("./states/indiana"), require("./states/iowa"), require("./states/louisiana"), require("./states/mississippi"), require("./states/southcarolina"), require("./states/idaho"), require("./states/vermont"), require("./states/texas"), ...require("./states/bso")];
@@ -68,8 +68,12 @@ const MAX_READS = Number(process.env.STATE_MAX_READS) || 60;
 async function addDocumentReads(list, prevById, adapter) {
   const key = process.env.ANTHROPIC_API_KEY;
   if (!key) return;
-  if (adapter && adapter.noPageReads) { console.log(`  ${adapter.code}: page reads skipped (the portal forbids automated reads); rows stay "Not read"`); return; }
-  const { readNotice } = require("./states/docs");
+  const local = adapter && adapter.noPageReads ? adapter.localDoc : null; // portal forbids reads: only files saved by hand
+  if (adapter && adapter.noPageReads) {
+    if (adapter.noPageReadsNote) for (const r of list) r.details.readNote = adapter.noPageReadsNote;
+    if (!local) { console.log(`  ${adapter.code}: page reads skipped (the portal forbids automated reads); rows stay "Not read"`); return; }
+  }
+  const readNotice = local ? async (url, r) => local(r.id.slice(adapter.code.length + 1)) : require("./states/docs").readNotice;
   const ai = require("./ai-extract");
   let reused = 0, read = 0, budget = MAX_READS, noPage = 0, shortPage = 0, noAnswer = 0, failed = 0, emptyPage = 0, sample = null;
   const refused = {}; // HTTP errors by status, e.g. 401 from the portal
@@ -77,7 +81,7 @@ async function addDocumentReads(list, prevById, adapter) {
   for (const r of list) {
     const p = prevById.get(r.id);
     if (p && p.aiRead) { r.requires = p.requires; r.scope = p.scope; r.shall = p.shall; r.aiRead = true; reused++; }
-    else todo.push(r);
+    else if (!local || local(r.id.slice(adapter.code.length + 1))) todo.push(r); // local mode: only notices with a saved file
   }
   todo.sort((a, b) => a.due.localeCompare(b.due)); // soonest deadlines first
   for (let i = 0; i < todo.length && budget > 0; i += 3) {
@@ -85,10 +89,10 @@ async function addDocumentReads(list, prevById, adapter) {
     budget -= batch.length;
     await Promise.all(batch.map(async (r) => {
       try {
-        const doc = await readNotice(r.rfqUrl);
+        const doc = await readNotice(r.rfqUrl, r);
         if (!doc) { noPage++; return; }
         const res = await ai.extractWithPdfs(doc.text, doc.pdfs, key);
-        if (!res) { if (!doc.pdfs.length && ai.plainLength(doc.text) < 200) { if (!sample) sample = { id: r.id, raw: doc.text.length, text: doc.text.replace(/<[^>]*>/g, " ").replace(/s+/g, " ").trim().slice(0, 150) }; if (ai.plainLength(doc.text) === 0) emptyPage++; else shortPage++; } else noAnswer++; return; }
+        if (!res) { if (!doc.pdfs.length && ai.plainLength(doc.text) < 200) { if (!sample) sample = { id: r.id, raw: doc.text.length, text: doc.text.replace(/<[^>]*>/g, " ").replace(/[ \t\r\n]+/g, " ").trim().slice(0, 150) }; if (ai.plainLength(doc.text) === 0) emptyPage++; else shortPage++; } else noAnswer++; return; }
         if (res.requires !== null) r.requires = res.requires;
         if (res.scope) r.scope = res.scope;
         if (res.shall.length) r.shall = res.shall;
@@ -164,4 +168,5 @@ function readPrevious() {
     "(window.LIVE_SOURCES = window.LIVE_SOURCES || []).push({ meta: " + JSON.stringify(meta) + ", rfqs: " + JSON.stringify(rfqs, null, 1) + " });\n");
   fs.renameSync(tmp, OUT);
   console.log(`Wrote ${rfqs.length} State solicitations to live-states.js`);
+  console.log(`Requests this run: ${Object.entries(requests).map(([h, n]) => `${h} ${n}`).join(", ") || "none"}`);
 })().catch((e) => { console.error(e.message); process.exit(1); });

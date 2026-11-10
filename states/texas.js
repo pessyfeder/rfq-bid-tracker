@@ -11,6 +11,7 @@
 const fs = require("fs");
 const path = require("path");
 const { clean, toEastern } = require("./common");
+const { NAMES } = require("./texas-agencies");
 
 const DIR = path.join(__dirname, "..", "imports");
 
@@ -72,7 +73,9 @@ function stamp(dateStr, timeStr) {
 const isoDate = (s) => { const r = stamp(s, ""); return r ? r.due : null; };
 
 // The export gives only the agency/member NUMBER (e.g. 601), not a name.
-const agencyName = (a) => (!a ? "Texas agency" : /^\d+$/.test(a) ? `Texas agency ${a}` : a);
+// State agency numbers are looked up in texas-agencies.js; other IDs (M0152, G1010...) are SmartBuy members such as cities
+// and districts, with no public list, so they keep their ID.
+const agencyName = (a) => (!a ? "Texas agency" : /^\d+$/.test(a) ? NAMES.get(a) || `Texas agency ${a}` : `Texas SmartBuy member ${a}`);
 
 function newestCsv() {
   let files = [];
@@ -110,8 +113,22 @@ function parse(text) {
   return out;
 }
 
+// Notices a person saved by hand (e.g. "Save as PDF" from a page they opened in their own browser) in
+// imports/texas-notices/<solicitation id>.pdf (or .html/.htm/.txt). The AI read uses these; nothing is fetched.
+const NOTICE_DIR = path.join(DIR, "texas-notices");
+function localDoc(id) {
+  for (const ext of [".pdf", ".html", ".htm", ".txt"]) {
+    let buf; try { buf = fs.readFileSync(path.join(NOTICE_DIR, id + ext)); } catch { continue; }
+    if (ext === ".pdf") return buf.slice(0, 4).toString() === "%PDF" && buf.length <= 8e6 ? { text: "", pdfs: [buf] } : null;
+    return { text: buf.toString("utf8"), pdfs: [] };
+  }
+  return null;
+}
+
 module.exports = {
   code: "TX", name: "Texas",
+  noPageReadsNote: "Texas ESBD does not allow automated reads. Open the notice on ESBD, or save it to imports/texas-notices/ to have it read.",
+  localDoc, // used instead of fetching pages (see addDocumentReads)
   noPageReads: true, // robots.txt forbids automated reads of ESBD: the AI page read in fetch-states.js must not fetch these URLs
   async fetch() {
     const file = newestCsv();
