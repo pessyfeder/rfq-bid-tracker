@@ -16,6 +16,7 @@ W=[("DE","Open-data API. 39 open."),("IN","HTML table. 54 open. Links go to the 
 ("NY","NYS Contract Reporter: public listing (GET form), 736 open of 886 listed; sole-source, surplus, grant and RFI ads left out. Ad pages need a login behind reCAPTCHA, which we do not work around, so no document reads and no deadline times. Site terms require written permission to copy protected material; none requested."),
 ("RI","Form POST (ASP.NET). 30 open. Partial: covers quasi-state agencies, cities and towns, schools, colleges and grants only; executive-branch state bids are in a login system and are not covered."),
 ("WY","Public Purchase (the Google Sites page only points to it). 12 open. The listing is scrambled with decoy text; we read it the way a browser does, by dropping the spans the page itself hides. One request per run."),
+("KS","eSupplier public bidding events (PeopleSoft). 35 open. No robots.txt; site terms reviewed, no ban on automated reads. A session cookie handshake loads the whole list, then one page per event for the description (about 37 requests, paced). Bid package documents are not opened, so eligibility stays unread."),
 ("TX","Automatic source only: TxDOT open-data dataset, 329 open. Texas replied: no feed, and automated page reads are not offered, so the other agencies stay off. The hand-exported CSV route was removed.")]
 ASK=[("PA","Replied: the free DGS e-Alert emails are the only route. Built: an automatic Gmail IMAP reader. Waiting on the Google app password (PA_GMAIL_USER, PA_GMAIL_APP_PASSWORD), so 0 notices so far. robots.txt forbids automated access to the site."),
 ("UT","robots.txt forbids all automated access (Bonfire). Email sent; reply pending."),
@@ -40,8 +41,7 @@ E=[("AZ","Not scrapable: app.az.gov robots.txt forbids all automated access. Rou
 ("NC","eVP: nightly consolidated email from vendor@nc.gov; system is mid-migration. Not subscribed yet."),
 ("WI","eSupplier: NIGP-code email alerts. The public list is a Blazor app, so not scrapable. Not subscribed yet."),
 ("GA","Georgia Procurement Registry: email notifications listed, steps unconfirmed; browser check blocks scripts. Not subscribed yet.")]
-L=[("KS","Public bid page (PeopleSoft, no robots.txt) loads, but the grid is empty until a stateful search POST; not built, site terms not reviewed."),
-("NM","Bonfire or Jaggaer system."),("SD","ESM system."),("NE","The page came back empty.")]
+L=[("NM","Bonfire or Jaggaer system."),("SD","ESM system."),("NE","The page came back empty.")]
 U=[("MD","Open data was last updated in 2019.")]
 groups=[("Working",W),("Asked for a feed",ASK),("Parked",P),("Email alerts to set up",E),("Login or JavaScript",L),("Unusable",U)]
 assert sum(len(g) for _,g in groups)==50
@@ -52,7 +52,7 @@ b=ParagraphStyle("b",parent=ss["BodyText"],fontSize=9.5,leading=12.5)
 c=ParagraphStyle("c",parent=b,fontSize=9,leading=11.5)
 doc=SimpleDocTemplate(sys.argv[1],pagesize=letter,leftMargin=45,rightMargin=45,topMargin=45,bottomMargin=45,title="State RFQ feeds: status of all 50 states")
 el=[Paragraph("State RFQ feeds: status of all 50 states",h1),
-Paragraph("Updated 2026-11-10 (evening) from state-sources-survey.md and the latest fetch run. Counts are open notices at that run.",b),Spacer(1,8),
+Paragraph("Updated 2026-11-10 (night) from state-sources-survey.md and the latest fetch run. Counts are open notices at that run.",b),Spacer(1,8),
 Paragraph("Summary",ss["Heading2"])]
 rows=[["Status","Count","States"]]+[[n,str(len(g)),", ".join(s for s,_ in g)] for n,g in groups]
 def tbl(data,widths):
@@ -61,7 +61,7 @@ def tbl(data,widths):
     t.setStyle(TableStyle([("BACKGROUND",(0,0),(-1,0),colors.HexColor("#e6e9ef")),("GRID",(0,0),(-1,-1),0.4,colors.HexColor("#b8bec9")),("VALIGN",(0,0),(-1,-1),"TOP")]))
     return t
 el+=[tbl(rows,[110,40,362]),Spacer(1,8),
-Paragraph("Working states hold about 2,865 open notices (MA 875, NY 736, TxDOT 329, OR 176, IL 162, LA 139, SC 132, the rest under 80 each). Pennsylvania adds more once the Gmail app password is set. The app takes only automatic sources: no hand-exported files. Realistic free coverage is about 14 to 20 states unless feeds come back from the emails.",b),
+Paragraph("Working states hold about 2,900 open notices (MA 875, NY 736, TxDOT 329, OR 176, IL 162, LA 139, SC 132, the rest under 80 each). Pennsylvania adds more once the Gmail app password is set. The app takes only automatic sources: no hand-exported files. Realistic free coverage is about 14 to 20 states unless feeds come back from the emails.",b),
 Spacer(1,6),Paragraph("Every state",ss["Heading2"])]
 rows=[["State","Status","Notes"]]
 for n,g in groups:

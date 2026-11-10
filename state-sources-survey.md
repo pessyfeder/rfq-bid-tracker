@@ -68,6 +68,7 @@ AR, VT (page 404 at the URL tried; `bgs.vermont.gov/purchasing-contracting` stil
 | MS | `mississippi.js` (DataTables POST, needs the full parameter set) | 76 |
 | SC | `southcarolina.js` (form POST plus session, 9 pages) | 132 |
 | ID | `idaho.js` (WordPress JSON; many close dates are only *anticipated*) | 10 |
+| KS | `kansas.js` (PeopleSoft list plus one detail page per event) | 35 |
 | NV, NJ, OR, IL, MA | `bso.js` (Periscope pages) | 27, 24, 179, 162, 852 (partial) |
 Quirks: OR lists county and city bids (all tagged "State"); DE and ID publish dates only; LA links to the solicitation PDF;
 IN links to its listing page. MA works (852 open on 2026-11-10); its portal is slow (about 10 s a page, 36 pages) and a network content filter blocks one page (rows 725-749), so MA is reported as partial.
@@ -86,7 +87,7 @@ PA (2026-11-10): `states/pennsylvania.js` reads the eAlert emails automatically 
 - AZ: app.az.gov/robots.txt is `Disallow: /` (NO-BOTS). Do not scrape; request a feed.
 - MT: public events are on bids.sciquest.com (Jaggaer); its robots.txt is `Disallow: /` (NO-BOTS). One page was fetched before the robots.txt was read; nothing more was fetched.
 - WI: vendornet.wi.gov (no robots.txt) is a Blazor Server app, so no plain HTML/JSON listing; not built.
-- KS: supplier.sok.ks.gov PeopleSoft (no robots.txt) serves the bid page with a session cookie but the grid is empty until a search action POST (ICSID/ICStateNum/ICAction); not built, terms not reviewed.
+- KS: BUILT (`states/kansas.js`). The earlier note was wrong: the public list page (`SCP_PUBLIC_MENU_FL.SCP_PUB_BID_CMP_FL.GBL`) holds the full grid once the cookie handshake (302 + Set-Cookie, send it back) is done; no search POST needed. No robots.txt. Terms of use (admin.ks.gov/terms-of-use) only disclaim liability and note copyright, no ban on automated access. 35 open on 2026-11-10; each event has a shareable detail URL (`AUC_ID=EVT...`) read for the description. Bid package documents need a further POST and are not read (rows stay "Not read").
 - FL (VBS archival since 2022-03-28) and VA (eVA open data is historical) are PARKED.
 
 ## Tried and parked
