@@ -2,7 +2,7 @@
 
 These five states publish `Disallow: /` in robots.txt for their bid sites, so we should not scrape them.
 The compliant free route is to ask each for a feed, an API, a data download, or written permission to read the
-public bid list once a day. **These are drafts; nothing has been sent.** Fill in the [bracketed] parts and
+public bid list once a day. **These were sent by the user (as of 2026-11-10); replies pending.** Fill in the [bracketed] parts and
 confirm each address first, since several came from search results and some may be out of date.
 
 ## Template

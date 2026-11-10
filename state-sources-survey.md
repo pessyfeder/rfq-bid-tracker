@@ -27,7 +27,7 @@ robots.txt on these sites only blocks `/craft`.
 | NJ | njstart.gov | VERIFIED (24 dates in the server-rendered page) |
 | OR | oregonbuys.gov | VERIFIED (25 dates) |
 | IL | bidbuy.illinois.gov | VERIFIED (25 dates) |
-| MA | commbuys.com | UNREACHABLE: timed out twice (may block this client). Same platform, so likely works. |
+| MA | commbuys.com | VERIFIED (852 open; one page blocked by a local filter) |
 
 **Other**
 | State | Source | Status |
@@ -68,17 +68,17 @@ AR, VT (page 404 at the URL tried; `bgs.vermont.gov/purchasing-contracting` stil
 | MS | `mississippi.js` (DataTables POST, needs the full parameter set) | 76 |
 | SC | `southcarolina.js` (form POST plus session, 9 pages) | 132 |
 | ID | `idaho.js` (WordPress JSON; many close dates are only *anticipated*) | 10 |
-| NV, NJ, OR, IL, MA | `bso.js` (Periscope pages) | 27, 24, 179, 162, MA blocked (see below) |
+| NV, NJ, OR, IL, MA | `bso.js` (Periscope pages) | 27, 24, 179, 162, 852 (partial) |
 Quirks: OR lists county and city bids (all tagged "State"); DE and ID publish dates only; LA links to the solicitation PDF;
-IN links to its listing page. MA's portal is slow (about 10 s a page, 36 pages) and the local web filter blocks it near row 725.
+IN links to its listing page. MA works (852 open on 2026-11-10); its portal is slow (about 10 s a page, 36 pages) and a network content filter blocks one page (rows 725-749), so MA is reported as partial.
 To add a state, write an adapter and list it in `fetch-states.js`.
 
 VT is also built: `vermont.js` reads the OPC "Current Bid Listings" page (9 open on 2026-11-10); each notice links to its solicitation PDF.
 AR was checked and not built: ARBuy's Periscope page loads but lists 0 open bids (the state is moving to a new system).
-Draft emails for the states that forbid automated access are in `state-feed-requests.md` (nothing sent).
+Draft emails for the states that forbid automated access are in `state-feed-requests.md` (sent by the user as of 2026-11-10; replies pending).
 
 Planned: read Pennsylvania's free DGS e-Alert emails automatically (needs a dedicated mailbox the app can read over IMAP;
-not built). Personalized, ready-to-send emails are in `state-feed-requests.local.md` (git-ignored; the repo is public).
+not built; the user cannot create a new mailbox because the provider needs a QR-code check and they have no smartphone). Personalized, ready-to-send emails are in `state-feed-requests.local.md` (git-ignored; the repo is public).
 
 ## Tried and parked
 - OK: the public list works (GET `ok.gov/dcs/solicit/app/solicitationSearch.php?status=open-pending`, then `?page=N` with the session cookie), but it holds only old items: of 155 rows, 153 are "Pending Award" and the 2 "Open" ones closed in 2020 and 2021. Current Oklahoma bids are not published there, so no adapter was built.
@@ -87,7 +87,7 @@ not built). Personalized, ready-to-send emails are in `state-feed-requests.local
 - CT, AK, HI, ND: ASP.NET form pages or other systems; each needs form-post reverse engineering for few notices.
 
 ## Next
-1. Retest MA once the filter allows commbuys.com.
+1. MA: ask the filter admin to allow commbuys.com so the one blocked page (rows 725-749) can be read.
 2. Email the NO-BOTS and BLOCKED states asking for a feed; that is the only compliant free route.
 3. VT, AR and the parked states if more coverage is wanted.
 Expected free coverage: about 13 states now. All 50 is not realistic without a paid feed.
