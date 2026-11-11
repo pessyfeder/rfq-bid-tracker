@@ -21,20 +21,19 @@ W=[("DE","Open-data API. 39 open."),("IN","HTML table. 54 open. Links go to the 
 ("FL","MyFloridaMarketPlace Vendor Information Portal: public JSON API, no login. 103 open (ITB, ITN, RFP, RFI, RSQ only). The old Vendor Bid System is archival. Attached documents are not read."),
 ("NE","DAS Purchasing Bureau current bid table (server-rendered, robots.txt does not cover it). 4 open with a due date; open-ended rows skipped. No due time published. Notice pages and attachments are AI-read."),
 ("TX","Automatic source only: TxDOT open-data dataset, 329 open. Texas replied: no feed, and automated page reads are not offered, so the other agencies stay off. The hand-exported CSV route was removed. Statewide Texas coverage (ESBD, every agency) depends on the Comptroller approving access; until then TX stays TxDOT only.")]
-ASK=[("PA","Replied: the free DGS e-Alert emails are the only route. Built: an automatic Gmail IMAP reader. Waiting on the Google app password (PA_GMAIL_USER, PA_GMAIL_APP_PASSWORD), so 0 notices so far. robots.txt forbids automated access to the site."),
-("UT","robots.txt forbids all automated access (Bonfire). Email sent; reply pending."),
+ASK=[("UT","robots.txt forbids all automated access (Bonfire). Email sent; reply pending."),
 ("OH","robots.txt forbids automated access, and the site is behind a login. Email sent; reply pending."),
 ("AL","robots.txt forbids all automated access. Email sent; reply pending."),
 ("CA","HTTP 403 to automated requests. Email sent; reply pending."),("CO","HTTP 403 to automated requests. Email sent; reply pending."),
 ("NH","HTTP 403 to automated requests. Email sent; reply pending."),("TN","HTTP 403 to automated requests. Not emailed; need to call."),
 ("ME","HTTP 403, and login-only since October 2025. Email sent; reply pending."),("MN","Bot challenge. Email sent; reply pending.")]
 P=[("OK","The public list only holds old items: 153 of 155 rows are Pending Award; the 2 open ones closed in 2020 and 2021."),
-("MO","Bids moved to the new MOVERS system, which needs a login."),
 ("CT","ASP.NET form pages; needs form-post work for few notices."),("AK","ASP.NET form pages or other system; needs form-post work for few notices."),
 ("HI","ASP.NET form pages or other system; needs form-post work for few notices."),("ND","ASP.NET form pages or other system; needs form-post work for few notices."),
 ("AR","ARBuy shows 0 open bids while the state moves to Ariba in 2026. Recheck in a few months."),
 ("MD","Open data was last updated in 2019.")]
-E=[("AZ","Not scrapable: app.az.gov robots.txt forbids all automated access. Route: supplier registration with commodity codes, email alerts. Not subscribed yet."),
+E=[("PA","Replied: the free DGS e-Alert emails are the only route. Built: an automatic Gmail IMAP reader. Waiting on the Google app password (PA_GMAIL_USER, PA_GMAIL_APP_PASSWORD), so 0 notices so far. robots.txt forbids automated access to the site."),
+("AZ","Not scrapable: app.az.gov robots.txt forbids all automated access. Route: supplier registration with commodity codes, email alerts. Not subscribed yet."),
 ("MT","Not scrapable: bids.sciquest.com robots.txt forbids all automated access. Route: eMACS vendor registration, email notices by commodity code. Not subscribed yet."),
 ("WA","WEBS: free registration, email alerts by commodity code. Not subscribed yet."),
 ("MI","SIGMA VSS: profile commodity codes drive email alerts. Not subscribed yet."),
