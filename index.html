@@ -127,7 +127,6 @@
     </thead>
     <tbody id="body"></tbody>
   </table>
-  <button id="more" class="toggle" hidden style="margin:12px 24px"></button>
   <div class="empty" id="empty" hidden>No requests match your filters.</div>
 </div>
 
@@ -434,8 +433,7 @@
     return parts.join(" ").toLowerCase();
   }
 
-  var PAGE = 50, shownCount = PAGE;
-  function render() {
+    function render() {
     renderHead();
     var f = makeFilter();
     var list = rows.filter(function (r) { return matches(r, f); });
@@ -450,7 +448,7 @@
       return (x - y) * sort.dir;
     });
     var total = list.length;
-    var shown = list.slice(0, shownCount); // thousands of rows make every redraw slow, so show a page at a time
+    var shown = list; // all rows are shown; row DOM is cached so redraws stay fast
     function rowHtml(r) {
       var open = expanded[r.id];
       var shallRow = open ? '<tr class="shall-row' + (r.daysLeft < 0 ? " closed" : "") + '"><td colspan="' + COLUMNS.length + '"><h4>Key requirements ("shall")' + (r.aiRead ? " &middot; AI read, please verify" : "") + '</h4><ul>' +
@@ -483,13 +481,10 @@
       r._els.nodes.forEach(function (n) { frag.appendChild(n); });
     });
     $("body").replaceChildren(frag);
-    var more = $("more");
-    more.hidden = total <= shown.length;
-    more.textContent = "Show " + Math.min(PAGE, total - shown.length) + " more (" + (total - shown.length) + " not shown)";
     $("empty").hidden = total > 0;
     $("empty").textContent = rows.length ? "No requests match your filters." : "No data";
     var m = window.RFQS_META;
-    $("count").textContent = (shown.length < total ? "showing " + shown.length + " of " + total + " matching, " : total + " of ") + rows.length + " requests · " +
+    $("count").textContent = (total + " of ") + rows.length + " requests · " +
       (m ? "live from " + m.source + ", updated " + new Date(m.fetchedAt).toLocaleString("en-US") : "No data");
   }
 
@@ -508,16 +503,14 @@
     }
     render();
   });
-  $("more").addEventListener("click", function () { shownCount += PAGE; render(); });
   $("head").addEventListener("click", function (e) {
     var th = e.target.closest("th"); if (!th || th.classList.contains("nosort")) return;
     var key = th.dataset.key;
     sort = sort.key === key ? { key: key, dir: -sort.dir } : { key: key, dir: key === "value" ? -1 : 1 };
-    shownCount = PAGE;
     render();
   });
   ["q", "st", "level", "category", "hideClosed", "hideFlagged"].forEach(function (id) {
-    function onFilter() { shownCount = PAGE; render(); }
+    function onFilter() { render(); }
     var timer;
     $(id).addEventListener("input", function () { clearTimeout(timer); timer = setTimeout(onFilter, 0); }); // coalesce events from one keystroke
     $(id).addEventListener("change", function () { clearTimeout(timer); onFilter(); });
