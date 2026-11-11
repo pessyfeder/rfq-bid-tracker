@@ -14,11 +14,11 @@
     { label: "Past performance / references", sev: "info", re: /past performance|references|\bCPARS\b|years of experience|similar (projects|contracts)/i },
     { label: "Multi-year / renewal term",  sev: "info", re: /option (year|period)|base (year|period)|\b\d+[- ]year (contract|term)|renewal/i }
   ];
-  var KEYWORD_ONLY = /^(NY|WY|DE|TXDOT)-/;
+  var KEYWORD_ONLY = /^(NY|WY|DE|TXDOT|ID|KS|PA)-/;
   function keyFacts(r) {
     var x = r.details || {};
     var src = [];
-    // States whose notices carry no readable documents (NY, WY, DE, TXDOT) get a free keyword match on the title and scope line.
+    // States whose notices carry no readable documents (NY, WY, DE, TXDOT, ID, KS, PA) get a free keyword match on the title and scope line.
     var kw = !r.aiRead && KEYWORD_ONLY.test(String(r.id || ""));
     if (kw && r.title) src.push(r.title);
     if (r.scope) src.push(r.scope);
