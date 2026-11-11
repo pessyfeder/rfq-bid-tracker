@@ -134,17 +134,18 @@
 <script src="data.js"></script>
 <script src="sample-data.js"></script>
 <script src="facts.js"></script>
+<script src="live-sam.js" onerror="void 0"></script>
+<script src="live-nyc.js" onerror="void 0"></script>
 <script src="live-states.js" onerror="void 0"></script>
 <script>
 // Merge whichever live feeds exist. No live feed = no requests (never made-up data).
 (function () {
   var src = window.LIVE_SOURCES || [];
   if (!src.length) return;
-  // Show only the states in the State fetch status snapshot (TxDOT counts as TX); federal and NYC feeds are left out.
+  // State-portal feed: only the states in the State fetch status snapshot (TxDOT counts as TX). Federal (SAM.gov) and NYC feeds are kept whole.
   var STATES = { DE: 1, IN: 1, IA: 1, LA: 1, MS: 1, SC: 1, ID: 1, VT: 1, NV: 1, NJ: 1, OR: 1, IL: 1, MA: 1, TX: 1, TXDOT: 1, PA: 1, RI: 1, NY: 1, WY: 1 };
-  src = src.filter(function (s) { return s.meta.states; }); // only the state-portal feed carries a states list
   window.RFQS = src.reduce(function (a, s) {
-    return a.concat(s.rfqs.filter(function (r) { return STATES[String(r.id).split("-")[0]]; }));
+    return a.concat(s.meta.states ? s.rfqs.filter(function (r) { return STATES[String(r.id).split("-")[0]]; }) : s.rfqs);
   }, []);
   window.RFQS_META = { source: src.map(function (s) { return s.meta.source; }).join(" + "),
     fetchedAt: src.map(function (s) { return s.meta.fetchedAt; }).sort()[0] };
@@ -187,7 +188,7 @@
   var rows = window.RFQS.map(function (r) {
     var noDue = hasNoRealDue(r);
     return Object.assign({}, r, {
-      st: String(r.id).split("-")[0].replace("TXDOT", "TX"), // state code from the id prefix
+      st: r.level === "Federal" ? "US" : String(r.id).split("-")[0].replace("TXDOT", "TX"), // state code from the id prefix (US = federal)
       noDue: noDue,
       dueSort: noDue ? null : r.due,
       daysLeft: noDue ? null : diffDays(todayStr, r.due),
@@ -211,7 +212,7 @@
   var STATE_NAMES = { AL: "Alabama", AK: "Alaska", AZ: "Arizona", AR: "Arkansas", CA: "California", CO: "Colorado", CT: "Connecticut", DE: "Delaware", DC: "District of Columbia", FL: "Florida", GA: "Georgia", HI: "Hawaii", ID: "Idaho", IL: "Illinois", IN: "Indiana", IA: "Iowa", KS: "Kansas", KY: "Kentucky", LA: "Louisiana", ME: "Maine", MD: "Maryland", MA: "Massachusetts", MI: "Michigan", MN: "Minnesota", MS: "Mississippi", MO: "Missouri", MT: "Montana", NE: "Nebraska", NV: "Nevada", NH: "New Hampshire", NJ: "New Jersey", NM: "New Mexico", NY: "New York", NC: "North Carolina", ND: "North Dakota", OH: "Ohio", OK: "Oklahoma", OR: "Oregon", PA: "Pennsylvania", RI: "Rhode Island", SC: "South Carolina", SD: "South Dakota", TN: "Tennessee", TX: "Texas", UT: "Utah", VT: "Vermont", VA: "Virginia", WA: "Washington", WV: "West Virginia", WI: "Wisconsin", WY: "Wyoming" };
   var stCount = {};
   rows.forEach(function (r) { stCount[r.st] = (stCount[r.st] || 0) + 1; });
-  Object.keys(STATE_NAMES).sort().forEach(function (code) {
+  Object.keys(STATE_NAMES).concat(["US", "NYC"]).sort().forEach(function (code) {
     var o = document.createElement("option");
     o.value = code;
     o.textContent = code + " (" + (stCount[code] || 0) + ")";
