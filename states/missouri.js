@@ -5,7 +5,10 @@ const { http, clean, instantToEastern } = require("./common");
 const HOST = "https://ewqg.fa.us8.oraclecloud.com";
 const BU = "300000005255687"; // State of Missouri procurement business unit (the id in the public listing URL)
 const PAGE = `${HOST}/fscmUI/redwood/negotiation-abstracts/view/abstractlisting?prcBuId=${BU}&ojSpLang=en`;
-const API = `${HOST}/fscmRestApi/resources/11.13.18.05/supplierNegotiationAbstracts`;
+// If MO suddenly errors (HTTP 404/400), check the Oracle REST version in this path first: "11.13.18.05" is pinned and Oracle may
+// retire it. Find the current one by opening the listing page in a browser and reading the page's own
+// /fscmRestApi/rest/rv:<id>/en/<version>/supplierNegotiationAbstractListings/... request in the network tab.
+const API =`${HOST}/fscmRestApi/resources/11.13.18.05/supplierNegotiationAbstracts`;
 const PAGE_SIZE = 100;
 
 module.exports = {
