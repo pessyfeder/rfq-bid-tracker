@@ -37,7 +37,6 @@ const CFG = {
   port: Number(process.env.PORT || 8765),
   maxAgeHours: Number(process.env.REFRESH_MAX_AGE_HOURS || 24), // refresh when the last attempt is this old
   wakeDelaySec: Number(process.env.WAKE_DELAY_SEC || 45),       // after a wake, wait for Wi-Fi/VPN before fetching
-  minGapMin: Number(process.env.REFRESH_MIN_GAP_MIN || 10),     // ignore wakes closer together than this
   fetchTimeoutMin: Number(process.env.FETCH_TIMEOUT_MIN || 45)
 };
 const isLoopback = (h) => h === "127.0.0.1" || h === "::1" || h === "localhost";
@@ -99,13 +98,13 @@ async function runRefresh(reason) {
   } catch (e) {
     log("refresh error: " + (e.stack || e.message));
   } finally {
-    refresh.running = false; refresh.startedAt = null; lastRefreshEnd = Date.now();
+    refresh.running = false; refresh.startedAt = null;
   }
   return true;
 }
 
-// Schedule: no clock times. A refresh starts when the machine wakes from sleep, or when the last
-// refresh attempt is a day old, whichever comes first. The service itself is started at boot by Task
+// Schedule: no clock times. A refresh starts only once the last refresh attempt is 24 hours old: as soon as
+// that is true while awake, or, if the machine was asleep when the 24 hours ran out, right after it wakes. The service itself is started at boot by Task
 // Scheduler ("At startup", whether or not anyone is logged on - see DEPLOY.md), so it is already
 // running when the machine wakes at the lock screen.
 //
@@ -121,12 +120,12 @@ function due() { // the 24-hour rule: some runnable source has never run, or the
   const runnable = feed.SOURCES.filter((s) => s.script && s.needsEnv.every((k) => process.env[k]));
   return runnable.some((s) => !(state.runs[s.id] || {}).lastAttempt) || Date.now() - lastAttemptMs() >= DAY_MS();
 }
-let wakeTimer = null, lastRefreshEnd = 0;
+let wakeTimer = null;
 function onWake(slept) {
   if (wakeTimer || refresh.running) return;
-  if (Date.now() - lastRefreshEnd < CFG.minGapMin * 60000) { log(`woke after ~${slept}s asleep; refreshed recently, skipping`); return; }
-  log(`woke after ~${Math.round(slept)}s asleep; refreshing in ${CFG.wakeDelaySec}s (network may still be coming up)`);
-  wakeTimer = setTimeout(() => { wakeTimer = null; runRefresh("wake from sleep"); }, CFG.wakeDelaySec * 1000);
+  if (!due()) { log(`woke after ~${Math.round(slept)}s asleep; last refresh under ${CFG.maxAgeHours} h ago, nothing to do (next by ${dueAt().toString()})`); return; }
+  log(`woke after ~${Math.round(slept)}s asleep and ${CFG.maxAgeHours} h have passed; refreshing in ${CFG.wakeDelaySec}s (network may still be coming up)`);
+  wakeTimer = setTimeout(() => { wakeTimer = null; runRefresh("wake from sleep, 24 h or more since the last refresh"); }, CFG.wakeDelaySec * 1000);
 }
 function startScheduler() {
   let last = Date.now();
@@ -135,7 +134,7 @@ function startScheduler() {
     if (gap > TICK_MS * 3) onWake(gap / 1000);                          // slept
     else if (!refresh.running && !wakeTimer && due()) runRefresh("24 hours since the last refresh");
   }, TICK_MS);
-  log(`refresh triggers: wake from sleep, or ${CFG.maxAgeHours} h after the last attempt (next by ${dueAt().toString()})`);
+  log(`refresh rule: ${CFG.maxAgeHours} h after the last attempt (on wake if it came due asleep) (next by ${dueAt().toString()})`);
 }
 
 // ---- HTTP ----------------------------------------------------------------------------------------

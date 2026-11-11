@@ -1,6 +1,6 @@
 # RFQ feed API (for clients of the service)
 
-The service (`server.js`) refreshes the data when the machine wakes from sleep or 24 hours after the last refresh and serves it as JSON. This service does **not** judge eligibility (see spec 2a); it passes on what each request says it requires.
+The service (`server.js`) refreshes the data once 24 hours have passed since the last refresh (right after waking, if it came due during sleep) and serves it as JSON. This service does **not** judge eligibility (see spec 2a); it passes on what each request says it requires.
 
 Base URL: `http://<service-machine>:8765` (port set by `PORT`). Schema version: **1**.
 

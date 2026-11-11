@@ -1,6 +1,6 @@
 # Installing the RFQ service
 
-This is a standalone service on **one machine** (the "service machine"). It fetches solicitations from NYC and SAM.gov on wake from sleep or every 24 hours, keeps them in `data/`, and serves them as JSON. The JSON contract is in `FEED.md`.
+This is a standalone service on **one machine** (the "service machine"). It fetches solicitations from NYC and SAM.gov every 24 hours (after a sleep, right on waking), keeps them in `data/`, and serves them as JSON. The JSON contract is in `FEED.md`.
 
 ```
  NYC / SAM.gov / USAspending / Anthropic  -->  [service machine: server.js]  -->  JSON on localhost
@@ -12,7 +12,7 @@ No secrets belong in this file. Keys live in environment variables or a `.env` f
 ## 1. What the service machine needs
 
 - Node.js, recent LTS (`node --version`; 18 or newer). No `npm install`: there are no dependencies.
-- Can sleep. The service refreshes when the machine wakes from sleep, or 24 hours after the last refresh attempt, whichever comes first (also at start-up if the data is over a day old). There is no fixed time of day. It must be started at boot (section 6) so it is already running when the machine wakes at the lock screen, before anyone logs in.
+- Can sleep. The service refreshes once 24 hours have passed since the last refresh attempt: while awake as soon as it is due, or, if the 24 hours ran out while the machine slept, right after it wakes (also at start-up if the data is over a day old). A wake sooner than 24 hours after the last refresh does nothing. There is no fixed time of day. It must be started at boot (section 6) so it is already running when the machine wakes at the lock screen, before anyone logs in.
 - Outbound internet to sam.gov, data.cityofnewyork.us, usaspending.gov, api.anthropic.com.
 - The service listens on this machine only (the default; `.env` also sets `HOST=127.0.0.1` to make it explicit), so no firewall change is needed.
 
@@ -68,7 +68,6 @@ Optional settings you can add to the same file (defaults shown):
 # PORT=8765
 # REFRESH_MAX_AGE_HOURS=24   # refresh when the last attempt is this old
 # WAKE_DELAY_SEC=45          # wait after a wake for the network to come up
-# REFRESH_MIN_GAP_MIN=10     # ignore wakes sooner than this after a refresh
 # SAM_DAILY_BUDGET=10   # see the note below
 ```
 
@@ -112,7 +111,7 @@ Simplest: Task Scheduler.
 3. Actions: Start a program = `start.cmd` in the project folder (full path), and Start in = the project folder. (`start.cmd` restarts the service 10 seconds after it exits. It needs `node` on the PATH of the account the task runs as: test with `where node` in a fresh PowerShell. After saving the task, right-click it > Run, then check `curl http://localhost:8765/api/health`. To stop the service, End the task in Task Scheduler; ending only `node.exe` makes `start.cmd` start it again.)
 4. Settings: untick "Stop the task if it runs longer than". In Conditions, untick "Start the task only if the computer is on AC power" so it also starts on battery.
 
-The service notices a wake by timer drift (a sleeping machine freezes it), so no wake trigger is needed in Task Scheduler. After a wake it waits `WAKE_DELAY_SEC` for the network, then refreshes; `data/service.log` shows `woke after ...` lines.
+The service notices a wake by timer drift (a sleeping machine freezes it), so no wake trigger is needed in Task Scheduler. After a wake that finds a refresh due, it waits `WAKE_DELAY_SEC` for the network, then refreshes; `data/service.log` shows `woke after ...` lines.
 
 Alternative: NSSM (`nssm install rfq-service "C:\Program Files\nodejs\node.exe" server.js`, startup directory the project folder) gives a real Windows service.
 

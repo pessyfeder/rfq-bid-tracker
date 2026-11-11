@@ -152,8 +152,8 @@ Search
     the app as its own low-privilege user or in Docker; if it is old, neglected or hosts
     something important, a separate VPS ($5-10/month) is cheaper than the risk. Also
     open: Linux or Windows server (decides the setup steps in DEPLOY.md).
- n. Refresh trigger: DECIDED. Fetchers run automatically when the machine wakes from sleep, or 24
-    hours after the last attempt, whichever comes first (no fixed time of day; see DEPLOY.md). The AI cache file (ai-cache.json) must persist on the
+ n. Refresh trigger: DECIDED. Fetchers run automatically once 24 hours have passed since the last attempt
+    (right after waking, if the 24 hours ran out during sleep) (no fixed time of day; see DEPLOY.md). The AI cache file (ai-cache.json) must persist on the
     server between runs, otherwise every notice is re-read and re-billed. Estimated AI
     cost is a few cents a day, roughly $1 to $3 a month (a projection, not a measurement;
     check ai-usage.log and the Anthropic Console). The earlier figure of about 50 cents
@@ -174,7 +174,7 @@ Search
 -------------------
 How it works: node scripts write live-*.js files; index.html loads whichever exist
 (live-sam.js, live-nyc.js, live-ny-state.js) and merges them. Re-run a script to refresh;
-server.js now runs them on wake / every 24 h and serves the merged result as JSON (FEED.md)
+server.js now runs them every 24 h and serves the merged result as JSON (FEED.md)
 (see DEPLOY.md). The data shape is documented at the top of data.js.
 
  - NYC City Record (fetch-nyc.js): LIVE. Open Procurement solicitations from NYC Open
