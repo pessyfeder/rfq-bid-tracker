@@ -15,6 +15,7 @@ W=[("DE","Open-data API. 39 open."),("IN","HTML table. 54 open. Links go to the 
 ("MA","Periscope portal. 875 open at the last run. Slow (about 10 s a page). Earlier runs had one page (rows 725-749) blocked by the local network content filter. Document reads paced one every 5 s."),
 ("NY","NYS Contract Reporter: public listing (GET form), 736 open of 886 listed; sole-source, surplus, grant and RFI ads left out. Ad pages need a login behind reCAPTCHA, which we do not work around, so no document reads and no deadline times. Site terms require written permission to copy protected material; none requested."),
 ("RI","Form POST (ASP.NET). 30 open. Partial: covers quasi-state agencies, cities and towns, schools, colleges and grants only; executive-branch state bids are in a login system and are not covered."),
+("WV","wvOASIS View Published Solicitations (CGI Advantage session app, no login). 70 open. We replay the three actions a visitor makes (open the page, search Open, 100 per page) in one session, retried when the host returns 503. No per-bid page, so document reads are skipped; Bid factors come from title and scope keywords."),
 ("WY","Public Purchase (the Google Sites page only points to it). 12 open. The listing is scrambled with decoy text; we read it the way a browser does, by dropping the spans the page itself hides. One request per run. Bid detail pages need a login (HTTP 401), so document reads are skipped; Bid factors come from title and scope keywords."),
 ("KS","eSupplier public bidding events (PeopleSoft). 35 open. No robots.txt; site terms reviewed, no ban on automated reads. A session cookie handshake loads the whole list, then one page per event for the description (about 37 requests, paced). Bid package documents are not opened, so eligibility stays unread; Bid factors come from title and scope keywords."),
 ("TX","Automatic source only: TxDOT open-data dataset, 329 open. Texas replied: no feed, and automated page reads are not offered, so the other agencies stay off. The hand-exported CSV route was removed.")]
@@ -31,8 +32,7 @@ P=[("OK","The public list only holds old items: 153 of 155 rows are Pending Awar
 ("HI","ASP.NET form pages or other system; needs form-post work for few notices."),("ND","ASP.NET form pages or other system; needs form-post work for few notices."),
 ("FL","The old Vendor Bid System is archival only (ads posted before 28 March 2022). Current bids are in MyFloridaMarketPlace (JavaScript app, vendor login); no feed or open data found."),
 ("VA","eVA Open Data Portal and data.virginia.gov hold historical procurement data only (yearly files, login to download), not open solicitations. No feed found."),
-("AR","ARBuy shows 0 open bids while the state moves to Ariba in 2026. Recheck in a few months."),
-("WV","Public pages are Bids Received results (no title or deadline), so they list closed solicitations. Open bids are in wvOASIS, a login-free but JavaScript session app (no plain listing) that often returns 503, so it is not built yet.")]
+("AR","ARBuy shows 0 open bids while the state moves to Ariba in 2026. Recheck in a few months.")]
 E=[("AZ","Not scrapable: app.az.gov robots.txt forbids all automated access. Route: supplier registration with commodity codes, email alerts. Not subscribed yet."),
 ("MT","Not scrapable: bids.sciquest.com robots.txt forbids all automated access. Route: eMACS vendor registration, email notices by commodity code. Not subscribed yet."),
 ("WA","WEBS: free registration, email alerts by commodity code. Not subscribed yet."),
@@ -40,8 +40,9 @@ E=[("AZ","Not scrapable: app.az.gov robots.txt forbids all automated access. Rou
 ("KY","VSS: email notifications for registered vendors; setup details unconfirmed. Not subscribed yet."),
 ("NC","eVP: nightly consolidated email from vendor@nc.gov; system is mid-migration. Not subscribed yet."),
 ("WI","eSupplier: NIGP-code email alerts. The public list is a Blazor app, so not scrapable. Not subscribed yet."),
-("GA","Georgia Procurement Registry: email notifications listed, steps unconfirmed; browser check blocks scripts. Not subscribed yet.")]
-L=[("NM","Bonfire or Jaggaer system."),("SD","ESM system."),("NE","The page came back empty.")]
+("GA","Georgia Procurement Registry: email notifications listed, steps unconfirmed; browser check blocks scripts. Not subscribed yet."),
+("NM","Not scrapable: bids.sciquest.com (Jaggaer) robots.txt forbids all automated access. Route: supplier registration at solutions.sciquest.com (CustOrg=StateOfNewMexico), email alerts. Not subscribed yet; skipped for now.")]
+L=[("SD","ESM system."),("NE","The page came back empty.")]
 U=[("MD","Open data was last updated in 2019.")]
 groups=[("Working",W),("Asked for a feed",ASK),("Parked",P),("Email alerts to set up",E),("Login or JavaScript",L),("Unusable",U)]
 assert sum(len(g) for _,g in groups)==50
