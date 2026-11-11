@@ -16,7 +16,7 @@ const sameHost = (a, b) => {
 };
 
 // Boilerplate attachments that never say who may bid; tried last.
-const SKIP = /terms (and|&) conditions|standard terms|forms? packet|price|pricing|cost (sheet|proposal)|pre-?quote|\bw-?9\b|insurance|affidavit|certification|questionnaire|amendment/i;
+const SKIP = /terms (and|&) conditions|standard terms|forms? packet|price|pricing|cost (sheet|proposal)|pre-?quote|\bw-?9\b|insurance|affidavit|certification|questionnaire|amendment|public records request/i;
 const WANTED = /rf[pqi]|itb|ifb|solicitation|specification|scope of work|bid document|invitation/i;
 
 async function body(url, max) {
