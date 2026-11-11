@@ -33,7 +33,8 @@ P=[("OK","The public list only holds old items: 153 of 155 rows are Pending Awar
 ("CT","ASP.NET form pages; needs form-post work for few notices."),("AK","ASP.NET form pages or other system; needs form-post work for few notices."),
 ("HI","ASP.NET form pages or other system; needs form-post work for few notices."),("ND","ASP.NET form pages or other system; needs form-post work for few notices."),
 ("VA","eVA Open Data Portal and data.virginia.gov hold historical procurement data only (yearly files, login to download), not open solicitations. No feed found."),
-("AR","ARBuy shows 0 open bids while the state moves to Ariba in 2026. Recheck in a few months.")]
+("AR","ARBuy shows 0 open bids while the state moves to Ariba in 2026. Recheck in a few months."),
+("MD","Open data was last updated in 2019.")]
 E=[("AZ","Not scrapable: app.az.gov robots.txt forbids all automated access. Route: supplier registration with commodity codes, email alerts. Not subscribed yet."),
 ("MT","Not scrapable: bids.sciquest.com robots.txt forbids all automated access. Route: eMACS vendor registration, email notices by commodity code. Not subscribed yet."),
 ("WA","WEBS: free registration, email alerts by commodity code. Not subscribed yet."),
@@ -44,8 +45,7 @@ E=[("AZ","Not scrapable: app.az.gov robots.txt forbids all automated access. Rou
 ("GA","Georgia Procurement Registry: email notifications listed, steps unconfirmed; browser check blocks scripts. Not subscribed yet."),
 ("NM","Not scrapable: bids.sciquest.com (Jaggaer) robots.txt forbids all automated access. Route: supplier registration at solutions.sciquest.com (CustOrg=StateOfNewMexico), email alerts. Not subscribed yet; skipped for now.")]
 L=[("SD","ESM system.")]
-U=[("MD","Open data was last updated in 2019.")]
-groups=[("Working",W),("Asked for a feed",ASK),("Parked",P),("Email alerts to set up",E),("Login or JavaScript",L),("Unusable",U)]
+groups=[("Working",W),("Asked for a feed",ASK),("Parked",P),("Email alerts to set up",E),("Login or JavaScript",L)]
 assert sum(len(g) for _,g in groups)==50
 
 ss=getSampleStyleSheet()
