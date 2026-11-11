@@ -76,6 +76,13 @@
   tr.shall-row li { margin-bottom: 4px; max-width: 900px; }
   tr.shall-row .ref { color: var(--muted); font-size: 12px; white-space: nowrap; }
   .empty { padding: 24px; text-align: center; color: var(--muted); }
+  /* Fetch-failure banner: unmissable on purpose; hidden when every state fetched fine. */
+  .failbar { margin: 0 24px 12px; padding: 10px 14px; background: #fdecea; color: var(--bad); border: 2px solid var(--bad); border-radius: 8px; }
+  .failbar.warn { background: #fff3cd; color: #7a5b00; border-color: var(--warn); }
+  .failbar b { font-size: 15px; }
+  .failbar ul { margin: 6px 0 0; padding-left: 20px; color: var(--ink); }
+  .failbar li { margin-bottom: 2px; }
+  @media (max-width: 900px) { .failbar { margin: 0 12px 12px; } }
   /* Narrow screens: each request becomes a card with its cells stacked vertically, labelled. */
   @media (max-width: 900px) {
     .wrap { margin: 0 12px 16px; overflow: visible; background: none; border: 0; }
@@ -106,6 +113,8 @@
   <h1>RFQ Bid Tracker</h1>
   <span class="sub">Discover Group &middot; Brooklyn, NY</span>
 </header>
+
+<div class="failbar" id="failBanner" role="alert" hidden></div>
 
 <div class="toolbar">
   <input type="search" id="q" placeholder="Search: filter by specification">
@@ -148,6 +157,46 @@
   }, []);
   window.RFQS_META = { source: src.map(function (s) { return s.meta.source; }).join(" + "),
     fetchedAt: src.map(function (s) { return s.meta.fetchedAt; }).sort()[0] };
+})();
+</script>
+<script>
+// Fetch health: read the per-state results that fetch-states.js records in live-states.js (meta.states) and show a banner
+// for every state whose last fetch failed (red) or was partial (amber). Failed states keep showing their last notices,
+// so without this the rows would look current. Also sets window.STATE_ISSUES for the state dropdown.
+(function () {
+  var NAMES = { AK: "Alaska", AR: "Arkansas", CO: "Colorado", DE: "Delaware", FL: "Florida", HI: "Hawaii", IA: "Iowa", ID: "Idaho", IN: "Indiana", KS: "Kansas", LA: "Louisiana", MO: "Missouri", MS: "Mississippi", NE: "Nebraska", NY: "New York", OK: "Oklahoma", PA: "Pennsylvania", RI: "Rhode Island", SC: "South Carolina", SD: "South Dakota", TX: "Texas", TXDOT: "Texas (TxDOT)", VT: "Vermont", WV: "West Virginia", WY: "Wyoming" };
+  var src = window.LIVE_SOURCES || [], st = null, issues = {}, items = [], failed = 0;
+  src.forEach(function (s) { if (s.meta && s.meta.states) st = s.meta.states; });
+  var box = document.getElementById("failBanner");
+  function when(iso) { return iso ? new Date(iso).toLocaleString("en-US") : null; }
+  if (!st) {
+    // live-states.js missing or unreadable: no state data at all
+    items.push("The state feed file (live-states.js) did not load, so no state notices are shown.");
+    failed++;
+  } else {
+    Object.keys(st).sort().forEach(function (code) {
+      var r = st[code] || {}, name = NAMES[code] || code;
+      if (r.ok === false) {
+        failed++;
+        issues[code] = "failed";
+        items.push(name + " (" + code + "): FETCH FAILED - " + (r.error || "unknown error") + ". " +
+          (r.fetchedAt ? "Showing older notices from the last good fetch on " + when(r.fetchedAt) + (r.count != null ? " (" + r.count + " then)" : "") + "; new notices will be missing." : "No notices have ever been fetched for this state."));
+      } else if (r.partial) {
+        issues[code] = issues[code] || "partial";
+        items.push(name + " (" + code + "): PARTIAL fetch - " + r.partial + ". Some notices may be missing.");
+      }
+    });
+  }
+  window.STATE_ISSUES = issues;
+  if (!items.length) return;
+  var title = document.createElement("b");
+  title.textContent = failed ? "⚠ Data problem: " + failed + " state source" + (failed === 1 ? "" : "s") + " failed to update" : "⚠ Some state data is incomplete";
+  var ul = document.createElement("ul");
+  items.forEach(function (t) { var li = document.createElement("li"); li.textContent = t; ul.appendChild(li); });
+  box.appendChild(title); box.appendChild(ul);
+  box.classList.toggle("warn", !failed);
+  box.hidden = false;
+  document.title = "⚠ " + document.title;
 })();
 </script>
 <script>
@@ -214,8 +263,10 @@
   Object.keys(STATE_NAMES).concat(["US", "NYC"]).sort().forEach(function (code) {
     var o = document.createElement("option");
     o.value = code;
-    o.textContent = code + " (" + (stCount[code] || 0) + ")";
+    var issue = (window.STATE_ISSUES || {})[code] || (code === "TX" && (window.STATE_ISSUES || {}).TXDOT);
+    o.textContent = (issue ? "⚠ " : "") + code + " (" + (stCount[code] || 0) + ")" + (issue === "failed" ? " - fetch failed" : issue ? " - partial" : "");
     if (!stCount[code]) o.style.color = "#999";
+    if (issue) o.style.color = issue === "failed" ? "#b3261e" : "#b26a00";
     $("st").appendChild(o);
   });
 
