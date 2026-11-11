@@ -31,8 +31,16 @@ const hidden = (html, name) => {
 
 module.exports = {
   code: "RI", name: "Rhode Island",
+  // The site is flaky ("fetch failed" = connection reset). Retry the whole session (GET + POST) a few times.
   async fetch() {
-    const first = await http(SEARCH);
+    let last;
+    for (let i = 0; i < 3; i++) {
+      try { return await this.run(); } catch (e) { last = e; await new Promise((r) => setTimeout(r, 3000 * (i + 1))); }
+    }
+    throw last;
+  },
+  async run() {
+    const first = await http(SEARCH, { timeoutMs: 45000 });
     const cookie = (first.headers.getSetCookie ? first.headers.getSetCookie() : []).map((c) => c.split(";")[0]).join("; ");
     const page = await decode(first);
     const sel = /id="ctl00_ContentPlaceHolder1_lstbox_ExBiddingEntities"[\s\S]*?<\/select>/.exec(page);
@@ -47,10 +55,10 @@ module.exports = {
     for (const e of entities) body.append(F + "lstbox_ExBiddingEntities", e);
     body.append(F + "lstbox_ExBidStatus", "Active(Scheduled)");
     body.append(F + "btn_ExSearch", "Search");
-    const res = await http(LISTING, { method: "POST", body, headers: { "Content-Type": "application/x-www-form-urlencoded", Referer: SEARCH, ...(cookie ? { Cookie: cookie } : {}) } });
+    const res = await http(LISTING, { timeoutMs: 45000, method: "POST", body, headers: { "Content-Type": "application/x-www-form-urlencoded", Referer: SEARCH, ...(cookie ? { Cookie: cookie } : {}) } });
     const html = await decode(res);
 
-    const count = /lbl_RowsNumber"[^>]*>(?:\s*<[^>]+>)*\s*(\d+)/ // wrapped in <b><font> for some user agents.exec(html);
+    const count = /lbl_RowsNumber"[^>]*>(?:\s*<[^>]+>)*\s*(\d+)/.exec(html); // number is wrapped in <b><font> for some user agents
     if (!count) throw new Error("Result page layout not recognised (row count missing)");
     const rows = [];
     for (const tr of html.slice(html.indexOf("GV_ExBidSearch")).split(/<tr[\s>]/i).slice(1)) {
