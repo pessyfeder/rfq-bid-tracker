@@ -20,7 +20,9 @@ W=[("DE","Open-data API. 39 open."),("IN","HTML table. 54 open. Links go to the 
 ("KS","eSupplier public bidding events (PeopleSoft). 35 open. No robots.txt; site terms reviewed, no ban on automated reads. A session cookie handshake loads the whole list, then one page per event for the description (about 37 requests, paced). Bid package documents are not opened, so eligibility stays unread; Bid factors come from title and scope keywords."),
 ("FL","MyFloridaMarketPlace Vendor Information Portal: public JSON API, no login. 103 open (ITB, ITN, RFP, RFI, RSQ only). The old Vendor Bid System is archival. Attached documents are not read."),
 ("NE","DAS Purchasing Bureau current bid table (server-rendered, robots.txt does not cover it). 4 open with a due date; open-ended rows skipped. No due time published. Notice pages and attachments are AI-read."),
-("TX","Automatic source only: TxDOT open-data dataset, 329 open. Texas replied: no feed, and automated page reads are not offered, so the other agencies stay off. The hand-exported CSV route was removed. Statewide Texas coverage (ESBD, every agency) depends on the Comptroller approving access; until then TX stays TxDOT only.")]
+("TX","Automatic source only: TxDOT open-data dataset, 329 open. Texas replied: no feed, and automated page reads are not offered, so the other agencies stay off. The hand-exported CSV route was removed. Statewide Texas coverage (ESBD, every agency) depends on the Comptroller approving access; until then TX stays TxDOT only."),
+("MO","MOVERS (Oracle Fusion) Solicitation Abstracts: public guest REST listing, no login, no robots.txt. 59 open. Rows link to the listing page and documents are not read. The Oracle REST version (11.13.18.05) is pinned in the adapter; check it first if MO fails."),
+("SD","ESM Central Bid Exchange posting board: public JSON API, no login. 34 open. No descriptions, and event documents are behind the ESM login, so eligibility stays unread; Bid factors come from title keywords.")]
 ASK=[("UT","robots.txt forbids all automated access (Bonfire). Email sent; reply pending."),
 ("OH","robots.txt forbids automated access, and the site is behind a login. Email sent; reply pending."),
 ("AL","robots.txt forbids all automated access. Email sent; reply pending."),
@@ -43,8 +45,7 @@ E=[("PA","Replied: the free DGS e-Alert emails are the only route. Built: an aut
 ("GA","Georgia Procurement Registry: email notifications listed, steps unconfirmed; browser check blocks scripts. Not subscribed yet."),
 ("VA","eVA: open-bid list (VBO) is behind an AWS bot challenge, and eVA open data is historical purchase orders only. Route: eVA supplier registration with NIGP codes, email alerts (sender noreply@cgeva.com, confirm at sign-up). Not subscribed yet; email to eVA Customer Care asking about a feed not yet sent."),
 ("NM","Not scrapable: bids.sciquest.com (Jaggaer) robots.txt forbids all automated access. Route: supplier registration at solutions.sciquest.com (CustOrg=StateOfNewMexico), email alerts. Not subscribed yet; skipped for now.")]
-L=[("SD","ESM system.")]
-groups=[("Working",W),("Asked for a feed",ASK),("Parked",P),("Email alerts to set up",E),("Login or JavaScript",L)]
+groups=[("Working",W),("Asked for a feed",ASK),("Parked",P),("Email alerts to set up",E)]
 assert sum(len(g) for _,g in groups)==50
 
 ss=getSampleStyleSheet()
@@ -53,7 +54,7 @@ b=ParagraphStyle("b",parent=ss["BodyText"],fontSize=9.5,leading=12.5)
 c=ParagraphStyle("c",parent=b,fontSize=9,leading=11.5)
 doc=SimpleDocTemplate(sys.argv[1],pagesize=letter,leftMargin=45,rightMargin=45,topMargin=45,bottomMargin=45,title="State RFQ feeds: status of all 50 states")
 el=[Paragraph("State RFQ feeds: status of all 50 states",h1),
-Paragraph("Updated 2026-11-10 (late night) from state-sources-survey.md and the latest fetch run. Counts are open notices at that run.",b),Spacer(1,8),
+Paragraph("Updated 2026-11-11 from state-sources-survey.md and the latest fetch run. Counts are open notices at that run.",b),Spacer(1,8),
 Paragraph("Summary",ss["Heading2"])]
 rows=[["Status","Count","States"]]+[[n,str(len(g)),", ".join(s for s,_ in g)] for n,g in groups]
 def tbl(data,widths):
@@ -62,7 +63,7 @@ def tbl(data,widths):
     t.setStyle(TableStyle([("BACKGROUND",(0,0),(-1,0),colors.HexColor("#e6e9ef")),("GRID",(0,0),(-1,-1),0.4,colors.HexColor("#b8bec9")),("VALIGN",(0,0),(-1,-1),"TOP")]))
     return t
 el+=[tbl(rows,[110,40,362]),Spacer(1,8),
-Paragraph("Working states hold about 2,900 open notices (MA 875, NY 736, TxDOT 329, OR 176, IL 162, LA 139, SC 132, the rest under 80 each). Pennsylvania adds more once the Gmail app password is set. The app takes only automatic sources: no hand-exported files. Realistic free coverage is about 16 to 22 states unless feeds come back from the emails.",b),
+Paragraph("Working states hold about 3,000 open notices (MA 875, NY 736, TxDOT 329, OR 176, IL 162, LA 139, SC 132, the rest under 80 each (MO 59, SD 34)). Pennsylvania adds more once the Gmail app password is set. The app takes only automatic sources: no hand-exported files. Realistic free coverage is about 16 to 22 states unless feeds come back from the emails.",b),
 Spacer(1,6),Paragraph("Every state",ss["Heading2"])]
 rows=[["State","Status","Notes"]]
 for n,g in groups:

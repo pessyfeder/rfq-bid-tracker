@@ -50,7 +50,7 @@ robots.txt on these sites only blocks `/craft`.
 
 ## Do not scrape / blocked
 - NO-BOTS (robots.txt `Disallow: /` for all): TX (ESBD), PA (eMarketplace), UT (Bonfire), OH, AL.
-- LOGIN/JS: AZ (redirects to login), OH (login redirect), NC eVP (Dynamics portal, read-only offline shell), WA WEBS (JS), KY and MI (Advantage VSS), KS, GA (browser check), VA eVA, MT (Jaggaer), NM (Bonfire/Jaggaer), SD (ESM), WI.
+- LOGIN/JS: AZ (redirects to login), OH (login redirect), NC eVP (Dynamics portal, read-only offline shell), WA WEBS (JS), KY and MI (Advantage VSS), KS, GA (browser check), VA eVA, MT (Jaggaer), NM (Bonfire/Jaggaer), WI.
 - BLOCKED: CA (403), CO (403), ME (403; also login-only since 2025-10), NH (403), TN (403), MN (bot challenge).
 - AR is moving ARBuy to Ariba in 2026 (not probed).
 
@@ -73,6 +73,7 @@ AR, VT (page 404 at the URL tried; `bgs.vermont.gov/purchasing-contracting` stil
 Quirks: OR lists county and city bids (all tagged "State"); DE and ID publish dates only; LA links to the solicitation PDF;
 IN links to its listing page. MA works (852 open on 2026-11-10); its portal is slow (about 10 s a page, 36 pages) and a network content filter blocks one page (rows 725-749), so MA is reported as partial.
 To add a state, write an adapter and list it in `fetch-states.js`.
+| SD | `southdakota.js` (ESM posting board JSON list; no login; no descriptions) | 34 |
 
 VT is also built: `vermont.js` reads the OPC "Current Bid Listings" page (9 open on 2026-11-10); each notice links to its solicitation PDF.
 AR was checked and not built: ARBuy's Periscope page loads but lists 0 open bids (the state is moving to a new system).
