@@ -150,11 +150,7 @@
 (function () {
   var src = window.LIVE_SOURCES || [];
   if (!src.length) return;
-  // State-portal feed: only the states in the State fetch status snapshot (TxDOT counts as TX). Federal (SAM.gov) and NYC feeds are kept whole.
-  var STATES = { DE: 1, IN: 1, IA: 1, LA: 1, MS: 1, SC: 1, ID: 1, VT: 1, NV: 1, NJ: 1, OR: 1, IL: 1, MA: 1, TX: 1, TXDOT: 1, PA: 1, RI: 1, NY: 1, WY: 1 };
-  window.RFQS = src.reduce(function (a, s) {
-    return a.concat(s.meta.states ? s.rfqs.filter(function (r) { return STATES[String(r.id).split("-")[0]]; }) : s.rfqs);
-  }, []);
+  window.RFQS = src.reduce(function (a, s) { return a.concat(s.rfqs); }, []);
   window.RFQS_META = { source: src.map(function (s) { return s.meta.source; }).join(" + "),
     fetchedAt: src.map(function (s) { return s.meta.fetchedAt; }).sort()[0] };
 })();
