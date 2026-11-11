@@ -17,6 +17,7 @@ S=[
 ("WI","2","VendorNet / eSupplier (doa.wi.gov)","Register in eSupplier and choose NIGP codes; automatic email when the State, UW System or a municipality posts a match.","doawispro@wisconsin.gov, 608-264-7897","The public list needs no login but is a Blazor app (not scrapable by plain request)."),
 ("GA","3","Georgia Procurement Registry (doas.ga.gov, GPR FAQs)","The GPR FAQ lists how suppliers receive email notifications of posted notices; steps not seen in the search.","Georgia DOAS (GPR FAQ page)","The site shows a browser check, so email is the likely route. Confirm the steps on the GPR FAQ page first."),
 ("VA","2","eVA (eva.virginia.gov; open bids on mvendor.cgieva.com VBO)","Register as an eVA supplier and choose NIGP codes; eVA emails solicitation notices for matching codes (confirm at sign-up). Add noreply@cgeva.com to safe senders.","eVA Customer Care, 1-866-289-7367 (web request form on get-help-customer-care.html)","The public bid list is behind an AWS bot challenge, so it is not scrapable; open data is purchase orders only. Also ask Customer Care whether a sanctioned feed or API exists."),
+("RI","2","Ocean State Procures (ridop.ri.gov/ocean-state-procures-osp; Bid Board on webprocure.proactiscloud.com)","Register as an OSP vendor and choose UNSPSC codes under My Account; Proactis emails new solicitations for matching codes. Sender is oceanstateprocures@proactis.com (from a vendor guide; confirm at sign-up).","suppliersupport@proactisservicedesk.com; Division of Purchases 401-574-8100","Covers executive-branch state bids, which the existing RI adapter (quasi-state, towns, schools) does not. The Bid Board host presents a certificate that does not verify against its claimed DigiCert issuer, so it cannot be fetched safely; report this to Proactis support. ridop.ri.gov blocks scripted requests (403)."),
 ]
 
 ss=getSampleStyleSheet()
@@ -30,7 +31,7 @@ def tbl(data,widths):
     t.setStyle(TableStyle([("BACKGROUND",(0,0),(-1,0),colors.HexColor("#e6e9ef")),("GRID",(0,0),(-1,-1),0.4,colors.HexColor("#b8bec9")),("VALIGN",(0,0),(-1,-1),"TOP")]))
     return t
 el=[Paragraph("State RFQ feeds: states for the email-alert route",h1),
-Paragraph("Prepared 2026-11-10. These nine states offer free vendor email alerts but no feed or open data for open bids that I could find. The plan is the Pennsylvania route: subscribe once, let the alerts arrive in the dedicated Gmail account, and have a reader parse them automatically. Findings come from web searches, not from the portals themselves, so each state's alert details are to be confirmed at sign-up.",b),Spacer(1,8),
+Paragraph("Prepared 2026-11-11. These ten states offer free vendor email alerts but no feed or open data for open bids that I could find. The plan is the Pennsylvania route: subscribe once, let the alerts arrive in the dedicated Gmail account, and have a reader parse them automatically. Findings come from web searches, not from the portals themselves, so each state's alert details are to be confirmed at sign-up.",b),Spacer(1,8),
 Paragraph("States and sign-up details",ss["Heading2"])]
 rows=[["State","Priority","Portal","How alerts work","State help","Notes"]]+[list(r) for r in S]
 el.append(tbl(rows,[28,34,92,122,78,176]))
@@ -41,7 +42,7 @@ Paragraph("2. Use the same dedicated Gmail account, or forward to it, so one IMA
 Paragraph("3. Registration is manual and one-time per state (vendor account, business details, terms). Claude cannot create accounts or enter credentials for you.",b),
 Paragraph("4. Choose commodity or NIGP codes broadly, since alerts are filtered by code. Expect a lot of mail.",b),
 Paragraph("5. After the first real alert from each state, check what it contains (title, agency, due date, link). Some links may need a login, and some alerts may lack a due date, as PA's does. The parser per state depends on this.",b),
-Paragraph("6. States not on this list: FL (old Vendor Bid System is archival; no alert option found) is parked; KS and the rest are on the main status PDF.",b),
+Paragraph("6. RI already has a partial adapter (quasi-state, towns, schools); this alert route adds the executive-branch state bids. States not on this list: FL (old Vendor Bid System is archival; no alert option found) is parked; KS and the rest are on the main status PDF.",b),
 Paragraph("Per-state checklist",ss["Heading2"])]
 chk=[["State","Registered","Codes chosen","First alert received","Alert has due date?","Parser built"]]+[[r[0],"","","","",""] for r in S]
 el.append(tbl(chk,[40,80,90,100,110,100]))
