@@ -32,7 +32,6 @@ P=[("OK","The public list only holds old items: 153 of 155 rows are Pending Awar
 ("MO","Bids moved to the new MOVERS system, which needs a login."),
 ("CT","ASP.NET form pages; needs form-post work for few notices."),("AK","ASP.NET form pages or other system; needs form-post work for few notices."),
 ("HI","ASP.NET form pages or other system; needs form-post work for few notices."),("ND","ASP.NET form pages or other system; needs form-post work for few notices."),
-("VA","eVA Open Data Portal and data.virginia.gov hold historical procurement data only (yearly files, login to download), not open solicitations. No feed found."),
 ("AR","ARBuy shows 0 open bids while the state moves to Ariba in 2026. Recheck in a few months."),
 ("MD","Open data was last updated in 2019.")]
 E=[("AZ","Not scrapable: app.az.gov robots.txt forbids all automated access. Route: supplier registration with commodity codes, email alerts. Not subscribed yet."),
@@ -43,6 +42,7 @@ E=[("AZ","Not scrapable: app.az.gov robots.txt forbids all automated access. Rou
 ("NC","eVP: nightly consolidated email from vendor@nc.gov; system is mid-migration. Not subscribed yet."),
 ("WI","eSupplier: NIGP-code email alerts. The public list is a Blazor app, so not scrapable. Not subscribed yet."),
 ("GA","Georgia Procurement Registry: email notifications listed, steps unconfirmed; browser check blocks scripts. Not subscribed yet."),
+("VA","eVA: open-bid list (VBO) is behind an AWS bot challenge, and eVA open data is historical purchase orders only. Route: eVA supplier registration with NIGP codes, email alerts (sender noreply@cgeva.com, confirm at sign-up). Not subscribed yet; email to eVA Customer Care asking about a feed not yet sent."),
 ("NM","Not scrapable: bids.sciquest.com (Jaggaer) robots.txt forbids all automated access. Route: supplier registration at solutions.sciquest.com (CustOrg=StateOfNewMexico), email alerts. Not subscribed yet; skipped for now.")]
 L=[("SD","ESM system.")]
 groups=[("Working",W),("Asked for a feed",ASK),("Parked",P),("Email alerts to set up",E),("Login or JavaScript",L)]
