@@ -50,7 +50,7 @@ robots.txt on these sites only blocks `/craft`.
 
 ## Do not scrape / blocked
 - NO-BOTS (robots.txt `Disallow: /` for all): TX (ESBD), PA (eMarketplace), UT (Bonfire), OH, AL.
-- LOGIN/JS: AZ (redirects to login), OH (login redirect), NC eVP (Dynamics portal, read-only offline shell), WA WEBS (JS), FL VBS (JS), KY and MI (Advantage VSS), KS, GA (browser check), VA eVA, MT (Jaggaer), NM (Bonfire/Jaggaer), SD (ESM), WI, NE (page empty).
+- LOGIN/JS: AZ (redirects to login), OH (login redirect), NC eVP (Dynamics portal, read-only offline shell), WA WEBS (JS), FL VBS (JS), KY and MI (Advantage VSS), KS, GA (browser check), VA eVA, MT (Jaggaer), NM (Bonfire/Jaggaer), SD (ESM), WI.
 - BLOCKED: CA (403), CO (403), ME (403; also login-only since 2025-10), NH (403), TN (403), MN (bot challenge).
 - AR is moving ARBuy to Ariba in 2026 (not probed).
 
@@ -88,7 +88,10 @@ PA (2026-11-10): `states/pennsylvania.js` reads the eAlert emails automatically 
 - MT: public events are on bids.sciquest.com (Jaggaer); its robots.txt is `Disallow: /` (NO-BOTS). One page was fetched before the robots.txt was read; nothing more was fetched.
 - WI: vendornet.wi.gov (no robots.txt) is a Blazor Server app, so no plain HTML/JSON listing; not built.
 - KS: BUILT (`states/kansas.js`). The earlier note was wrong: the public list page (`SCP_PUBLIC_MENU_FL.SCP_PUB_BID_CMP_FL.GBL`) holds the full grid once the cookie handshake (302 + Set-Cookie, send it back) is done; no search POST needed. No robots.txt. Terms of use (admin.ks.gov/terms-of-use) only disclaim liability and note copyright, no ban on automated access. 35 open on 2026-11-10; each event has a shareable detail URL (`AUC_ID=EVT...`) read for the description. Bid package documents need a further POST and are not read (rows stay "Not read").
+- NE: BUILT (`states/nebraska.js`, 2026-11-10). The earlier "page empty" was the old statecontracts/nebraskabuys hosts (awards only / no longer resolves). Open bids are a server-rendered table at das.nebraska.gov/materiel/bid-opportunities.html (robots.txt does not cover /materiel/, no login); 4 open with a due date, open-ended "Continous" rows skipped. No due time published. Not AI-read yet.
 - FL (VBS archival since 2022-03-28) and VA (eVA open data is historical) are PARKED.
+- VA retried 2026-11-10: the open-bid page (VBO, mvendor.cgieva.com/Vendor/public/AllOpportunities.jsp) is public but behind an AWS WAF JavaScript challenge (HTTP 202, empty body, x-amzn-waf-action: challenge), so a plain fetch gets nothing; not bypassing it. data.virginia.gov CKAN datastore_search works without login, but eVA Procurement Data 2026/2027 are purchase-order lines (vendor, NIGP, price), no solicitations or due dates. Still parked.
+- NM retried 2026-11-10: the GSD site (generalservices.state.nm.us, robots.txt only blocks wp-admin/calendar) has no bid list of its own; "Active Procurements" just links to Jaggaer (`bids.sciquest.com/apps/Router/PublicEvent?CustomerOrg=StateOfNewMexico&tab=PHX_NAV_SourcingOpenForBid`). That page loads without login, but `bids.sciquest.com/robots.txt` is `User-agent: * / Disallow: /`, so it is NO-BOTS; not built. (It is Jaggaer, not Bonfire; the earlier note was wrong on that.)
 
 ## Tried and parked
 - OK: the public list works (GET `ok.gov/dcs/solicit/app/solicitationSearch.php?status=open-pending`, then `?page=N` with the session cookie), but it holds only old items: of 155 rows, 153 are "Pending Award" and the 2 "Open" ones closed in 2020 and 2021. Current Oklahoma bids are not published there, so no adapter was built.
