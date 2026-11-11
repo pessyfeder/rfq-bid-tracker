@@ -33,3 +33,9 @@ service-run.log
 states-run.log
 
 Discover Group real anthropic api key.txt
+
+# Built distribution zip (contains node.exe)
+dist/
+
+# Built distribution zip (contains node.exe)
+dist/
