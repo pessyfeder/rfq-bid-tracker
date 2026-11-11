@@ -124,7 +124,6 @@
     <option>Federal</option><option>State</option><option>Local</option>
   </select>
   <select id="category"><option value="">All categories</option></select>
-  <label><input type="checkbox" id="hideClosed" checked> Hide closed</label>
   <label title="Placeholder deadlines (more than 3 years out) and notices posted over a year ago"><input type="checkbox" id="hideFlagged" checked> Hide flagged</label>
   <span class="sub" id="count"></span>
 </div>
@@ -381,14 +380,14 @@
   // Read the filter controls and parse the search text once per render (not once per row).
   function makeFilter() {
     var q = $("q").value.trim().toLowerCase();
-    return { st: $("st").value, level: $("level").value, category: $("category").value, hideClosed: $("hideClosed").checked,
+    return { st: $("st").value, level: $("level").value, category: $("category").value,
       hideFlagged: $("hideFlagged").checked, pq: q ? parseQuery(q) : null };
   }
   function matches(r, f) {
     if (f.st && r.st !== f.st) return false;
     if (f.level && r.level !== f.level) return false;
     if (f.category && r.category !== f.category) return false;
-    if (f.hideClosed && r.daysLeft < 0) return false;
+    if (r.daysLeft < 0) return false; // closed bids are never shown
     if (f.hideFlagged && ((r.details.warnings || []).length || r.noDue)) return false;
     var pq = f.pq;
     if (pq) {
@@ -556,7 +555,7 @@
     sort = sort.key === key ? { key: key, dir: -sort.dir } : { key: key, dir: key === "value" ? -1 : 1 };
     render();
   });
-  ["q", "st", "level", "category", "hideClosed", "hideFlagged"].forEach(function (id) {
+  ["q", "st", "level", "category", "hideFlagged"].forEach(function (id) {
     function onFilter() { render(); }
     var timer;
     $(id).addEventListener("input", function () { clearTimeout(timer); timer = setTimeout(onFilter, 0); }); // coalesce events from one keystroke
