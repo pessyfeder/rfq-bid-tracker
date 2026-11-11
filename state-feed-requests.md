@@ -126,7 +126,7 @@ Alaska Division of General Services procurement office are the places to follow 
 **If a reply arrives:** record it under "Replies received", then add the official feed to `alaska.js`; keep the IRIS
 read unless they object, in which case delete `states/alaska.js` and its entry in `fetch-states.js`.
 
-## Connecticut (CTsource) - draft, not yet sent
+## Connecticut (CTsource) - sent, reply pending
 
 Why: portal.ct.gov/DAS/CTSource/BidBoard is only a landing page with no bid list. The bids are inside the CTsource
 portal behind a login, and biznet.ct.gov answers automated requests with a bot-filter rejection, so we do not read it.
