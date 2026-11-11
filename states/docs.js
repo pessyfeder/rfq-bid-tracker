@@ -6,7 +6,14 @@ const zip = require("./zip");
 
 const MAX_PAGE = 2e6, MAX_FILE = 8e6, MAX_PDFS = 2, MAX_DOCX = 3, MAX_FETCH = 6, MAX_DOCX_TEXT = 40000;
 
-const sameHost = (a, b) => { try { return new URL(a).host === new URL(b).host; } catch { return false; } };
+// A portal's attachments sometimes live on its own document server: Mississippi's notice pages (ms.gov) link to SRM.MAGIC.MS.GOV.
+const PARTNER_HOSTS = { "www.ms.gov": ["srm.magic.ms.gov"] };
+const sameHost = (a, b) => {
+  try {
+    const x = new URL(a), y = new URL(b);
+    return x.host === y.host || (PARTNER_HOSTS[y.host] || []).includes(x.hostname.toLowerCase());
+  } catch { return false; }
+};
 
 // Boilerplate attachments that never say who may bid; tried last.
 const SKIP = /terms (and|&) conditions|standard terms|forms? packet|price|pricing|cost (sheet|proposal)|pre-?quote|\bw-?9\b|insurance|affidavit|certification|questionnaire|amendment/i;

@@ -8,6 +8,10 @@ const mdy = (s) => { const m = /(\d{2})\/(\d{2})\/(\d{4})/.exec(s || ""); return
 
 module.exports = {
   code: "ID", name: "Idaho",
+  // Every row links to the same index page and the solicitation documents live in IPRO, so a page read only summarises the index (wrong scope, junk "shall" text).
+  noPageReads: true,
+  noPageReadsWhy: "Idaho rows link to one index page; the documents are in IPRO",
+  noPageReadsNote: "Eligibility not read: Idaho lists solicitations on one index page and keeps the documents in IPRO. See the solicitation there.",
   async fetch() {
     const j = await (await http("https://purchasing.idaho.gov/wp-json/wm4/v1/procurement-report", { timeoutMs: 60000 }, 3)).json();
     if (!j || !Array.isArray(j.data)) throw new Error("Unexpected response from purchasing.idaho.gov");

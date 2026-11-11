@@ -68,8 +68,9 @@ async function addStateEstimates(list) {
 const MAX_READS = Number(process.env.STATE_MAX_READS) || 60;
 // Bump DOCS_VERSION when states/docs.js learns to reach more documents; rows read before that with no restriction found are read again.
 // Version 2: Periscope attachment downloads, Word (.docx) files, Indiana per-event zips.
-const DOCS_VERSION = 2;
-const REREAD_STATES = new Set(["NV", "NJ", "OR", "IL", "MA", "SC", "IN"]);
+// Version 3: Mississippi attachments on srm.magic.ms.gov (earlier reads saw only the page header).
+const DOCS_VERSION = 3;
+const REREAD_STATES = new Set(["NV", "NJ", "OR", "IL", "MA", "SC", "IN", "MS"]);
 async function addDocumentReads(list, prevById, adapter) {
   const key = process.env.ANTHROPIC_API_KEY;
   if (adapter && adapter.noPageReads) for (const r of list) { if (adapter.noPageReadsNote) r.details.readNote = adapter.noPageReadsNote; if (adapter.noPageReadsWhy) r.details.readWhy = adapter.noPageReadsWhy; } // shown whether or not a key is set
