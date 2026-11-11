@@ -37,11 +37,21 @@ const cacheKey = (kind, prompt, text) => crypto.createHash("sha256").update(MODE
 function cacheGet(key) {
   const e = loadCache()[key];
   if (!e) return undefined;
+  // A remembered "could not read this" is only trusted for NEG_DAYS, then tried once more (a failed parse can be a fluke).
+  if (e.neg && e.until < today()) { delete loadCache()[key]; return undefined; }
   e.seen = today();
   usage.hits++;
   return e.result;
 }
 function cacheSet(key, result) { loadCache()[key] = { seen: today(), result }; }
+// Remember that this exact text gave no usable answer, so the next runs do not pay to ask again (a billed reply with no
+// parseable JSON was re-sent on every run). Retried after NEG_DAYS, or at once if the text or prompt changes (new hash).
+const NEG_DAYS = 7;
+function cacheNone(key, why) {
+  console.warn("  AI reply unusable (" + why + "); not retried for " + NEG_DAYS + " days");
+  loadCache()[key] = { seen: today(), neg: true, until: new Date(Date.now() + NEG_DAYS * 86400000).toISOString().slice(0, 10), result: null };
+  return null;
+}
 
 function saveCache() {
   const c = loadCache(), cutoff = new Date(Date.now() - CACHE_DAYS * 86400000).toISOString().slice(0, 10);
@@ -141,12 +151,12 @@ async function extract(html, apiKey) {
   track(body);
   const out = textOf(body);
   const m = out.match(/\{[\s\S]*\}/);
-  if (!m) return null;
+  if (!m) return cacheNone(key, body.stop_reason === "max_tokens" ? "cut off at max_tokens" : "no JSON in reply");
   try {
     const r = validate(JSON.parse(m[0]));
-    if (r) cacheSet(key, r);
+    if (r) cacheSet(key, r); else cacheNone(key, "failed validation");
     return r;
-  } catch (e) { return null; }
+  } catch (e) { return cacheNone(key, "unparseable JSON"); }
 }
 
 // Same read, but the solicitation also comes as PDF attachments (sent to the model as document blocks, so no
@@ -168,12 +178,12 @@ async function extractWithPdfs(html, pdfs, apiKey) {
   const body = await res.json();
   track(body);
   const m = textOf(body).match(/\{[\s\S]*\}/);
-  if (!m) return null;
+  if (!m) return cacheNone(key, body.stop_reason === "max_tokens" ? "cut off at max_tokens" : "no JSON in reply");
   try {
     const r = validate(JSON.parse(m[0]));
-    if (r) cacheSet(key, r);
+    if (r) cacheSet(key, r); else cacheNone(key, "failed validation");
     return r;
-  } catch (e) { return null; }
+  } catch (e) { return cacheNone(key, "unparseable JSON"); }
 }
 
 // ---- Stated contract amount ------------------------------------------------------------
