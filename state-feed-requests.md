@@ -45,3 +45,32 @@ The same template works; for these, ask for permission or a feed rather than a w
 ## Replies received (2026-11-10)
 - **Texas (SPD, Comptroller):** no data feed from ESBD. Search results can be exported as CSV from the site (limit 20,000 rows). Posted solicitations can be listed on SmartBuy: Vendor > ESBD Bid Opportunities > Status = Posted (filter by start/end date). The CSV export is manual, so it is not used (policy: only automatic sources). TxDOT notices are read automatically from Texas open data instead.
 - **Pennsylvania (DGS Supplier Services):** the only notification route is eAlerts (email of open solicitations). Sign-up instructions are on the Supplier Service Center page; the e-Alerts login is dgs.internet.state.pa.us/EAlerts_V2/Login.aspx, with an "E-Alerts Guide" PDF. Bidding help: srmhelp@pa.gov.
+
+## Maryland (eMMA) - draft, not yet sent
+
+Why: opendata.maryland.gov only has eMMA bids through FY2019 (last update 2019-07-02), and emma.maryland.gov
+publishes `Disallow: /` in robots.txt behind a browser check, so we do not read it automatically.
+
+To: emma.helpdesk@maryland.gov (listed in the eMMA user guides; confirm it is still current, or use the eMMA Knowledge Portal contact link on procurement.maryland.gov)
+
+Subject: Request for a data feed of open solicitations (Maryland eMMA)
+
+Hello,
+
+I work at [company], a [small business] that bids on state contracts. We keep a small internal tracker of open
+solicitations so we do not miss ones that fit our work.
+
+We found that the eMaryland Marketplace bid datasets on opendata.maryland.gov stopped updating in 2019, and that
+eMMA's robots.txt asks automated tools not to read the site. So we would like to ask the supported way to get
+current open solicitations. Does eMMA offer any of the following?
+1. an RSS feed, API, or data download (CSV/JSON) of current open solicitations, or a current replacement for the
+   open data bid datasets, or
+2. an email digest we can subscribe to with a single mailbox, or
+3. permission to read the public solicitation list automatically, once a day, at low volume.
+
+If any of these exist, could you point me to the documentation or terms? If none do, could you tell me the
+preferred way to get notified of new solicitations? We would only use the data to track bids for our own company
+and would link back to eMMA for every solicitation.
+
+Thank you,
+[Name], [title], [company], [phone], [email]

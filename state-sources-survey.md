@@ -16,7 +16,7 @@ Caveat: I fetched with curl and ignored certificate revocation checks. About 80 
 | OK | data.ok.gov "Statewide Contracts & Solicitations Search" | Page reachable. robots.txt has no blanket block. API and Open-status rows NOT confirmed. |
 | IL | Socrata `illinois-edp.data.socrata.com` `6rb8-ntpm` "Future Solicitations" | Upcoming only, not open bids |
 | TX | data.texas.gov `qh8x-rm8r` "Official and Unofficial Bid Items" | Probably bid tabulations. NOT confirmed |
-| MD | opendata.maryland.gov eMMA bids | Last updated 2019, unusable |
+| MD | opendata.maryland.gov eMMA bids | Last updated 2019, unusable. eMMA itself forbids automated access (robots.txt); email to support drafted in state-feed-requests.md |
 
 ## Tier 2: public listing, scrapable
 **Periscope "bso" platform** (one adapter, several states). URL: `/bso/view/search/external/advancedSearchBid.xhtml?openBids=true`
