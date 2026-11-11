@@ -4,32 +4,35 @@ RFQ BID TRACKER - SPEC
 User:     Israel Blackman, Discover Group (Brooklyn, NY)
 Purpose:  See each request at a glance and decide whether or not to bid.
 Principle: Include all information needed for a bid / no-bid decision, and nothing extra.
-Status:   Phase 1 (display) is built and runs on LIVE data (NYC and SAM.gov feeds). The page
-          never shows made-up data: no feed = "No data". NYS feed is a stub (see section 3).
+Status:   Built and running on LIVE data: NYC City Record, SAM.gov and 28 state portals
+          (section 3). The page never shows made-up data: no feed = "No data". (A labelled
+          sample dataset loads only on the public github.io demo; see sample-data.js, section 5.)
 
 
 1. MAIN VIEW - TABLE COLUMNS
 ----------------------------
-Ten columns, left to right. Each is sortable except RFQ doc and Details.
+Ten columns, left to right. Each is sortable except RFQ doc and Details. (The per-row
+Status dropdown was removed; bid tracking lives in the separate bidding app.)
 
  #  Column          Notes
- 1  (removed)        The per-row Status dropdown was removed; bid tracking lives in the bidding app.
- 2  Request         Title of the request (agency shown beneath). ALL-CAPS titles from
+ 1  Request         Title of the request (agency shown beneath). ALL-CAPS titles from
                     agencies are tidied to Title Case (acronyms kept upper case).
- 3  Category        Type of work. NYC: City Record category. SAM.gov: "NAICS <code>".
- 4  Eligibility     Chips listing everything the RFQ requires to bid (Israel decides); "Not read" if unknown.
+ 2  Category        Type of work. NYC: City Record category. SAM.gov: "NAICS <code>". States: the
+                    portal's category (UNSPSC codes become a readable name).
+ 3  Eligibility     Chips listing everything the RFQ requires to bid (Israel decides); "Not read" if unknown.
                     The app does NOT judge eligibility: there is no company profile
                     and no yes / no result (DECIDED, see 2a). Sortable. AI-read rows
                     say "AI-extracted, please verify."
- 5  Posted          Date the request was posted.
- 6  End date        Bid due date plus due time and time zone. Due dates more than 3 years
+ 4  Posted          Date the request was posted.
+ 5  End date        Bid due date plus due time and time zone. Due dates more than 3 years
                     out are treated as placeholders: shown as "No real due date".
- 7  Days left       Days from today to the end date. "Closed" if past, a dash if no real
+ 6  Days left       Days from today to the end date. "Closed" if past, a dash if no real
                     due date. Colored: 7 or fewer = red, 14 or fewer = orange, else green.
- 8  Municipality    Federal / State / Local badge.
- 9  RFQ doc         "Open RFQ" link to the solicitation (NYC City Record page or SAM.gov
-                    notice).
-10  Est. value      Dollar value, always labelled with where it came from, in this order:
+ 7  Municipality    Federal / State / Local badge.
+ 8  RFQ doc         "Open RFQ" link to the solicitation (NYC City Record page or SAM.gov
+                    notice, or the state portal's page). Only https links are
+                    opened; anything else becomes a dead link.
+ 9  Est. value      Dollar value, always labelled with where it came from, in this order:
                     a) Published by the agency (contract amount in the notice).
                     b) Stated in the notice: amount read by AI, with the quoted sentence
                        under "Where from". Only kept if the quote really contains the
@@ -41,6 +44,9 @@ Ten columns, left to right. Each is sortable except RFQ doc and Details.
                        awards (last 3 years, purchase/delivery orders and contracts) with the
                        same NAICS code, matched on title keywords, else all in that NAICS;
                        needs at least 5 awards. Run by fetch-sam.js; or `node sam-estimates.js`.
+                    c'') State notices: same USAspending estimate, using a NAICS prefix mapped
+                       from the notice's UNSPSC codes or a NAICS stated in the text; labelled a
+                       rough guide. Run by fetch-states.js.
                     c) Estimate from similar past awards (NYC): median with a
                        25th-75th percentile range, from competitively bid City Record
                        awards of the last 3 years (renewals, amendments, noncompetitive
@@ -50,7 +56,7 @@ Ten columns, left to right. Each is sortable except RFQ doc and Details.
                        awards. "How estimated" lists the method and 5 recent examples.
                     d) "Not published" when none of the above exists.
                     DEFAULT SORT: descending by this value; unknown values last.
-11  Details         ONE merged column. Top to bottom:
+10  Details         ONE merged column. Top to bottom:
                     1) region
                     2) "Bid factors" box (see below)
                     3) chips: "Restricted: ..." (red), Amended, warnings, plain
@@ -60,6 +66,9 @@ Ten columns, left to right. Each is sortable except RFQ doc and Details.
                        the key "shall" statements with section/page refs and a link to
                        the full RFQ. Only shown when shall[] is not empty.
                     AI-read rows are labelled "AI-read, verify".
+                    Rows whose documents were not read show a "No document access" badge
+                    and a note saying why (e.g. the portal forbids automated reads, or needs
+                    a login), so a thin row is not mistaken for a complete one.
 
 Bid factors (box at the top of Details)
  Chips for facts that commonly decide bid / no-bid. Detected by keyword (FACT_RULES in
@@ -75,11 +84,18 @@ Bid factors (box at the top of Details)
 
 Toolbar and behavior
  - Search box (see below).
- - Filters: Municipality (All levels / Federal / State / Local), Category.
+ - Filters: State (every state that has data, plus US = federal and NYC), Municipality
+   (All levels / Federal / State / Local), Category. A state whose last fetch failed or was
+   partial is marked in the State dropdown.
+ - Fetch-health banner above the table: red when a state's last fetch failed (older notices are
+   still shown, with the date of the last good fetch), amber when partial, and a notice if
+   live-states.js did not load. Hidden when every state fetched fine.
  - "Hide closed" (on by default).
  - "Hide flagged" (on by default): hides notices with a warning, i.e. a placeholder
    deadline (2099 or later, or more than 3 years out) or posted over a year ago.
  - Count line: "n of N requests", source(s) and when the data was last updated.
+ - The long "shall" list is not loaded with the page: it is fetched per notice from the
+   service (/shall/<id>) when "Show all requirements" is opened.
  - No paging: all matching requests are always shown.
  - Click a header to sort; click again to reverse.
  - Narrow screens (900px or less): each request becomes a labelled card.
@@ -108,7 +124,8 @@ Search
       - SAM.gov: mapped from the set-aside code; keyword scan of the description for
         GSA Schedule, NASA SEWP, CIO-SP, Alliant when worded as a limit; then AI.
       - NYC: AI read of the notice text (null = could not tell = No data).
-      - NYS: passed through from the source if present, else null.
+      - States: AI read of the notice page and its attachments (PDF, Word, zip) when the
+        portal allows it; otherwise null ("Not read", with a note saying why).
     Original question: should the app answer "Can Discover Group actually bid on this?"
     Answer: no.
  b. Bonds, pre-bid meetings, background checks: DECIDED, shown as Bid factors chips
@@ -127,7 +144,9 @@ Search
     what counts as out of scope when every category is wanted (e.g. a work type
     Discover Group does not do)? Needs Israel's definition.
  h. Sources: DECIDED - no source priority; all are wanted. Order the list by estimated
-    value, highest first (already the default sort). NYS still waits on a source.
+    value, highest first (already the default sort). States that forbid automated reads
+    and offer no feed or email digest stay parked (state-feed-requests.md,
+    state-sources-survey.md).
  i. "Shall" requirements: DECIDED - scope summary under each request plus an expandable
     list of key "shall" statements, each with its RFQ section/page. Now filled by the AI
     read (3-5 key points per notice, quoted near-verbatim) for NYC and SAM.gov rows
@@ -176,10 +195,13 @@ Search
 
 3. DATA INTEGRATION
 -------------------
-How it works: node scripts write live-*.js files; index.html loads whichever exist
-(live-sam.js, live-nyc.js, live-ny-state.js) and merges them. Re-run a script to refresh;
-server.js now runs them every 24 h and serves the merged result as JSON (FEED.md)
-(see DEPLOY.md). The data shape is documented at the top of data.js.
+How it works: node fetchers write generated live-*.js files (git-ignored); server.js runs them,
+merges the result into data/state.json, serves it as JSON (FEED.md) and serves the page
+(index.html), which loads live-sam.js, live-nyc.js and live-states.js and merges them. The
+data shape is documented at the top of data.js. Fetchers run once 24 hours have passed since
+the last attempt (right after waking, if it came due asleep; see DEPLOY.md). A failed fetch
+leaves the old live file untouched, so old data stays; a failed state keeps its last notices
+and is flagged on the page and in /api/status.
 
  - NYC City Record (fetch-nyc.js): LIVE. Open Procurement solicitations from NYC Open
    Data, no key needed. Optional AI read (needs ANTHROPIC_API_KEY): stated amount,
@@ -187,14 +209,29 @@ server.js now runs them every 24 h and serves the merged result as JSON (FEED.md
    Run: node fetch-nyc.js [--max 500]
  - SAM.gov Opportunities (fetch-sam.js): LIVE. Solicitations and combined
    synopsis/solicitations posted in the last 30 days. Needs SAM_API_KEY (free; environment
-   only). Optional AI read as above. Run: node fetch-sam.js [--days 30 --max 300]
- - NYS Contract Reporter (fetch-ny-state.js): NOT LIVE. The conversion, filters and file
-   writing are done, but there is no known API; waiting for a reply from the Contract
-   Reporter. Can be tested with: node fetch-ny-state.js --from-file notices.json
- - Not started: USAspending.gov (pricing / competitor context), SAM.gov Entity API
-   (vendor registrations), DIBBS and eBuy (need logins or scraping). Add one at a time.
- - Secrets and generated files stay out of git (.gitignore): keys, live-*.js,
-   ai-usage.log, ai-cache.json.
+   only). Quota-aware (SAM_DAILY_BUDGET, default 10 requests a day): each description is read
+   once, and a backlog resumes the next day. Optional AI read as above.
+   Run: node fetch-sam.js [--days 30 --max 300]
+ - State portals (fetch-states.js): LIVE, 28 adapters, one per state in states/ (a failing
+   state does not stop the others; one retry pass after a pause):
+     DE IN IA LA MS SC ID VT TX (TxDOT lettings only) RI NY WY KS FL NE WV MO SD OK AR CO AK HI,
+     plus NV NJ OR IL MA via the shared Periscope adapter (states/bso.js).
+   Each notice needs a title, https link and due date, else it is dropped. Then USAspending
+   value estimates and the AI read of the notice page and attachments (needs
+   ANTHROPIC_API_KEY; capped at STATE_MAX_READS = 60 new reads per run, soonest deadline
+   first; earlier reads are reused). Portals that forbid reads or need a login are marked
+   noPageReads and show a "Not read" note. Run: node fetch-states.js [DE NV ...]
+   Per-state status and the reasons for parked states: state-sources-survey.md,
+   state-fetch-status.pdf, state-feed-requests.md.
+ - Pennsylvania (states/pennsylvania.js): written but NOT registered. PA forbids automated
+   reads; the only route is DGS's eAlert emails, read over IMAP from a dedicated Gmail
+   account (PA_GMAIL_USER, PA_GMAIL_APP_PASSWORD). Waiting on the Google app password;
+   until it is registered in fetch-states.js PA shows nothing.
+ - Not started: SAM.gov Entity API (vendor registrations), DIBBS and eBuy (need logins or
+   scraping). Add one at a time. Rule: only fully automatic sources are kept; manual CSV or
+   .eml routes were removed.
+ - Secrets and generated files stay out of git (.gitignore): .env, keys, live-*.js, data/,
+   ai-usage.log, ai-cache.json, sam-cache.json, sam-quota.json, logs.
 
 Things that trip up newcomers (from notes)
  - Deadlines are date, time and time zone, plus the agency's clock rules.
@@ -206,14 +243,72 @@ Things that trip up newcomers (from notes)
  - Teaming agreements and subcontracting are central; model partners.
 
 
-4. STATUS
+4. FILE MAP - WHAT EACH FILE DOES
+---------------------------------
+Service and page
+ server.js           The one running process. Loads .env, runs the fetchers (24 h rule, wake
+                     detection, startup), ingests results, and serves HTTP: the page and
+                     its scripts (this machine only), /api/health, /api/status (incl.
+                     per-state health), /api/rfqs, /api/rfqs/<id>, POST /api/refresh,
+                     /shall/<id>. Builds a slimmed live-states.js for the page. --once =
+                     one refresh then exit.
+ service/feed.js     Reads the live-*.js files, normalizes every notice to the feed schema,
+                     keeps data/state.json (seq cursor, active flag, 90-day tombstones) and
+                     answers feed queries. Lists the sources and their fetch scripts.
+ index.html          The whole UI: table, search, filters, sorting, fetch-health banner, card
+                     layout on narrow screens. Escapes all text, links https only.
+ facts.js            Bid-factor keyword rules (FACT_RULES), shared by the page and server.
+ data.js             Documents the notice data shape (comment only; no data).
+ sample-data.js      Invented demo rows, loaded only on *.github.io.
+ start.cmd           Windows launcher: runs server.js and restarts it if it exits.
+ package.json        npm start / npm run refresh; Node 18+, no dependencies.
+ .claude/launch.json Local preview config for the editor (git-ignored).
+
+Fetchers and helpers (project root)
+ fetch-nyc.js        NYC City Record -> live-nyc.js (AI read, similar-award estimates).
+ fetch-sam.js        SAM.gov -> live-sam.js (quota-aware, set-aside mapping, AI read).
+ fetch-states.js     Runs the state adapters -> live-states.js (estimates, document reads,
+                     retry pass, carry-over of failed states, backups in data/backups).
+ sam-estimates.js    USAspending similar-award estimates (federal and state NAICS lookups).
+ stated-amount.js    Keyword pass that finds a contract amount stated in a notice (no key).
+ ai-extract.js       Claude Haiku reader: requires, scope, "shall" points, stated amount.
+                     Validates output strictly, caches in ai-cache.json, logs cost.
+
+State adapters (states/)
+ <state>.js          One adapter each { code, name, fetch() } for the portals listed in
+                     section 3. A header comment in each says how that portal is read.
+ bso.js              Shared Periscope "bso" adapter for NV, NJ, OR, IL, MA.
+ common.js           Shared helpers: http with retry, request counting, text cleaning, time zones.
+ docs.js             Fetches a notice's page and attachments (PDF, Word, zip) for the AI read.
+ zip.js              Minimal ZIP/.docx reader used by docs.js.
+ unspsc.js           UNSPSC code -> readable category and NAICS prefix.
+ pennsylvania.js     Gmail eAlert reader (not registered; see section 3).
+
+Docs and notes
+ spec.txt            This file.
+ DEPLOY.md           Installing and running the service (Task Scheduler, keys, hosting).
+ FEED.md             The JSON feed API for client apps.
+ anthropic-key-setup.md   Steps to create and fund the Anthropic key (no secrets).
+ state-sources-survey.md  Survey of every state's source and its status.
+ state-feed-requests.md   Feed-request emails to states that forbid automated reads.
+ rfq-bid-tracker notes.md Scratch notes (not part of the app).
+ make-status-pdf.py, make-email-states-pdf.py  Regenerate state-fetch-status.pdf and
+                     email-alert-states.pdf (need reportlab).
+ App Status.pdf, search_google.pdf, state-fetch-status.pdf, email-alert-states.pdf
+                     Status and reference PDFs.
+
+Generated at run time (git-ignored): live-*.js, data/ (state.json, feed.json, service.log,
+backups), ai-cache.json, ai-usage.log, sam-cache.json, sam-quota.json, *-run.log.
+
+
+5. STATUS
 ---------
- - Table, filters, search and Bid factors built (index.html, data.js). Bid status tracking was removed;
-   it belongs to the separate bidding app.
- - Standalone service built (server.js): scheduled fetches + JSON feed
-   (FEED.md, DEPLOY.md).
- - Live feeds: NYC and SAM.gov working; NYS stub.
- - AI read with caching and cost reporting built.
+ - Table, filters, search, Bid factors and fetch-health banner built (index.html).
+   Bid status tracking was removed; it belongs to the separate bidding app.
+ - Standalone service built (server.js): scheduled fetches + JSON feed (FEED.md, DEPLOY.md).
+ - Live feeds: NYC, SAM.gov and 28 state portals. PA waits on a Gmail app password; other
+   states are parked pending a feed or email route (state-sources-survey.md).
+ - AI read with caching and cost reporting built (also reads state attachments).
  - Waiting on Israel: billing owner, and the hosting and multi-user decisions (items
-   k-o). Regions/categories (all USA, all), sources and eligibility (no company
+   m-o). Regions/categories (all USA, all), sources and eligibility (no company
    profile, see 2a) are settled.
