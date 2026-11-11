@@ -26,3 +26,5 @@ quesions.md
 anthropic-account-setup.pdf
 # Hand-exported CSVs (e.g. Texas ESBD); may be large
 imports/
+
+fetch-run.log
