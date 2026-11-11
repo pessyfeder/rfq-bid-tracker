@@ -18,6 +18,8 @@ W=[("DE","Open-data API. 39 open."),("IN","HTML table. 54 open. Links go to the 
 ("WV","wvOASIS View Published Solicitations (CGI Advantage session app, no login). 70 open. We replay the three actions a visitor makes (open the page, search Open, 100 per page) in one session, retried when the host returns 503. No per-bid page, so document reads are skipped; Bid factors come from title and scope keywords."),
 ("WY","Public Purchase (the Google Sites page only points to it). 12 open. The listing is scrambled with decoy text; we read it the way a browser does, by dropping the spans the page itself hides. One request per run. Bid detail pages need a login (HTTP 401), so document reads are skipped; Bid factors come from title and scope keywords."),
 ("KS","eSupplier public bidding events (PeopleSoft). 35 open. No robots.txt; site terms reviewed, no ban on automated reads. A session cookie handshake loads the whole list, then one page per event for the description (about 37 requests, paced). Bid package documents are not opened, so eligibility stays unread; Bid factors come from title and scope keywords."),
+("FL","MyFloridaMarketPlace Vendor Information Portal: public JSON API, no login. 103 open (ITB, ITN, RFP, RFI, RSQ only). The old Vendor Bid System is archival. Attached documents are not read."),
+("NE","DAS Purchasing Bureau current bid table (server-rendered, robots.txt does not cover it). 4 open with a due date; open-ended rows skipped. No due time published. Notice pages and attachments are AI-read."),
 ("TX","Automatic source only: TxDOT open-data dataset, 329 open. Texas replied: no feed, and automated page reads are not offered, so the other agencies stay off. The hand-exported CSV route was removed.")]
 ASK=[("PA","Replied: the free DGS e-Alert emails are the only route. Built: an automatic Gmail IMAP reader. Waiting on the Google app password (PA_GMAIL_USER, PA_GMAIL_APP_PASSWORD), so 0 notices so far. robots.txt forbids automated access to the site."),
 ("UT","robots.txt forbids all automated access (Bonfire). Email sent; reply pending."),
@@ -30,7 +32,6 @@ P=[("OK","The public list only holds old items: 153 of 155 rows are Pending Awar
 ("MO","Bids moved to the new MOVERS system, which needs a login."),
 ("CT","ASP.NET form pages; needs form-post work for few notices."),("AK","ASP.NET form pages or other system; needs form-post work for few notices."),
 ("HI","ASP.NET form pages or other system; needs form-post work for few notices."),("ND","ASP.NET form pages or other system; needs form-post work for few notices."),
-("FL","The old Vendor Bid System is archival only (ads posted before 28 March 2022). Current bids are in MyFloridaMarketPlace (JavaScript app, vendor login); no feed or open data found."),
 ("VA","eVA Open Data Portal and data.virginia.gov hold historical procurement data only (yearly files, login to download), not open solicitations. No feed found."),
 ("AR","ARBuy shows 0 open bids while the state moves to Ariba in 2026. Recheck in a few months.")]
 E=[("AZ","Not scrapable: app.az.gov robots.txt forbids all automated access. Route: supplier registration with commodity codes, email alerts. Not subscribed yet."),
@@ -42,7 +43,7 @@ E=[("AZ","Not scrapable: app.az.gov robots.txt forbids all automated access. Rou
 ("WI","eSupplier: NIGP-code email alerts. The public list is a Blazor app, so not scrapable. Not subscribed yet."),
 ("GA","Georgia Procurement Registry: email notifications listed, steps unconfirmed; browser check blocks scripts. Not subscribed yet."),
 ("NM","Not scrapable: bids.sciquest.com (Jaggaer) robots.txt forbids all automated access. Route: supplier registration at solutions.sciquest.com (CustOrg=StateOfNewMexico), email alerts. Not subscribed yet; skipped for now.")]
-L=[("SD","ESM system."),("NE","The page came back empty.")]
+L=[("SD","ESM system.")]
 U=[("MD","Open data was last updated in 2019.")]
 groups=[("Working",W),("Asked for a feed",ASK),("Parked",P),("Email alerts to set up",E),("Login or JavaScript",L),("Unusable",U)]
 assert sum(len(g) for _,g in groups)==50
@@ -62,7 +63,7 @@ def tbl(data,widths):
     t.setStyle(TableStyle([("BACKGROUND",(0,0),(-1,0),colors.HexColor("#e6e9ef")),("GRID",(0,0),(-1,-1),0.4,colors.HexColor("#b8bec9")),("VALIGN",(0,0),(-1,-1),"TOP")]))
     return t
 el+=[tbl(rows,[110,40,362]),Spacer(1,8),
-Paragraph("Working states hold about 2,900 open notices (MA 875, NY 736, TxDOT 329, OR 176, IL 162, LA 139, SC 132, the rest under 80 each). Pennsylvania adds more once the Gmail app password is set. The app takes only automatic sources: no hand-exported files. Realistic free coverage is about 14 to 20 states unless feeds come back from the emails.",b),
+Paragraph("Working states hold about 2,900 open notices (MA 875, NY 736, TxDOT 329, OR 176, IL 162, LA 139, SC 132, the rest under 80 each). Pennsylvania adds more once the Gmail app password is set. The app takes only automatic sources: no hand-exported files. Realistic free coverage is about 16 to 22 states unless feeds come back from the emails.",b),
 Spacer(1,6),Paragraph("Every state",ss["Heading2"])]
 rows=[["State","Status","Notes"]]
 for n,g in groups:
