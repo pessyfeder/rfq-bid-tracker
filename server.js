@@ -157,9 +157,26 @@ function statusBody() {
       id: s.id, label: s.label, schedulable: !!s.script,
       fetchedAt: (state.sources[s.id] || {}).fetchedAt || null,
       records: Object.values(state.records).filter((r) => r.source === s.id && r.active).length,
-      ...(state.runs[s.id] || {})
+      ...(state.runs[s.id] || {}),
+      ...(s.id === "states" ? { states: statesHealth(s.id) } : {})
     }))
   };
+}
+
+// Per-state health from the last states fetch. A failed state's older notices are still in the feed (carried over),
+// so "stale" tells you the data is not from the latest fetch even though the source as a whole reported success.
+function statesHealth(sourceId) {
+  const meta = (state.sources[sourceId] || {}).states || {};
+  const counts = {};
+  for (const r of Object.values(state.records)) {
+    if (r.source === sourceId && r.active) { const c = String(r.id).split("-")[0]; counts[c] = (counts[c] || 0) + 1; }
+  }
+  const codes = new Set([...Object.keys(meta), ...Object.keys(counts)]);
+  return [...codes].sort().map((code) => {
+    const m = meta[code] || {};
+    return { code, ok: m.ok !== false && !!meta[code], stale: m.ok === false, error: m.error || null, partial: m.partial || null,
+      lastSuccess: m.fetchedAt || null, openRecords: counts[code] || 0 };
+  });
 }
 
 // The human page (index.html + live-*.js) is served to this machine only: statuses and bid interest

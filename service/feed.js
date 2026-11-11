@@ -132,6 +132,7 @@ function ingest(state, now = new Date()) {
     if (!live) continue;
     const st = state.sources[src.id] = state.sources[src.id] || {};
     st.label = src.label;
+    if (live.meta.states) st.states = live.meta.states; // per-state outcome of the last fetch (set before the unchanged check so older state files pick it up)
     if (st.fetchedAt === live.meta.fetchedAt) continue; // nothing new from this source
     st.fetchedAt = live.meta.fetchedAt;
     st.count = live.rfqs.length;
