@@ -15,15 +15,15 @@ W=[("DE","Open-data API. 39 open."),("IN","HTML table. 54 open. Links go to the 
 ("MA","Periscope portal. 875 open at the last run. Slow (about 10 s a page). Earlier runs had one page (rows 725-749) blocked by the local network content filter. Document reads paced one every 5 s."),
 ("NY","NYS Contract Reporter: public listing (GET form), 736 open of 886 listed; sole-source, surplus, grant and RFI ads left out. Ad pages need a login behind reCAPTCHA, which we do not work around, so no document reads and no deadline times. Site terms require written permission to copy protected material; none requested."),
 ("RI","Form POST (ASP.NET). 30 open. Partial: covers quasi-state agencies, cities and towns, schools, colleges and grants only; executive-branch state bids are in a login system and are not covered."),
-("WY","Public Purchase (the Google Sites page only points to it). 12 open. The listing is scrambled with decoy text; we read it the way a browser does, by dropping the spans the page itself hides. One request per run."),
-("KS","eSupplier public bidding events (PeopleSoft). 35 open. No robots.txt; site terms reviewed, no ban on automated reads. A session cookie handshake loads the whole list, then one page per event for the description (about 37 requests, paced). Bid package documents are not opened, so eligibility stays unread."),
+("WY","Public Purchase (the Google Sites page only points to it). 12 open. The listing is scrambled with decoy text; we read it the way a browser does, by dropping the spans the page itself hides. One request per run. Bid detail pages need a login (HTTP 401), so document reads are skipped; Bid factors come from title and scope keywords."),
+("KS","eSupplier public bidding events (PeopleSoft). 35 open. No robots.txt; site terms reviewed, no ban on automated reads. A session cookie handshake loads the whole list, then one page per event for the description (about 37 requests, paced). Bid package documents are not opened, so eligibility stays unread; Bid factors come from title and scope keywords."),
 ("TX","Automatic source only: TxDOT open-data dataset, 329 open. Texas replied: no feed, and automated page reads are not offered, so the other agencies stay off. The hand-exported CSV route was removed.")]
 ASK=[("PA","Replied: the free DGS e-Alert emails are the only route. Built: an automatic Gmail IMAP reader. Waiting on the Google app password (PA_GMAIL_USER, PA_GMAIL_APP_PASSWORD), so 0 notices so far. robots.txt forbids automated access to the site."),
 ("UT","robots.txt forbids all automated access (Bonfire). Email sent; reply pending."),
 ("OH","robots.txt forbids automated access, and the site is behind a login. Email sent; reply pending."),
 ("AL","robots.txt forbids all automated access. Email sent; reply pending."),
 ("CA","HTTP 403 to automated requests. Email sent; reply pending."),("CO","HTTP 403 to automated requests. Email sent; reply pending."),
-("NH","HTTP 403 to automated requests. Email sent; reply pending."),("TN","HTTP 403 to automated requests. Email sent; reply pending."),
+("NH","HTTP 403 to automated requests. Email sent; reply pending."),("TN","HTTP 403 to automated requests. Not emailed; need to call."),
 ("ME","HTTP 403, and login-only since October 2025. Email sent; reply pending."),("MN","Bot challenge. Email sent; reply pending.")]
 P=[("OK","The public list only holds old items: 153 of 155 rows are Pending Award; the 2 open ones closed in 2020 and 2021."),
 ("MO","Bids moved to the new MOVERS system, which needs a login."),
@@ -52,7 +52,7 @@ b=ParagraphStyle("b",parent=ss["BodyText"],fontSize=9.5,leading=12.5)
 c=ParagraphStyle("c",parent=b,fontSize=9,leading=11.5)
 doc=SimpleDocTemplate(sys.argv[1],pagesize=letter,leftMargin=45,rightMargin=45,topMargin=45,bottomMargin=45,title="State RFQ feeds: status of all 50 states")
 el=[Paragraph("State RFQ feeds: status of all 50 states",h1),
-Paragraph("Updated 2026-11-10 (night) from state-sources-survey.md and the latest fetch run. Counts are open notices at that run.",b),Spacer(1,8),
+Paragraph("Updated 2026-11-10 (late night) from state-sources-survey.md and the latest fetch run. Counts are open notices at that run.",b),Spacer(1,8),
 Paragraph("Summary",ss["Heading2"])]
 rows=[["Status","Count","States"]]+[[n,str(len(g)),", ".join(s for s,_ in g)] for n,g in groups]
 def tbl(data,widths):
