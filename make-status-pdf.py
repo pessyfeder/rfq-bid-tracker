@@ -23,6 +23,7 @@ W=[("DE","Open-data API. 39 open."),("IN","HTML table. 54 open. Links go to the 
 ("TX","Automatic source only: TxDOT open-data dataset, 329 open. Texas replied: no feed, and automated page reads are not offered, so the other agencies stay off. The hand-exported CSV route was removed. Statewide Texas coverage (ESBD, every agency) depends on the Comptroller approving access; until then TX stays TxDOT only."),
 ("MO","MOVERS (Oracle Fusion) Solicitation Abstracts: public guest REST listing, no login, no robots.txt. 59 open. Rows link to the listing page and documents are not read. The Oracle REST version (11.13.18.05) is pinned in the adapter; check it first if MO fails."),
 ("SD","ESM Central Bid Exchange posting board: public JSON API, no login. 34 open. No descriptions, and event documents are behind the ESM login, so eligibility stays unread; Bid factors come from title keywords."),
+("AR","Public bid-opportunities page on sas.arkansas.gov (ARBuy was retired in July 2026; the state now uses Ariba). No login; robots.txt allows all. 15 open (state agencies plus colleges). State deadlines are date only. Links go to the anonymous Ariba preview."),
 ("OK","Oklahoma Supplier Portal, public Bidding Event Information page (PeopleSoft): no login, no robots.txt. 15 open. A session cookie handshake loads the list, then one form postback per event for the description. The bid package is inside the portal, so eligibility stays unread. The old ok.gov list only held 2020-2021 items and is not used.")]
 ASK=[("UT","robots.txt forbids all automated access (Bonfire). Email sent; reply pending."),
 ("OH","robots.txt forbids automated access, and the site is behind a login. Email sent; reply pending."),
@@ -32,7 +33,6 @@ ASK=[("UT","robots.txt forbids all automated access (Bonfire). Email sent; reply
 ("ME","HTTP 403, and login-only since October 2025. Email sent; reply pending."),("MN","Bot challenge. Email sent; reply pending.")]
 P=[("CT","ASP.NET form pages; needs form-post work for few notices."),("AK","ASP.NET form pages or other system; needs form-post work for few notices."),
 ("HI","ASP.NET form pages or other system; needs form-post work for few notices."),("ND","ASP.NET form pages or other system; needs form-post work for few notices."),
-("AR","ARBuy shows 0 open bids while the state moves to Ariba in 2026. Recheck in a few months."),
 ("MD","Open data was last updated in 2019.")]
 E=[("PA","Replied: the free DGS e-Alert emails are the only route. Built: an automatic Gmail IMAP reader. Waiting on the Google app password (PA_GMAIL_USER, PA_GMAIL_APP_PASSWORD), so 0 notices so far. robots.txt forbids automated access to the site."),
 ("AZ","Not scrapable: app.az.gov robots.txt forbids all automated access. Route: supplier registration with commodity codes, email alerts. Not subscribed yet."),

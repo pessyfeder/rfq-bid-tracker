@@ -52,10 +52,9 @@ robots.txt on these sites only blocks `/craft`.
 - NO-BOTS (robots.txt `Disallow: /` for all): TX (ESBD), PA (eMarketplace), UT (Bonfire), OH, AL.
 - LOGIN/JS: AZ (redirects to login), OH (login redirect), NC eVP (Dynamics portal, read-only offline shell), WA WEBS (JS), KY and MI (Advantage VSS), KS, GA (browser check), VA eVA, MT (Jaggaer), NM (Bonfire/Jaggaer), WI.
 - BLOCKED: CA (403), CO (403), ME (403; also login-only since 2025-10), NH (403), TN (403), MN (bot challenge).
-- AR is moving ARBuy to Ariba in 2026 (not probed).
 
 ## Not probed at all
-AR, VT (page 404 at the URL tried; `bgs.vermont.gov/purchasing-contracting` still to check), plus deeper pages for the LISTING states above.
+VT (page 404 at the URL tried; `bgs.vermont.gov/purchasing-contracting` still to check), plus deeper pages for the LISTING states above.
 
 ## Built
 `fetch-states.js` runs one adapter per state in `states/` and writes `live-states.js` (source `states` in `service/feed.js`).
@@ -74,10 +73,11 @@ Quirks: OR lists county and city bids (all tagged "State"); DE and ID publish da
 IN links to its listing page. MA works (852 open on 2026-11-10); its portal is slow (about 10 s a page, 36 pages) and a network content filter blocks one page (rows 725-749), so MA is reported as partial.
 To add a state, write an adapter and list it in `fetch-states.js`.
 | SD | `southdakota.js` (ESM posting board JSON list; no login; no descriptions) | 34 |
+| AR | `arkansas.js` (sas.arkansas.gov bid-opportunities page; two HTML tables; no login) | 15 |
 | OK | `oklahoma.js` (Oklahoma Supplier Portal public Bidding Event page, PeopleSoft; session cookie, one form postback per event for the description; no login, no robots.txt) | 15 |
 
 VT is also built: `vermont.js` reads the OPC "Current Bid Listings" page (9 open on 2026-11-10); each notice links to its solicitation PDF.
-AR was checked and not built: ARBuy's Periscope page loads but lists 0 open bids (the state is moving to a new system).
+AR: ARBuy (Periscope) lists 0 open bids because the state moved to SAP Ariba in July 2026. Checked 2026-11-11: a public source exists, https://sas.arkansas.gov/procurement/bid-opportunities/ (Office of State Procurement "Current Solicitations" table: bid number, name, description, posted and deadline dates, "View" link to an Ariba RfxEvent preview with ANONYMOUS in the URL, plus a detail page at sas.arkansas.gov/bid-opportunity/doc<id>/; a second list for other procurement units). No login, robots.txt allows all with Crawl-delay 10. BUILT 2026-11-11 (`arkansas.js`, 15 open): one request; parses the server-rendered wpDataTable (state agencies; deadline is date only, link goes to the anonymous Ariba preview) and the Other Procurement Units table (colleges etc.; opening time is Central). Closed/cancelled rows are skipped.
 Draft emails for the states that forbid automated access are in `state-feed-requests.md` (sent by the user as of 2026-11-10; replies pending).
 
 TX: ESBD offers no feed and forbids automated reads; the Comptroller confirmed (2026-11-10) the only route is a manual CSV export. Policy: nothing manual is kept, so the CSV import was removed. TxDOT notices come automatically from Texas open data (`states/txdot.js`).
@@ -104,5 +104,5 @@ PA (2026-11-10): `states/pennsylvania.js` reads the eAlert emails automatically 
 ## Next
 1. MA: ask the filter admin to allow commbuys.com so the one blocked page (rows 725-749) can be read.
 2. Email the NO-BOTS and BLOCKED states asking for a feed; that is the only compliant free route.
-3. VT, AR and the parked states if more coverage is wanted.
+3. VT and the parked states if more coverage is wanted.
 Expected free coverage: about 13 states now. All 50 is not realistic without a paid feed.
