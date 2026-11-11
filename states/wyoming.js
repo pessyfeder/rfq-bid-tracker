@@ -28,6 +28,9 @@ function visible(fragment, hidden) {
 
 module.exports = {
   code: "WY", name: "Wyoming",
+  noPageReads: true,
+  noPageReadsWhy: "Public Purchase bid detail pages need a login (HTTP 401)",
+  noPageReadsNote: "Public Purchase shows the full bid only to logged-in users, so this row is not read. Open the bid and log in (free) to see the solicitation.",
   async fetch() {
     const res = await http(LIST);
     const html = await res.text();
