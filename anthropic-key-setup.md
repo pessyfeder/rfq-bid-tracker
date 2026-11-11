@@ -15,6 +15,15 @@ Israel should own the account so the bill goes to him and he controls access.
 3. Go to **Settings > Billing**. Add a payment method and buy a small amount of prepaid credit (for example $10 to $20). Calls fail when credit runs out.
 4. Go to **Settings > Limits** (or the spend-limit section of Billing). Set a **monthly spend limit** so a bug or a leaked key cannot run up a large bill.
 
+## Current billing arrangement and runway (as of 2026-11-11)
+
+- The account is on a **$20 prepaid plan with auto-reload**: when the balance falls to **$5**, the card is charged $20 and the balance goes back up. Calls only fail if the reload is declined (card expired, bank block) or the monthly spend limit is hit, so keep the card current and the limit above expected use.
+- The key for this app is in the local `.env` (git-ignored; never commit or paste it).
+- **Each reload buys about $15 of use** (the $5 floor is never spent down first), so a reload happens whenever $15 has been consumed.
+- **Estimated time between reloads: about 3 to 8 months** in normal running. Basis: the spec projects roughly $1 to $3 a month once the cache is warm; I'd budget $2 to $5 a month to allow for the state portals and new notices. At $2/month a reload is about every 7 months; at $5/month, about every 3 months. That is roughly $40 to $80 a year.
+- **Caveat:** this is a projection. During development (2026-11-10 to 11-11) `ai-usage.log` shows about $10.40 of *estimated* spend in two days, because the cache was cleared and prompts changed repeatedly. The first $15 may go much sooner if development continues. After the cache is warm, check `ai-usage.log` (or the Console Usage page) after a week of scheduled runs and replace the estimate with the measured daily average: months between reloads = 15 / (daily cost x 30).
+- Reloads appear as $20 charges on the card and in Console > Billing. A reload sooner than every ~2 months means something is re-reading notices (a deleted `ai-cache.json`, or a changed prompt) and is worth investigating.
+
 ## Part 2: Israel adds Pessy as a member
 
 1. Go to **Settings > Members** (sometimes "Organization" or "Team").

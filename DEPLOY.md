@@ -145,7 +145,7 @@ The service reads `.env` itself, so no `EnvironmentFile=` is needed.
 
 - **Freshness**: check `/api/status` (or `/api/health`'s `lastSuccessfulRefresh`); it should never be much over 24 hours old while the machine is awake; if it is, something is wrong. (A machine that sleeps for days is stale until it wakes, then refreshes.)
 - **Back up** `data/state.json` and `ai-cache.json`. The data itself rebuilds on the next refresh, but losing `state.json` resets the `seq` cursor, and losing `ai-cache.json` makes every notice be re-read and re-billed.
-- **Cost**: after the first run, check Anthropic Console > Usage; each run also appends to `ai-usage.log`.
+- **Cost**: after the first run, check Anthropic Console > Usage; each run also appends to `ai-usage.log`. The account auto-reloads $20 when the balance reaches $5 (about $15 of use per reload, roughly every 3 to 8 months; see `anthropic-key-setup.md`). Keep the card on the account valid.
 - **Key leaks**: delete the key on its service's site, make a new one, edit `.env`, restart the service.
 - **Manual refresh**: `POST /api/refresh`, or restart the service.
 - **Upgrading to a new version**:

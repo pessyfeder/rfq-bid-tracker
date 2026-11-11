@@ -142,8 +142,12 @@ Search
     by hash of the notice text, so unchanged notices cost nothing on the next refresh
     (entries unseen for 60 days are dropped; delete the file after changing a prompt).
     Without a key, NYC and SAM rows simply have fewer Bid factors chips and no AI value.
-    OPEN: who owns the Anthropic account and pays? Where does the key live once refreshes
-    run on a schedule?
+    Billing now (2026-11-11): the account is on a $20 prepaid plan that auto-reloads $20
+    when the balance reaches $5, so each reload covers about $15 of use. Estimated one
+    reload every 3 to 8 months at $2 to $5 a month (projection; see anthropic-key-setup.md).
+    The key is in the local .env (git-ignored).
+    OPEN: who owns the Anthropic account and pays long term? Where does the key live once
+    refreshes run on a schedule on the server?
  k. "Interested" follow-up: DROPPED (no statuses here). The feed carries rfqUrl only.
  l. Multiple users: no longer applies to this app (no statuses, no logins). 
  m. Hosting: OPEN - to discuss with Israel, to keep the information safe. Assumed: own
