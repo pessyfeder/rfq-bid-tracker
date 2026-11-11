@@ -74,6 +74,7 @@ Quirks: OR lists county and city bids (all tagged "State"); DE and ID publish da
 IN links to its listing page. MA works (852 open on 2026-11-10); its portal is slow (about 10 s a page, 36 pages) and a network content filter blocks one page (rows 725-749), so MA is reported as partial.
 To add a state, write an adapter and list it in `fetch-states.js`.
 | SD | `southdakota.js` (ESM posting board JSON list; no login; no descriptions) | 34 |
+| OK | `oklahoma.js` (Oklahoma Supplier Portal public Bidding Event page, PeopleSoft; session cookie, one form postback per event for the description; no login, no robots.txt) | 15 |
 
 VT is also built: `vermont.js` reads the OPC "Current Bid Listings" page (9 open on 2026-11-10); each notice links to its solicitation PDF.
 AR was checked and not built: ARBuy's Periscope page loads but lists 0 open bids (the state is moving to a new system).
@@ -97,7 +98,7 @@ PA (2026-11-10): `states/pennsylvania.js` reads the eAlert emails automatically 
 - NM retried 2026-11-10: the GSD site (generalservices.state.nm.us, robots.txt only blocks wp-admin/calendar) has no bid list of its own; "Active Procurements" just links to Jaggaer (`bids.sciquest.com/apps/Router/PublicEvent?CustomerOrg=StateOfNewMexico&tab=PHX_NAV_SourcingOpenForBid`). That page loads without login, but `bids.sciquest.com/robots.txt` is `User-agent: * / Disallow: /`, so it is NO-BOTS; not built. (It is Jaggaer, not Bonfire; the earlier note was wrong on that.)
 
 ## Tried and parked
-- OK: the public list works (GET `ok.gov/dcs/solicit/app/solicitationSearch.php?status=open-pending`, then `?page=N` with the session cookie), but it holds only old items: of 155 rows, 153 are "Pending Award" and the 2 "Open" ones closed in 2020 and 2021. Current Oklahoma bids are not published there, so no adapter was built.
+- OK: moved to a working adapter 2026-11-11 (`oklahoma.js`). The old `ok.gov/dcs/solicit` list only holds 2020-2021 items; current bids are on the Oklahoma Supplier Portal's public Bidding Event Information page (financials.ok.gov, PeopleSoft). If it breaks, check the element ids (SCP_PUB_AUC_VW_*, SCP_P_AUCDTL_VW_*) first.
 - CT, AK, HI, ND: ASP.NET form pages or other systems; each needs form-post reverse engineering for few notices.
 
 ## Next

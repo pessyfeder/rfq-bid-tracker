@@ -22,15 +22,15 @@ W=[("DE","Open-data API. 39 open."),("IN","HTML table. 54 open. Links go to the 
 ("NE","DAS Purchasing Bureau current bid table (server-rendered, robots.txt does not cover it). 4 open with a due date; open-ended rows skipped. No due time published. Notice pages and attachments are AI-read."),
 ("TX","Automatic source only: TxDOT open-data dataset, 329 open. Texas replied: no feed, and automated page reads are not offered, so the other agencies stay off. The hand-exported CSV route was removed. Statewide Texas coverage (ESBD, every agency) depends on the Comptroller approving access; until then TX stays TxDOT only."),
 ("MO","MOVERS (Oracle Fusion) Solicitation Abstracts: public guest REST listing, no login, no robots.txt. 59 open. Rows link to the listing page and documents are not read. The Oracle REST version (11.13.18.05) is pinned in the adapter; check it first if MO fails."),
-("SD","ESM Central Bid Exchange posting board: public JSON API, no login. 34 open. No descriptions, and event documents are behind the ESM login, so eligibility stays unread; Bid factors come from title keywords.")]
+("SD","ESM Central Bid Exchange posting board: public JSON API, no login. 34 open. No descriptions, and event documents are behind the ESM login, so eligibility stays unread; Bid factors come from title keywords."),
+("OK","Oklahoma Supplier Portal, public Bidding Event Information page (PeopleSoft): no login, no robots.txt. 15 open. A session cookie handshake loads the list, then one form postback per event for the description. The bid package is inside the portal, so eligibility stays unread. The old ok.gov list only held 2020-2021 items and is not used.")]
 ASK=[("UT","robots.txt forbids all automated access (Bonfire). Email sent; reply pending."),
 ("OH","robots.txt forbids automated access, and the site is behind a login. Email sent; reply pending."),
 ("AL","robots.txt forbids all automated access. Email sent; reply pending."),
 ("CA","HTTP 403 to automated requests. Email sent; reply pending."),("CO","HTTP 403 to automated requests. Email sent; reply pending."),
 ("NH","HTTP 403 to automated requests. Email sent; reply pending."),("TN","HTTP 403 to automated requests. Not emailed; need to call."),
 ("ME","HTTP 403, and login-only since October 2025. Email sent; reply pending."),("MN","Bot challenge. Email sent; reply pending.")]
-P=[("OK","The public list only holds old items: 153 of 155 rows are Pending Award; the 2 open ones closed in 2020 and 2021."),
-("CT","ASP.NET form pages; needs form-post work for few notices."),("AK","ASP.NET form pages or other system; needs form-post work for few notices."),
+P=[("CT","ASP.NET form pages; needs form-post work for few notices."),("AK","ASP.NET form pages or other system; needs form-post work for few notices."),
 ("HI","ASP.NET form pages or other system; needs form-post work for few notices."),("ND","ASP.NET form pages or other system; needs form-post work for few notices."),
 ("AR","ARBuy shows 0 open bids while the state moves to Ariba in 2026. Recheck in a few months."),
 ("MD","Open data was last updated in 2019.")]
