@@ -1,9 +1,9 @@
 # Installing the RFQ service
 
-This is a standalone service on **one machine** (the "service machine"). It fetches solicitations from NYC and SAM.gov every 24 hours (after a sleep, right on waking), keeps them in `data/`, and serves them as JSON. The JSON contract is in `FEED.md`.
+This is a standalone service on **one machine** (the "service machine"). It fetches solicitations from NYC, SAM.gov and about 28 state procurement portals (including New York State's Contract Reporter, and Pennsylvania via its eAlert emails in Gmail) every 24 hours (after a sleep, right on waking), keeps them in `data/`, and serves them as JSON. The JSON contract is in `FEED.md`.
 
 ```
- NYC / SAM.gov / USAspending / Anthropic  -->  [service machine: server.js]  -->  JSON on localhost
+ NYC / SAM.gov / state portals / Gmail / Anthropic  -->  [service machine: server.js]  -->  JSON on localhost
                                                  fetchers, data/state.json
 ```
 
@@ -13,7 +13,7 @@ No secrets belong in this file. Keys live in environment variables or a `.env` f
 
 - Node.js, recent LTS (`node --version`; 18 or newer). No `npm install`: there are no dependencies.
 - Can sleep. The service refreshes once 24 hours have passed since the last refresh attempt: while awake as soon as it is due, or, if the 24 hours ran out while the machine slept, right after it wakes (also at start-up if the data is over a day old). A wake sooner than 24 hours after the last refresh does nothing. There is no fixed time of day. It must be started at boot (section 6) so it is already running when the machine wakes at the lock screen, before anyone logs in.
-- Outbound internet to sam.gov, data.cityofnewyork.us, usaspending.gov, api.anthropic.com.
+- Outbound internet to sam.gov (api.sam.gov), a856-cityrecord.nyc.gov and data.cityofnewyork.us, api.anthropic.com, imap.gmail.com (port 993, for Pennsylvania), and the state portals themselves (about 30 hosts, such as nyscr.ny.gov, data.texas.gov, www.njstart.gov, oregonbuys.gov, bidopportunities.iowa.gov). The full list is the `https://` hosts in `states/*.js`. If outbound traffic is filtered, allow those.
 - The service listens on this machine only (the default; `.env` also sets `HOST=127.0.0.1` to make it explicit), so no firewall change is needed.
 
 ## 2. Put the project on the machine
@@ -36,17 +36,17 @@ This gives `/opt/rfq-bid-tracker`. Make sure the account that will run the servi
 
 ## 3. Create your keys
 
-You need two values. They go in a `.env` file in the next step. Never email them or paste them in chat.
+You need up to four values (the first two matter most). They go in a `.env` file in the next step. Never email them or paste them in chat.
 
 | Value | Where it comes from |
 |---|---|
-| `SAM_API_KEY` | sam.gov > sign in > Account Details > API Key. Without it, SAM.gov is skipped and NYC still works. |
-| `ANTHROPIC_API_KEY` | A **new** key made for this machine only (see `anthropic-key-setup.md`). Do not reuse anyone else's key. Without it the feed works, but `scope`, `requires` and `shall` are thin. |
+| `SAM_API_KEY` | sam.gov > sign in > Account Details > API Key. Without it, SAM.gov is skipped; NYC and the state portals still work. |
+| `ANTHROPIC_API_KEY` | A **new** key made for this machine only (see `anthropic-key-setup.md`). Do not reuse anyone else's key. Without it the feed works, but `scope`, `requires` and `shall` are thin, and state notices get no AI reading. |
 | `PA_GMAIL_USER`, `PA_GMAIL_APP_PASSWORD` | Optional. The Gmail account that receives the Pennsylvania eAlert emails, and a Google app password for it (Google Account > Security > 2-Step Verification, then App passwords; IMAP must be on). Read-only: only emails from RA-paealerts@pa.gov in the last 90 days are read. Without them Pennsylvania shows no notices (there is no manual route). |
 
 ## 4. Create the `.env` file
 
-1. The zip already contains an empty `.env` file in the project folder with the names and no values.
+1. The zip may contain an empty `.env` file in the project folder (it lists only some of the names; add any that are missing, as in step 3).
    - **Windows:** open the folder in File Explorer. If you can't see the file, turn on View > Show > Hidden items. If it is missing, create a new text file named exactly `.env`, with no `.txt` at the end (turn on View > Show > File name extensions so you can check).
    - **Linux / macOS:** it is a dot-file, so use `ls -a`. If it is missing, `touch .env`.
 2. Open it in a text editor: on Windows, right-click `.env` > Open with > Notepad; on Linux / macOS, `nano .env`.
@@ -69,6 +69,9 @@ Optional settings you can add to the same file (defaults shown):
 # REFRESH_MAX_AGE_HOURS=24   # refresh when the last attempt is this old
 # WAKE_DELAY_SEC=45          # wait after a wake for the network to come up
 # SAM_DAILY_BUDGET=10   # see the note below
+# FETCH_TIMEOUT_MIN=45       # kill a fetcher (nyc, sam, states) that runs longer than this
+# STATE_MAX_READS=60         # most new state notices the AI reads per run (already-read ones are reused)
+# STATE_RETRY_WAIT_SEC=60    # pause before a failed state is retried once
 ```
 
 Notes:
@@ -85,7 +88,7 @@ Open a terminal **in the project folder**. On Windows, the easy way is to open t
 node server.js --once
 ```
 
-This fetches everything once, writes `data/feed.json` and exits. With AI reading on it takes a few minutes. Then start the service:
+This fetches everything once, writes `data/feed.json` and exits. With AI reading on, the first run can take well over a few minutes (the state portals are fetched one at a time, and each fetcher is stopped after `FETCH_TIMEOUT_MIN`); later runs are quicker because already-read notices are reused. Then start the service:
 
 ```
 node server.js
@@ -98,7 +101,7 @@ curl http://localhost:8765/api/health
 curl http://localhost:8765/api/status
 ```
 
-`/api/status` should show each source with a recent `lastSuccess` and `error: null`. Logs: `data/service.log`.
+`/api/status` should show each source (`nyc`, `sam`, `states`) with a recent `lastSuccess` and `error: null`. The `states` entry also has a per-state list: a state with `stale: true` failed its last fetch and its older notices are carried over; `partial` means only some of its notices were fetched. Pennsylvania reports an error until the Gmail values are set. Logs: `data/service.log`.
 
 ## 6. Keep it running
 
@@ -144,14 +147,14 @@ The service reads `.env` itself, so no `EnvironmentFile=` is needed.
 ## 7. Look after it
 
 - **Freshness**: check `/api/status` (or `/api/health`'s `lastSuccessfulRefresh`); it should never be much over 24 hours old while the machine is awake; if it is, something is wrong. (A machine that sleeps for days is stale until it wakes, then refreshes.)
-- **Back up** `data/state.json` and `ai-cache.json`. The data itself rebuilds on the next refresh, but losing `state.json` resets the `seq` cursor, and losing `ai-cache.json` makes every notice be re-read and re-billed.
+- **Back up** `data/state.json`, `ai-cache.json`, `sam-cache.json` and `sam-quota.json`. The data itself rebuilds on the next refresh, but losing `state.json` resets the `seq` cursor, losing `ai-cache.json` makes every notice be re-read and re-billed, and losing `sam-cache.json` makes SAM.gov descriptions be re-fetched against the daily request budget.
 - **Cost**: after the first run, check Anthropic Console > Usage; each run also appends to `ai-usage.log`. The account auto-reloads $20 when the balance reaches $5 (about $15 of use per reload, roughly every 3 to 8 months; see `anthropic-key-setup.md`). Keep the card on the account valid.
-- **Key leaks**: delete the key on its service's site, make a new one, edit `.env`, restart the service.
+- **Key leaks**: delete the key on its service's site (for the Gmail app password, revoke it in the Google account), make a new one, edit `.env`, restart the service.
 - **Manual refresh**: `POST /api/refresh`, or restart the service.
 - **Upgrading to a new version**:
   1. Stop the service (Windows: End the task in Task Scheduler; Linux: `sudo systemctl stop rfq-service`).
   2. Extract the new zip to a temporary folder, not over the project folder.
-  3. Copy its files into the project folder, replacing existing files, but **do not overwrite or delete** these: `.env`, the `data/` folder (`state.json` and `service.log`), and `ai-cache.json` and `ai-usage.log` in the project folder itself. If the new zip contains any of them, skip them.
+  3. Copy its files into the project folder, replacing existing files, but **do not overwrite or delete** these: `.env`, the `data/` folder (`state.json` and `service.log`), and `ai-cache.json`, `ai-usage.log`, `sam-cache.json` and `sam-quota.json` in the project folder itself (the generated `live-*.js` files are rebuilt on the next refresh). If the new zip contains any of them, skip them.
   4. Start the service again and check `/api/health` and `/api/status`.
 
 ## 8. The human page
@@ -175,5 +178,4 @@ The API has no authentication, so anyone who can reach the port can read the fee
 
 ## 10. Not built yet
 
-- NYS Contract Reporter (no source; see spec section 3).
 - HTTPS.
