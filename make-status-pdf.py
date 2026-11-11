@@ -24,11 +24,12 @@ W=[("DE","Open-data API. 39 open."),("IN","HTML table. 54 open. Links go to the 
 ("MO","MOVERS (Oracle Fusion) Solicitation Abstracts: public guest REST listing, no login, no robots.txt. 59 open. Rows link to the listing page and documents are not read. The Oracle REST version (11.13.18.05) is pinned in the adapter; check it first if MO fails."),
 ("SD","ESM Central Bid Exchange posting board: public JSON API, no login. 34 open. No descriptions, and event documents are behind the ESM login, so eligibility stays unread; Bid factors come from title keywords."),
 ("AR","Public bid-opportunities page on sas.arkansas.gov (ARBuy was retired in July 2026; the state now uses Ariba). No login; robots.txt allows all. 15 open (state agencies plus colleges). State deadlines are date only. Links go to the anonymous Ariba preview."),
-("OK","Oklahoma Supplier Portal, public Bidding Event Information page (PeopleSoft): no login, no robots.txt. 15 open. A session cookie handshake loads the list, then one form postback per event for the description. The bid package is inside the portal, so eligibility stays unread. The old ok.gov list only held 2020-2021 items and is not used.")]
+("OK","Oklahoma Supplier Portal, public Bidding Event Information page (PeopleSoft): no login, no robots.txt. 15 open. A session cookie handshake loads the list, then one form postback per event for the description. The bid package is inside the portal, so eligibility stays unread. The old ok.gov list only held 2020-2021 items and is not used."),
+("CO","CGI Advantage VSS, View Published Solicitations (colorado.gov/vss): no login. 69 open. We replay the four guest calls the page's own JavaScript makes (session shell, two pageOpen, show_lines at 100 per page). Fragile: the adapter depends on CGI's internal protocol, expected to break within a year or two. Note: ask Colorado for an official feed or export; the plain site returns HTTP 403, so a feed request is still worth sending.")]
 ASK=[("UT","robots.txt forbids all automated access (Bonfire). Email sent; reply pending."),
 ("OH","robots.txt forbids automated access, and the site is behind a login. Email sent; reply pending."),
 ("AL","robots.txt forbids all automated access. Email sent; reply pending."),
-("CA","HTTP 403 to automated requests. Email sent; reply pending."),("CO","HTTP 403 to automated requests. Email sent; reply pending."),
+("CA","HTTP 403 to automated requests. Email sent; reply pending."),
 ("NH","HTTP 403 to automated requests. Email sent; reply pending."),("TN","HTTP 403 to automated requests. Not emailed; need to call."),
 ("ME","HTTP 403, and login-only since October 2025. Email sent; reply pending."),("MN","Bot challenge. Email sent; reply pending."),
 ("MD","eMMA robots.txt forbids all automated access, behind a browser check. The open data bid sets stopped in 2019 (last update 2019-07-02), so no other source. Email to eMMA support drafted; not sent yet.")]

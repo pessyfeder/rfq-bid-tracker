@@ -51,7 +51,7 @@ robots.txt on these sites only blocks `/craft`.
 ## Do not scrape / blocked
 - NO-BOTS (robots.txt `Disallow: /` for all): TX (ESBD), PA (eMarketplace), UT (Bonfire), OH, AL.
 - LOGIN/JS: AZ (redirects to login), OH (login redirect), NC eVP (Dynamics portal, read-only offline shell), WA WEBS (JS), KY and MI (Advantage VSS), KS, GA (browser check), VA eVA, MT (Jaggaer), NM (Bonfire/Jaggaer), WI.
-- BLOCKED: CA (403), CO (403), ME (403; also login-only since 2025-10), NH (403), TN (403), MN (bot challenge).
+- BLOCKED: CA (403), CO (403 to the plain site, but now read through the VSS guest session, see below), ME (403; also login-only since 2025-10), NH (403), TN (403), MN (bot challenge).
 
 ## Not probed at all
 VT (page 404 at the URL tried; `bgs.vermont.gov/purchasing-contracting` still to check), plus deeper pages for the LISTING states above.
@@ -109,3 +109,4 @@ PA (2026-11-10): `states/pennsylvania.js` reads the eAlert emails automatically 
 Expected free coverage: about 13 states now. All 50 is not realistic without a paid feed.
 
 CO: BUILT 2026-11-11 (`colorado.js`, 69 open). colorado.gov/vss redirects to the CGI Advantage VSS app (prd.co.cgiadvantage.com/PRDVSS1X1/Advantage4); "View Published Solicitations" works as a guest. No feed, API or export is documented, so the adapter makes the same four guest calls the page makes (shell GET for session/CSRF, two pageOpen POSTs, one show_lines POST at 100 rows per page). Times are MST in the source and converted to Eastern. No per-bid deep link exists, so links go to colorado.gov/vss. Category codes 30 and 31 have no label yet (shown as "No data"). Fragile if CGI changes the protocol: the state then shows as failed. If 100 rows are ever returned, paging beyond the first 100 is not implemented (a warning is logged).
+CO follow-up: because this relies on CGI's undocumented internal calls, a feed request is planned; see "Colorado: adapter in use now, feed request pending" in state-feed-requests.md for the failure mode, what to ask for, and what to do on a reply.

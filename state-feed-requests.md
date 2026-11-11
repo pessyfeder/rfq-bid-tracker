@@ -39,7 +39,7 @@ Verified = the address appears on the state's own page when fetched on 2026-11-1
 | Alabama | Alabama Buys | Alabamabuys@purchasing.alabama.gov, (334) 353-0700 | Not verified: the state's pages showed no contact address when fetched; it came from search results. Phone is safest. |
 
 ## Also worth asking (blocked to automated requests, not forbidden)
-California (Cal eProcure), Colorado, Maine, New Hampshire, Tennessee, Minnesota returned errors or bot challenges.
+California (Cal eProcure), Maine, New Hampshire, Tennessee, Minnesota returned errors or bot challenges.
 The same template works; for these, ask for permission or a feed rather than a way around the block.
 
 ## Replies received (2026-11-10)
@@ -74,3 +74,30 @@ and would link back to eMMA for every solicitation.
 
 Thank you,
 [Name], [title], [company], [phone], [email]
+
+## Colorado: adapter in use now, feed request pending
+**Status (2026-11-11):** Colorado is already tracked (`states/colorado.js`, 69 open bids), but through a workaround, so we
+still want an official feed. The request has NOT been sent yet.
+
+**What the workaround is.** Colorado's public bid list (colorado.gov/vss, "View Published Solicitations") is a
+JavaScript app (CGI Advantage VSS) with no documented feed, API or export. The adapter makes the same guest requests the
+page itself makes: it starts a guest session, opens the solicitations page, and asks for 100 rows. No login, and the
+volume is four requests per run. It reads only what any visitor sees.
+
+**Why it is fragile.** Those requests use CGI's internal, undocumented message format (session and CSRF tokens,
+checksums, internal page and table names). CGI can change that at any release without notice. When it does, the adapter
+throws and Colorado shows as **failed** in the status (other states are unaffected, and it never shows wrong data
+silently). Fixing it means re-capturing the page's traffic in a browser and updating the adapter, about half an hour.
+We expect this to happen within a year or two, though not in any given week.
+
+**What we are asking for.** The same template above, for any of: an RSS feed, API or CSV/JSON download of open
+solicitations; an email digest to a single mailbox; or written permission to read the public list once a day.
+Also mention that we currently read the guest page automatically at low volume and ask whether that is acceptable.
+A documented feed would replace the adapter; until one exists, keep the adapter.
+
+**Where to ask.** Not yet verified. Use the "Contact Us" button on the VSS page (colorado.gov/vss), the VSS support
+link on the same page, or the State Purchasing and Contracts office. Confirm the address on the state's own page
+before sending, and add the sender's details to `state-feed-requests.local.md` (not this public file).
+
+**If a reply arrives:** record it under "Replies received", then either switch `colorado.js` to the official feed or,
+if they object to the guest-page reads, remove the adapter (delete `states/colorado.js` and its entry in `fetch-states.js`).
