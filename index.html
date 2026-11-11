@@ -246,7 +246,7 @@
   function factsHtml(r) {
     var f = keyFacts(r);
     if (!f.length) return "";
-    return '<div class="facts"><div class="facts-h">Bid factors' + (r.aiRead ? " &middot; AI read, please verify" : "") + "</div>" +
+    return '<div class="facts"><div class="facts-h">Bid factors' + (r.aiRead ? " &middot; AI read, please verify" : (f[0] && f[0].kw ? " &middot; keyword match on title/scope only" : "")) + "</div>" +
       f.map(function (k) {
         return '<span class="fact ' + k.sev + '" title="' + esc(k.why) + '">' + (k.sev === "hard" ? "&#9873; " : "") + esc(k.label) + "</span>";
       }).join("") + "</div>";

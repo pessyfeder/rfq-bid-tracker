@@ -14,9 +14,13 @@
     { label: "Past performance / references", sev: "info", re: /past performance|references|\bCPARS\b|years of experience|similar (projects|contracts)/i },
     { label: "Multi-year / renewal term",  sev: "info", re: /option (year|period)|base (year|period)|\b\d+[- ]year (contract|term)|renewal/i }
   ];
+  var KEYWORD_ONLY = /^(NY|WY|DE|TXDOT)-/;
   function keyFacts(r) {
     var x = r.details || {};
     var src = [];
+    // States whose notices carry no readable documents (NY, WY, DE, TXDOT) get a free keyword match on the title and scope line.
+    var kw = !r.aiRead && KEYWORD_ONLY.test(String(r.id || ""));
+    if (kw && r.title) src.push(r.title);
     if (r.scope) src.push(r.scope);
     (r.shall || []).forEach(function (s) { src.push(s.text); });
     (x.requirements || []).forEach(function (q) { src.push(q); });
@@ -24,7 +28,7 @@
     var out = [];
     FACT_RULES.forEach(function (rule) {
       for (var i = 0; i < src.length; i++) {
-        if (rule.re.test(src[i])) { out.push({ label: rule.label, sev: rule.sev, why: src[i] }); return; }
+        if (rule.re.test(src[i])) { var f = { label: rule.label, sev: rule.sev, why: src[i] }; if (kw) f.kw = true; out.push(f); return; }
       }
     });
     return out;
