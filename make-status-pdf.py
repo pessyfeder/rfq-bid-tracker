@@ -34,7 +34,7 @@ ASK=[("UT","robots.txt forbids all automated access (Bonfire). Email sent; reply
 ("ME","HTTP 403, and login-only since October 2025. Email sent; reply pending."),("MN","Bot challenge. Email sent; reply pending."),
 ("MD","eMMA robots.txt forbids all automated access, behind a browser check. The open data bid sets stopped in 2019 (last update 2019-07-02), so no other source. Email to eMMA support drafted; not sent yet.")]
 P=[("CT","ASP.NET form pages; needs form-post work for few notices."),("AK","ASP.NET form pages or other system; needs form-post work for few notices."),
-("HI","ASP.NET form pages or other system; needs form-post work for few notices."),("ND","ASP.NET form pages or other system; needs form-post work for few notices.")]
+("HI","ASP.NET form pages or other system; needs form-post work for few notices.")]
 E=[("PA","Replied: the free DGS e-Alert emails are the only route. Built: an automatic Gmail IMAP reader. Waiting on the Google app password (PA_GMAIL_USER, PA_GMAIL_APP_PASSWORD), so 0 notices so far. robots.txt forbids automated access to the site."),
 ("AZ","Not scrapable: app.az.gov robots.txt forbids all automated access. Route: supplier registration with commodity codes, email alerts. Not subscribed yet."),
 ("MT","Not scrapable: bids.sciquest.com robots.txt forbids all automated access. Route: eMACS vendor registration, email notices by commodity code. Not subscribed yet."),
@@ -45,7 +45,8 @@ E=[("PA","Replied: the free DGS e-Alert emails are the only route. Built: an aut
 ("WI","eSupplier: NIGP-code email alerts. The public list is a Blazor app, so not scrapable. Not subscribed yet."),
 ("GA","Georgia Procurement Registry: email notifications listed, steps unconfirmed; browser check blocks scripts. Not subscribed yet."),
 ("VA","eVA: open-bid list (VBO) is behind an AWS bot challenge, and eVA open data is historical purchase orders only. Route: eVA supplier registration with NIGP codes, email alerts (sender noreply@cgeva.com, confirm at sign-up). Not subscribed yet; email to eVA Customer Care asking about a feed not yet sent."),
-("NM","Not scrapable: bids.sciquest.com (Jaggaer) robots.txt forbids all automated access. Route: supplier registration at solutions.sciquest.com (CustOrg=StateOfNewMexico), email alerts. Not subscribed yet; skipped for now.")]
+("NM","Not scrapable: bids.sciquest.com (Jaggaer) robots.txt forbids all automated access. Route: supplier registration at solutions.sciquest.com (CustOrg=StateOfNewMexico), email alerts. Not subscribed yet; skipped for now."),
+("ND","Re-checked 2026-11-11: the OMB page is only a link hub. Solicitations are on NDBuys (Ivalua), which requires a CAPTCHA/browser check, so it is not scrapable. Route: NDBuys supplier registration or the OMB bidders list for emailed notices, plus the NDDOT Notice to Bidders email list (public.govdelivery.com/accounts/NDDOT/subscriber/new?topic_id=NDDOT_157) for highway bids. Not subscribed yet.")]
 groups=[("Working",W),("Asked for a feed",ASK),("Parked",P),("Email alerts to set up",E)]
 assert sum(len(g) for _,g in groups)==50
 
