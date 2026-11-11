@@ -28,3 +28,6 @@ anthropic-account-setup.pdf
 imports/
 
 fetch-run.log
+
+service-run.log
+states-run.log
