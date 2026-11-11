@@ -2,7 +2,7 @@
   "name": "rfq-bid-tracker",
   "version": "1.0.0",
   "private": true,
-  "description": "Standalone RFQ feed service: fetches solicitations on a schedule and serves them as JSON.",
+  "description": "Standalone RFQ feed service: fetches solicitations on wake or every 24 h and serves them as JSON.",
   "scripts": { "start": "node server.js", "refresh": "node server.js --once" },
   "engines": { "node": ">=18" }
 }

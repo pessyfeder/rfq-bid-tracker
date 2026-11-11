@@ -1,6 +1,6 @@
 # Setting up the Anthropic API key (for Israel's server)
 
-Purpose: the app's nightly fetch scripts use Claude to read each bid notice (what a bidder must hold, scope, key points, stated dollar amounts). That needs an Anthropic API key. Usage is billed per call to the account that owns the key, separately from any Claude chat subscription (claude.ai).
+Purpose: the app's fetch scripts use Claude to read each bid notice (what a bidder must hold, scope, key points, stated dollar amounts). That needs an Anthropic API key. Usage is billed per call to the account that owns the key, separately from any Claude chat subscription (claude.ai).
 
 **Rule: the key itself never goes in this repo, in chat, or in email.** This document contains steps only, no secrets.
 
@@ -36,9 +36,9 @@ Either person can do this once they are inside Israel's organization.
 
 The scripts read the key from the environment variable `ANTHROPIC_API_KEY` (see `fetch-nyc.js`, `fetch-sam.js`, `ai-extract.js`). If it is not set they skip the AI step and the app still works with basic values.
 
-Scheduled jobs (cron, systemd timers, Windows Task Scheduler) do not inherit a login shell's variables, so set it where the job runs:
+Background jobs (systemd, Windows Task Scheduler) do not inherit a login shell's variables, so set it where the job runs:
 
-- **Linux (systemd):** create `/etc/rfq-bid-tracker.env` containing the line `ANTHROPIC_API_KEY=sk-ant-...`, owned by root with `chmod 600`, and load it with `EnvironmentFile=/etc/rfq-bid-tracker.env` in the service or timer unit.
+- **Linux (systemd):** create `/etc/rfq-bid-tracker.env` containing the line `ANTHROPIC_API_KEY=sk-ant-...`, owned by root with `chmod 600`, and load it with `EnvironmentFile=/etc/rfq-bid-tracker.env` in the service unit.
 - **Windows:** set it as a system environment variable (System Properties > Environment Variables) or in the scheduled task's environment, then restart the task or service.
 
 The same applies to `SAM_API_KEY` (the free SAM.gov key from SAM.gov > Account Details > API Key).
@@ -46,5 +46,5 @@ The same applies to `SAM_API_KEY` (the free SAM.gov key from SAM.gov > Account D
 ## Part 5: Check it and look after it
 
 - Run one fetch by hand (for example `node fetch-nyc.js`) and confirm it does not print "ANTHROPIC_API_KEY not set".
-- Check **Usage** in the Console after the first few nightly runs to see what a refresh costs (the spec estimates about 200 small-model calls per NYC refresh).
+- Check **Usage** in the Console after the first few runs to see what a refresh costs (the spec estimates about 200 small-model calls per NYC refresh).
 - If the key may have leaked, delete it in the Console right away and create a new one.
