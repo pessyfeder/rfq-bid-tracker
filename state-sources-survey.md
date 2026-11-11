@@ -74,6 +74,7 @@ IN links to its listing page. MA works (852 open on 2026-11-10); its portal is s
 To add a state, write an adapter and list it in `fetch-states.js`.
 | SD | `southdakota.js` (ESM posting board JSON list; no login; no descriptions) | 34 |
 | AR | `arkansas.js` (sas.arkansas.gov bid-opportunities page; two HTML tables; no login) | 15 |
+| CO | `colorado.js` (CGI Advantage VSS guest session, replays the page's own JSON calls; no login) | 69 |
 | OK | `oklahoma.js` (Oklahoma Supplier Portal public Bidding Event page, PeopleSoft; session cookie, one form postback per event for the description; no login, no robots.txt) | 15 |
 
 VT is also built: `vermont.js` reads the OPC "Current Bid Listings" page (9 open on 2026-11-10); each notice links to its solicitation PDF.
@@ -106,3 +107,5 @@ PA (2026-11-10): `states/pennsylvania.js` reads the eAlert emails automatically 
 2. Email the NO-BOTS and BLOCKED states asking for a feed; that is the only compliant free route.
 3. VT and the parked states if more coverage is wanted.
 Expected free coverage: about 13 states now. All 50 is not realistic without a paid feed.
+
+CO: BUILT 2026-11-11 (`colorado.js`, 69 open). colorado.gov/vss redirects to the CGI Advantage VSS app (prd.co.cgiadvantage.com/PRDVSS1X1/Advantage4); "View Published Solicitations" works as a guest. No feed, API or export is documented, so the adapter makes the same four guest calls the page makes (shell GET for session/CSRF, two pageOpen POSTs, one show_lines POST at 100 rows per page). Times are MST in the source and converted to Eastern. No per-bid deep link exists, so links go to colorado.gov/vss. Category codes 30 and 31 have no label yet (shown as "No data"). Fragile if CGI changes the protocol: the state then shows as failed. If 100 rows are ever returned, paging beyond the first 100 is not implemented (a warning is logged).
