@@ -101,3 +101,33 @@ before sending, and add the sender's details to `state-feed-requests.local.md` (
 
 **If a reply arrives:** record it under "Replies received", then either switch `colorado.js` to the official feed or,
 if they object to the guest-page reads, remove the adapter (delete `states/colorado.js` and its entry in `fetch-states.js`).
+
+## Connecticut (CTsource) - draft, not yet sent
+
+Why: portal.ct.gov/DAS/CTSource/BidBoard is only a landing page with no bid list. The bids are inside the CTsource
+portal behind a login, and biznet.ct.gov answers automated requests with a bot-filter rejection, so we do not read it.
+(The `/search-results/` rule in portal.ct.gov/robots.txt is the portal's own site search and is unrelated.)
+
+To: DAS.CTsource@ct.gov (Department of Administrative Services, Procurement Division, 860-713-5095; verified on
+portal.ct.gov/das/ctsource/ctsource-resources/contact on 2026-11-11). Account problems only: SupplierSupport@ProactisServiceDesk.com.
+
+Subject: Request for a data feed of open solicitations (CTsource Bid Board)
+
+Hello,
+
+I work at [company], a [small business] that bids on state contracts. We keep a small internal tracker of open
+solicitations so we do not miss ones that fit our work.
+
+We found that the CTsource Bid Board page on portal.ct.gov does not list solicitations publicly, and that the bid
+system does not accept automated reads. So we would like to ask the supported way to get current open solicitations.
+Does CTsource offer any of the following?
+1. an RSS feed, API, or data download (CSV/JSON) of current open solicitations, or
+2. an email digest we can subscribe to with a single mailbox, or
+3. permission to read the public solicitation list automatically, once a day, at low volume.
+
+If any of these exist, could you point me to the documentation or terms? If none do, could you tell me the
+preferred way to get notified of new solicitations? We would only use the data to track bids for our own company
+and would link back to CTsource for every solicitation.
+
+Thank you,
+[Name], [title], [company], [phone], [email]
