@@ -102,6 +102,30 @@ before sending, and add the sender's details to `state-feed-requests.local.md` (
 **If a reply arrives:** record it under "Replies received", then either switch `colorado.js` to the official feed or,
 if they object to the guest-page reads, remove the adapter (delete `states/colorado.js` and its entry in `fetch-states.js`).
 
+## Alaska: partial adapter in use now, waiting for a feed reply
+**Status (2026-11-11):** Alaska is tracked only partly (`states/alaska.js`, 2 open bids from the IRIS Vendor Self Service
+guest list). Most Alaska solicitations are on Online Public Notices (aws.state.ak.us/OnlinePublicNotices), which we do
+not cover. The feed request has been sent and we are waiting for a reply (send date and recipient: record them under "Replies received" or in `state-feed-requests.local.md`).
+
+**Why Public Notices is not covered.** The page loads, but its search and paging requests are answered with a DataDome
+bot-protection challenge. We do not bypass bot protection. The GET-only browse pages give just the first 25 of about 58
+rows, with meetings mixed in and no agency, so we do not use them.
+
+**Why the IRIS adapter is fragile.** Same as Colorado: it replays IRIS's internal, undocumented guest calls. If CGI changes
+them, Alaska shows as **failed** in the status (never silently wrong).
+
+**What we are asking for.** The same template above, for any of: an RSS feed, API or CSV/JSON download of the procurement
+category (Procurement is category 8 on the notices site); an email digest to a single mailbox; or written permission to
+read the public list once a day. Also mention that we read the IRIS guest page automatically at low volume. The notices
+site also has a Subscribe button; check whether it can feed the email reader.
+
+**Where it went.** Recipient not recorded here. Keep the sender's details and the recipient in
+`state-feed-requests.local.md` (not this public file). If there is no reply, the Online Public Notices site and the State of
+Alaska Division of General Services procurement office are the places to follow up.
+
+**If a reply arrives:** record it under "Replies received", then add the official feed to `alaska.js`; keep the IRIS
+read unless they object, in which case delete `states/alaska.js` and its entry in `fetch-states.js`.
+
 ## Connecticut (CTsource) - draft, not yet sent
 
 Why: portal.ct.gov/DAS/CTSource/BidBoard is only a landing page with no bid list. The bids are inside the CTsource
