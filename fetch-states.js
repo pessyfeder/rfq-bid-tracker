@@ -164,8 +164,7 @@ function readPrevious() {
   let rfqs = [];
   const okNow = new Set(); // states fetched successfully in THIS run
 
-  for (const a of ADAPTERS) {
-    if (wanted.length && !wanted.includes(a.code)) { results[a.code] = prevStates[a.code] || { ok: false, error: "not run" }; continue; }
+  async function runAdapter(a) {
     try {
       const raw = await a.fetch();
       const seen = new Set();
@@ -190,6 +189,24 @@ function readPrevious() {
       results[a.code] = { ...(prevStates[a.code] || {}), ok: false, error: String(e.message).slice(0, 200) };
       console.error(`${a.code}: FAILED - ${e.message}`);
     }
+  }
+
+  const ran = [];
+  for (const a of ADAPTERS) {
+    if (wanted.length && !wanted.includes(a.code)) { results[a.code] = prevStates[a.code] || { ok: false, error: "not run" }; continue; }
+    ran.push(a);
+    await runAdapter(a);
+  }
+  // One retry pass for states that failed, after a pause: a network dropout (e.g. right after a wake from sleep) often
+  // hits several unrelated portals within minutes, and the 2 quick tries per request in states/common.js do not outlast it.
+  const failed = ran.filter((a) => !okNow.has(a.code));
+  if (failed.length) {
+    const waitMs = Number(process.env.STATE_RETRY_WAIT_SEC ?? 60) * 1000;
+    console.log(`Retrying ${failed.length} failed state(s) (${failed.map((a) => a.code).join(", ")}) in ${waitMs / 1000}s`);
+    await new Promise((res) => setTimeout(res, waitMs));
+    for (const a of failed) await runAdapter(a);
+    const still = failed.filter((a) => !okNow.has(a.code));
+    console.log(`Retry pass: ${failed.length - still.length} recovered${still.length ? `, still failing: ${still.map((a) => a.code).join(", ")}` : ""}`);
   }
   // Carry over previous notices for states that did not succeed this time (still-future deadlines only).
   const known = new Set(ADAPTERS.map((a) => a.code));
