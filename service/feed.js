@@ -91,6 +91,10 @@ function normalize(r, source) {
     requirements: (r.details && r.details.requirements) || [],
     shall: Array.isArray(r.shall) ? r.shall : [],
     amended: !!(r.details && r.details.amended),
+    docAccess: r.aiRead ? "read" : "none", // "none" = documents not read: a thin record, not a complete one
+    sourceUrl: r.rfqUrl,                  // deep link to the source posting
+    naics: r.naics || null,               // from the documents (AI-read), when stated
+    docDue: r.docDue || null,             // due date stated in the documents (YYYY-MM-DD), may differ from the listing's
     aiRead: !!r.aiRead,                   // true = scope/requires/shall were read by AI: verify
     value: normalizeValue(r)
   };

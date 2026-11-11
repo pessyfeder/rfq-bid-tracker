@@ -283,7 +283,11 @@
       if (r.aiRead) return '<td><span class="elig unclear">Not stated</span><div class="elig-note">' + esc((r.details && r.details.readNote) || "The notice was read but does not say who may bid. Check the agency's documents or contact.") + "</div>" + ai + "</td>";
       return '<td><span class="elig unclear">Not read</span><div class="elig-note">' + esc((r.details && r.details.readNote) || "Restriction not read from the RFQ; check the document.") + "</div></td>";
     }
-    if (!r.requires.length) return '<td><span class="elig yes">No requirements found</span>' + ai + "</td>";
+    if (!r.requires.length) {
+      // Empty list from a notice that was never AI-read means nothing was looked for, not that nothing exists.
+      if (!r.aiRead) return '<td><span class="elig unclear">Not read</span><div class="elig-note">' + esc((r.details && r.details.readNote) || "Restriction not read from the RFQ; check the document.") + "</div></td>";
+      return '<td><span class="elig yes">No requirements found</span>' + ai + "</td>";
+    }
     return "<td>" + r.requires.map(function (q) { return '<span class="elig chip">' + esc(q) + "</span>"; }).join(" ") + ai + "</td>";
   }
 
@@ -460,7 +464,8 @@
         "<td>" + (r.noDue ? (/eMarketplace/.test(r.dueTime || "") ? esc(r.dueTime) : "No real due date") : fmtDate(r.due) + '<div class="agency">' + esc(r.dueTime) + "</div>") + "</td>" +
         leftCell(r) +
         '<td><span class="badge ' + esc(r.level) + '">' + esc(r.level) + "</span></td>" +
-        '<td><a href="' + esc(safeUrl(r.rfqUrl)) + '" target="_blank" rel="noopener">Open RFQ</a></td>' +
+        '<td><a href="' + esc(safeUrl(r.rfqUrl)) + '" target="_blank" rel="noopener" title="Source posting">Open RFQ</a>' +
+          (r.aiRead ? "" : '<div><span class="elig unclear" title="The documents behind this posting were not read, so the details shown are only what the listing itself gives. Open the posting to see the rest.">No document access</span></div>') + "</td>" +
         valueCell(r) +
         "<td>" + detailsHtml(r) +
           scopeHtml(r, !!scopeOpen[r.id]) +

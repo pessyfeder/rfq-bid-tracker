@@ -177,6 +177,8 @@ async function enrich(r, o, text, AI_KEY) {
     else if (!base.length) r.requires = null;
     if (ai.scope) r.scope = ai.scope;
     if (ai.shall.length) r.shall = ai.shall;
+    if (ai.naics) r.naics = ai.naics;
+    if (ai.dueDate) r.docDue = ai.dueDate;
     r.aiRead = true;
     return true;
   }

@@ -71,6 +71,12 @@ const MAX_READS = Number(process.env.STATE_MAX_READS) || 60;
 // Version 3: Mississippi attachments on srm.magic.ms.gov (earlier reads saw only the page header).
 const DOCS_VERSION = 3;
 const REREAD_STATES = new Set(["NV", "NJ", "OR", "IL", "MA", "SC", "IN", "MS"]);
+// A 6-digit NAICS code stated next to the word NAICS (or its full name) in the notice text; "" if none or if several differ.
+function naicsIn(text) {
+  const plain = String(text || "").replace(/<[^>]*>/g, " ").replace(/&nbsp;/g, " ");
+  const found = new Set([...plain.matchAll(/(?:NAICS|North American Industry Classification)[^0-9]{0,40}?\b(\d{6})\b/gi)].map((m) => m[1]));
+  return found.size === 1 ? [...found][0] : "";
+}
 async function addDocumentReads(list, prevById, adapter) {
   const key = process.env.ANTHROPIC_API_KEY;
   if (adapter && adapter.noPageReads) for (const r of list) { if (adapter.noPageReadsNote) r.details.readNote = adapter.noPageReadsNote; if (adapter.noPageReadsWhy) r.details.readWhy = adapter.noPageReadsWhy; } // shown whether or not a key is set
@@ -88,7 +94,7 @@ async function addDocumentReads(list, prevById, adapter) {
     const p = prevById.get(r.id);
     // A read that found no restriction is redone once when the reader improved (DOCS_VERSION), for states whose attachments it now reaches.
     const stale = p && p.requires == null && (p.docsV || 0) < DOCS_VERSION && REREAD_STATES.has(adapter.code);
-    if (p && p.aiRead) { r.requires = p.requires; r.scope = p.scope; r.shall = p.shall; r.aiRead = true; if (p.docsV) r.docsV = p.docsV; } // a failed re-read keeps this
+    if (p && p.aiRead) { r.requires = p.requires; r.scope = p.scope; r.shall = p.shall; if (p.naics) r.naics = p.naics; if (p.docDue) r.docDue = p.docDue; r.aiRead = true; if (p.docsV) r.docsV = p.docsV; } // a failed re-read keeps this
     if (p && p.aiRead && !stale) reused++;
     else if (stale) todo.push(r);
     else if (process.env.STATE_REREAD_ONLY && !(p && p.aiRead)) continue; // re-read only notices that were already read once
@@ -111,6 +117,7 @@ async function addDocumentReads(list, prevById, adapter) {
         if (res.requires !== null) r.requires = res.requires;
         if (res.scope) r.scope = res.scope;
         if (res.shall.length) r.shall = res.shall;
+        { const n = naicsIn(doc.text); if (n) r.naics = n; } // regex on the page/Word text, not the model (PDF text is not scanned)
         r.aiRead = true; r.docsV = DOCS_VERSION; read++;
         if (r.details) delete r.details.readNote;
       } catch (e) {

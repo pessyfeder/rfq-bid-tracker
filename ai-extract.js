@@ -112,7 +112,9 @@ function validate(o) {
     .map((s) => ({ text: str(s && s.text, 300), ref: str(s && s.ref, 40) }))
     .filter((s) => s.text)
     .slice(0, 5);
-  return { requires, scope: str(o.scope, 200), shall };
+  const naics = /^\d{6}$/.test(str(o.naics, 6)) ? str(o.naics, 6) : "";
+  const dueDate = /^\d{4}-\d{2}-\d{2}$/.test(str(o.dueDate, 10)) && !isNaN(Date.parse(o.dueDate)) ? o.dueDate : "";
+  return { requires, scope: str(o.scope, 200), shall, naics, dueDate };
 }
 
 // html: raw solicitation text (HTML or plain). Returns {requires, scope, shall} or null if it could not be read.

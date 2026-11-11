@@ -215,6 +215,8 @@ async function inBatches(items, size, fn) {
         if (ai.requires !== null) r.requires = ai.requires;
         if (ai.scope) r.scope = ai.scope;
         if (ai.shall.length) r.shall = ai.shall;
+        if (ai.naics) r.naics = ai.naics;
+        if (ai.dueDate) r.docDue = ai.dueDate;
         r.aiRead = true;
         read++;
       } catch (e) { console.warn("AI read failed for " + r.id + ": " + e.message); }
