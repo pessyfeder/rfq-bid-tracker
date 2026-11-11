@@ -155,7 +155,9 @@ Search
  n. Refresh schedule: OPEN. Fetchers must run automatically at set times (daily at 09:00 is
     documented in DEPLOY.md). The AI cache file (ai-cache.json) must persist on the
     server between runs, otherwise every notice is re-read and re-billed. Estimated AI
-    cost is about 50 cents a month. SAM.gov limits requests per key (a personal key is
+    cost is a few cents a day, roughly $1 to $3 a month (a projection, not a measurement;
+    check ai-usage.log and the Anthropic Console). The earlier figure of about 50 cents
+    a month predates the state portals. SAM.gov limits requests per key (a personal key is
     commonly about 10 a day; an entity-linked key about 1,000 - check the account page).
     A higher limit would allow refreshing more than once a day, checking amendments on
     Interested notices, and pulling attachments for the AI summaries.
