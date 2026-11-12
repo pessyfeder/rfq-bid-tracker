@@ -60,7 +60,7 @@ const refresh = { running: false, startedAt: null, child: null, progress: null }
 
 function save() {
   feed.writeAtomic(STATE_FILE, JSON.stringify(state));
-  feed.writeAtomic(SNAPSHOT_FILE, JSON.stringify(feed.query(state, new URLSearchParams("open=0&limit=5000")), null, 1));
+  feed.writeAtomic(SNAPSHOT_FILE, JSON.stringify(feed.query(state, new URLSearchParams("open=0"), { unlimited: true }), null, 1));
 }
 
 // ---- running the fetchers ------------------------------------------------------------------------

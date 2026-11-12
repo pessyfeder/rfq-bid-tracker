@@ -183,7 +183,8 @@ function publicRecord(rec) {
 
 // ---- querying --------------------------------------------------------------------------------
 // params: URLSearchParams. See FEED.md for the meaning of each.
-function query(state, params) {
+// opts.unlimited (internal, for the on-disk snapshot only): skip the per-call page cap so nothing is truncated.
+function query(state, params, opts = {}) {
   const num = (k) => (params.has(k) && params.get(k) !== "" && !isNaN(Number(params.get(k))) ? Number(params.get(k)) : null);
   const after = num("after");
   const includeInactive = params.get("include_inactive") === "1" || after !== null; // incremental clients need tombstones
@@ -209,7 +210,7 @@ function query(state, params) {
   });
   list.sort((a, b) => a.seq - b.seq);
   const total = list.length;
-  const limit = Math.min(num("limit") || 1000, 5000);
+  const limit = opts.unlimited ? Infinity : Math.min(num("limit") || 1000, 5000);
   const page = list.slice(0, limit);
   // `cursor` = highest seq returned; pass it back as ?after= next time. If the page was cut off by
   // `limit`, `more` is true and the next call continues exactly where this one stopped.
