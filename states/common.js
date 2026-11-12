@@ -16,9 +16,18 @@ async function http(url, opts = {}, tries = 2) {
       const res = await fetch(url, { ...fetchOpts, headers: { "User-Agent": UA, ...(fetchOpts.headers || {}) }, signal: AbortSignal.timeout(timeoutMs) });
       if (!res.ok) throw new Error(`HTTP ${res.status} for ${new URL(url).host}`);
       return res;
-    } catch (e) { last = e; await sleep(1500); }
+    } catch (e) { last = withCause(e); await sleep(1500); }
   }
   throw last;
+}
+// Node's fetch reports every network error as "fetch failed"; the real reason (ENOTFOUND, ECONNRESET, a TLS error,
+// a timeout...) is in e.cause. Put it in the message so run logs and the fetch-health banner say what happened.
+function withCause(e) {
+  if (!e || /\(cause: /.test(e.message)) return e;
+  const c = e.cause;
+  const why = c ? [c.code, c.message].filter(Boolean).join(" ") : (e.name === "TimeoutError" || e.name === "AbortError" ? "timed out" : "");
+  if (why && !String(e.message).includes(why)) e.message = `${e.message} (cause: ${why})`;
+  return e;
 }
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
