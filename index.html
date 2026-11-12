@@ -34,6 +34,8 @@
   th .arrow { margin-left: 4px; color: var(--accent); }
   tr:last-child td { border-bottom: 0; }
   tr.closed td { opacity: .5; }
+  .more { padding: 14px; text-align: center; border-top: 1px solid var(--line); }
+  .more button { font: inherit; padding: 6px 14px; margin: 0 4px; border: 1px solid var(--line); border-radius: 6px; background: var(--card); cursor: pointer; }
   td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
   .req-title { font-weight: 600; }
   .agency { color: var(--muted); font-size: 12px; }
@@ -142,6 +144,7 @@
     <tbody id="body"></tbody>
   </table>
   <div class="empty" id="empty" hidden>No requests match your filters.</div>
+  <div class="more" id="more" hidden><button id="moreBtn" type="button"></button> <button id="allBtn" type="button">Show all</button></div>
 </div>
 
 <script src="data.js"></script>
@@ -253,6 +256,7 @@
   // The server sends rows without their long "shall" lists (r.shallCount says how many); a list is fetched when its row is opened.
   function shallN(r) { return r.shallCount != null ? r.shallCount : (r.shall || []).length; }
   var expanded = {}; // request id -> true when its "shall" list is open
+  var PAGE = 100, limit = PAGE; // rows drawn so far; reset to one page whenever the filters or sort change
 
   var $ = function (id) { return document.getElementById(id); };
 
@@ -500,7 +504,11 @@
       return (x - y) * sort.dir;
     });
     var total = list.length;
-    var shown = list; // all rows are shown; row DOM is cached so redraws stay fast
+    // Only the first `limit` rows go into the page: thousands of table rows make every filter and resize slow.
+    var shown = list.slice(0, limit);
+    var left = total - shown.length;
+    $("more").hidden = left <= 0;
+    $("moreBtn").textContent = "Show " + Math.min(PAGE, left) + " more (" + left + " not shown)";
     function rowHtml(r) {
       var open = expanded[r.id];
       var shallRow = open ? '<tr class="shall-row' + (r.daysLeft < 0 ? " closed" : "") + '"><td colspan="' + COLUMNS.length + '"><h4>Key requirements ("shall")' + (r.aiRead ? " &middot; AI read, please verify" : "") + '</h4><ul>' +
@@ -559,10 +567,13 @@
     var th = e.target.closest("th"); if (!th || th.classList.contains("nosort")) return;
     var key = th.dataset.key;
     sort = sort.key === key ? { key: key, dir: -sort.dir } : { key: key, dir: key === "value" ? -1 : 1 };
+    limit = PAGE;
     render();
   });
+  $("moreBtn").addEventListener("click", function () { limit += PAGE; render(); });
+  $("allBtn").addEventListener("click", function () { limit = Infinity; render(); });
   ["q", "st", "level", "category", "hideFlagged"].forEach(function (id) {
-    function onFilter() { render(); }
+    function onFilter() { limit = PAGE; render(); }
     var timer;
     $(id).addEventListener("input", function () { clearTimeout(timer); timer = setTimeout(onFilter, 0); }); // coalesce events from one keystroke
     $(id).addEventListener("change", function () { clearTimeout(timer); onFilter(); });
