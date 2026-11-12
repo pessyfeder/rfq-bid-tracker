@@ -9,6 +9,7 @@ const fs = require("fs");
 const path = require("path");
 const vm = require("vm");
 const crypto = require("crypto");
+const { etToday } = require("../et-today");
 
 const ROOT = path.join(__dirname, "..");
 const SCHEMA_VERSION = 1;
@@ -160,7 +161,7 @@ function ingest(state, now = new Date()) {
     for (const rec of Object.values(state.records)) {
       if (rec.source === src.id && rec.active && !seen.has(rec.id)) {
         // Windowed source: keep the record active until its own deadline passes.
-        if (src.windowed && (rec.dueAt ? rec.dueAt >= nowIso : rec.due >= nowIso.slice(0, 10))) continue;
+        if (src.windowed && (rec.dueAt ? rec.dueAt >= nowIso : rec.due >= etToday(now))) continue;
         rec.active = false; rec.updatedAt = nowIso; rec.seq = ++state.seq; stats.deactivated++;
       }
     }
@@ -198,7 +199,7 @@ function query(state, params) {
     if (after !== null && r.seq <= after) return false;
     if (level && r.level.toLowerCase() !== level.toLowerCase()) return false;
     if (source && r.source !== source) return false;
-    if (openOnly && r.active && (r.dueAt ? r.dueAt < nowIso : r.due < nowIso.slice(0, 10))) return false;
+    if (openOnly && r.active && (r.dueAt ? r.dueAt < nowIso : r.due < etToday())) return false;
     if (realOnly && !r.hasRealDeadline) return false;
     if (dueAfter && r.due < dueAfter) return false;
     if (dueBefore && r.due > dueBefore) return false;

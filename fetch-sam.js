@@ -186,7 +186,7 @@ async function enrich(r, o, text, AI_KEY) {
 }
 
 (async () => {
-  const today = todayUtc();
+  const today = require("./et-today").etToday();
   const cache = readJson(CACHE_FILE, { searchedThrough: null, resume: null, notices: {} });
   const notices = cache.notices;
   const AI_KEY = process.env.ANTHROPIC_API_KEY;
@@ -204,7 +204,7 @@ async function enrich(r, o, text, AI_KEY) {
     let offset = cache.resume ? cache.resume.offset : 0, pages = 0, finished = false;
     if (left() > 0) {
       while (pages < searchCap && added < MAX) {
-        const page = await getPage(fmt(new Date(from)), fmt(new Date(today)), offset);
+        const page = await getPage(fmt(new Date(from + "T12:00:00")), fmt(new Date(today + "T12:00:00")), offset);
         pages++;
         const items = page.opportunitiesData || [];
         for (const o of items) {
@@ -248,7 +248,7 @@ async function enrich(r, o, text, AI_KEY) {
   }
 
   // 3. Drop notices long past due, estimate values for the new ones (USAspending: separate API, no SAM quota).
-  const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
+  const weekAgo = require("./et-today").etToday(new Date(Date.now() - 7 * 86400000));
   for (const [id, n] of Object.entries(notices)) if (n.rfq.due < weekAgo) delete notices[id];
   const open = Object.values(notices).filter((n) => n.rfq.due >= today);
   const needEst = open.filter((n) => !n.estDone);

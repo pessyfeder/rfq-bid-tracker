@@ -157,7 +157,7 @@ function readPrevious() {
 
 (async () => {
   const wanted = process.argv.slice(2).map((s) => s.toUpperCase());
-  const today = new Date().toISOString().slice(0, 10);
+  const today = require("./et-today").etToday();
   const prev = readPrevious();
   const prevStates = (prev && prev.meta && prev.meta.states) || {};
   const results = {};
