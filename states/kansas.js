@@ -4,7 +4,7 @@
 // send the cookie back lands on "You must have cookies enabled". With the cookie, the list page already holds the whole
 // grid (no search POST needed): event name, agency (business unit), event ID, start and end. Each event also has a
 // shareable detail URL (AUC_ID=...) that holds the description; bid package documents need a further POST and are not read.
-const { requests, clean, toEastern, sleep, UA } = require("./common");
+const { requests, clean, toEastern, sleep, UA, withCause } = require("./common");
 
 const BASE = "https://supplier.sok.ks.gov/psc/sokfsprdsup/SUPPLIER/ERP/c/";
 const LIST = BASE + "SCP_PUBLIC_MENU_FL.SCP_PUB_BID_CMP_FL.GBL";
@@ -14,7 +14,15 @@ const DETAIL = (id) => BASE + "KS_FSCM_APP_PK.KS_SCP_PUB_BIDLST.GBL?Page=KS_SCP_
 function session() {
   const jar = {};
   const cookie = () => Object.entries(jar).map(([k, v]) => `${k}=${v}`).join("; ");
+  // One attempt walks the redirects with a fresh cookie jar; a network error gets one more try (like http() in common.js) and names its cause.
   return async function get(url) {
+    let last;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try { return await getOnce(url); } catch (e) { last = withCause(e); if (/^HTTP 4/.test(e.message)) throw last; await sleep(1500); }
+    }
+    throw last;
+  };
+  async function getOnce(url) {
     for (let hop = 0; hop < 5; hop++) {
       const host = new URL(url).host; requests[host] = (requests[host] || 0) + 1;
       const res = await fetch(url, { headers: { "User-Agent": UA, Cookie: cookie() }, redirect: "manual", signal: AbortSignal.timeout(30000) });
@@ -27,7 +35,7 @@ function session() {
       return res.text();
     }
     throw new Error("Too many redirects from supplier.sok.ks.gov");
-  };
+  }
 }
 
 // "11/12/2026 02:00 PM CST" -> Eastern { due, dueTime }. The portal's default zone label is "CST" all year; it is Kansas Central time.

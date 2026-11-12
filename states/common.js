@@ -65,4 +65,4 @@ function instantToEastern(ms) {
   return { due: `${p.year}-${p.month}-${p.day}`, dueTime: `${h12}:${p.minute} ${h24 >= 12 ? "PM" : "AM"} ET` };
 }
 
-module.exports = { UA, requests, http, sleep, clean, decodeEntities, toEastern, instantToEastern };
+module.exports = { UA, requests, http, withCause, sleep, clean, decodeEntities, toEastern, instantToEastern };

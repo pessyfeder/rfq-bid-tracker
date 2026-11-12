@@ -163,6 +163,7 @@ function readPrevious() {
   const results = {};
   let rfqs = [];
   const okNow = new Set(); // states fetched successfully in THIS run
+  const needsSetup = new Set(); // states waiting for a login/setting the user has not provided: retrying cannot help, so the retry pass skips them
 
   async function runAdapter(a) {
     try {
@@ -187,6 +188,7 @@ function readPrevious() {
       console.log(`${a.code}: ${mine.length} open (of ${raw.length} read)`);
     } catch (e) {
       results[a.code] = { ...(prevStates[a.code] || {}), ok: false, error: String(e.message).slice(0, 200) };
+      if (/^Waiting for/.test(e.message)) needsSetup.add(a.code);
       console.error(`${a.code}: FAILED - ${e.message}`);
     }
   }
@@ -201,7 +203,7 @@ function readPrevious() {
   }
   // One retry pass for states that failed, after a pause: a network dropout (e.g. right after a wake from sleep) often
   // hits several unrelated portals within minutes, and the 2 quick tries per request in states/common.js do not outlast it.
-  const failed = ran.filter((a) => !okNow.has(a.code));
+  const failed = ran.filter((a) => !okNow.has(a.code) && !needsSetup.has(a.code));
   if (failed.length) {
     const waitMs = Number(process.env.STATE_RETRY_WAIT_SEC ?? 60) * 1000;
     console.log(`Retrying ${failed.length} failed state(s) (${failed.map((a) => a.code).join(", ")}) in ${waitMs / 1000}s`);
