@@ -536,7 +536,12 @@
     $("empty").hidden = total > 0;
     $("empty").textContent = rows.length ? "No requests match your filters." : "No data";
     var m = window.RFQS_META;
-    $("count").textContent = (total + " of ") + rows.length + " requests · " +
+    var closed = 0, flagged = 0;
+    rows.forEach(function (r) {
+      if (r.daysLeft < 0) closed++;
+      else if ((r.details.warnings || []).length || r.noDue) flagged++;
+    });
+    $("count").textContent = total + " shown · " + closed + " closed · " + flagged + " flagged · " +
       (m ? "live from " + m.source + ", updated " + new Date(m.fetchedAt).toLocaleString("en-US") : "No data");
   }
 
