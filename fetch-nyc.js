@@ -77,9 +77,33 @@ const MIN_SIMILAR = 3;   // need at least this many same-agency, same-category a
 async function socrata(params) {
   const u = new URL(API);
   u.search = new URLSearchParams(params);
-  const res = await fetch(u);
-  if (!res.ok) throw new Error("NYC Open Data returned HTTP " + res.status);
-  return res.json();
+  // Retry transient server errors (502/503/504, 429) and network failures with backoff.
+  for (let attempt = 1; ; attempt++) {
+    let res;
+    try { res = await fetch(u); }
+    catch (e) { if (attempt >= 4) throw e; } // network failure: retry
+    if (res) {
+      if (res.ok) return res.json();
+      if (![429, 502, 503, 504].includes(res.status) || attempt >= 4) throw new Error("NYC Open Data returned HTTP " + res.status);
+    }
+    await new Promise((r) => setTimeout(r, 1000 * 2 ** attempt));
+  }
+}
+
+// Fetch every matching row by paging with $limit/$offset. A single huge $limit can be silently capped
+// by the server, which would drop the oldest rows without any error. A unique tie-break on the sort
+// keeps pages from overlapping or skipping rows.
+// `maxRows` is a hard cap; `capIsLimit` says it is a deliberate limit (no warning when reached).
+async function socrataAll(params, { pageSize = 5000, maxRows = 200000, capIsLimit = false } = {}) {
+  const all = [];
+  while (all.length < maxRows) {
+    const want = Math.min(pageSize, maxRows - all.length);
+    const page = await socrata({ ...params, $order: params.$order + ", request_id", $limit: String(want), $offset: String(all.length) });
+    all.push(...page);
+    if (page.length < want) return all;
+  }
+  if (!capIsLimit) console.warn(`NYC: stopped at ${maxRows} rows (safety cap); older rows were not loaded`);
+  return all;
 }
 
 function percentile(sorted, p) {
@@ -106,14 +130,13 @@ function keywords(title) {
 // Past awards (City Record "Award" notices with a contract amount), as a flat list, newest first.
 async function loadAwards() {
   const since = new Date(Date.now() - AWARD_YEARS * 365 * 86400000).toISOString().slice(0, 10);
-  const rows = await socrata({
+  const rows = await socrataAll({
     $select: "request_id,agency_name,category_description,short_title,vendor_name,contract_amount,start_date",
     // Only awards from open competition (bids / proposals / RFQs). Renewals, sole source, emergency,
     // small purchases etc. are not comparable to a solicitation someone can bid on.
     $where: `section_name='Procurement' AND type_of_notice_description='Award' AND contract_amount>0 AND start_date>='${since}'` +
       ` AND (selection_method_description like 'Competitive Sealed%' OR selection_method_description like 'Request for%')`,
-    $order: "start_date DESC",
-    $limit: "50000"
+    $order: "start_date DESC"
   });
   const NOT_NEW = /\b(amend\w*|renewal|extension|allowance|increase|change order|modification)\b/i;
   const seen = new Set(), awards = [];
@@ -169,11 +192,10 @@ async function inBatches(items, size, fn) {
 
 (async () => {
   const today = require("./et-today").etToday();
-  const items = await socrata({
+  const items = await socrataAll({
     $where: `section_name='Procurement' AND type_of_notice_description='Solicitation' AND due_date >= '${today}'`,
-    $order: "start_date DESC",
-    $limit: String(MAX)
-  });
+    $order: "start_date DESC"
+  }, { maxRows: MAX, capIsLimit: true });
   learnAcronyms(items.map((o) => o.short_title));
   const rfqs = items.map(toRfq).filter(Boolean);
   const byId = new Map(items.map((o) => ["NYC-" + o.request_id, o]));
