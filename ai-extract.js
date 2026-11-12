@@ -189,11 +189,19 @@ const norm = (s) => s.replace(/\s+/g, " ").trim().toLowerCase();
 // cannot invent a figure.
 function amountIsSupported(amount, quote, text) {
   if (!(amount > 0) || !quote || !norm(text).includes(norm(quote))) return false;
-  const q = norm(quote).replace(/,/g, "");
-  const forms = [String(Math.round(amount))];
-  if (amount >= 1e6) forms.push(String(amount / 1e6) + " million", String(amount / 1e6) + "m");
-  if (amount >= 1e3) forms.push(String(amount / 1e3) + "k", String(amount / 1e3) + " thousand");
-  return forms.some((f) => q.includes(f));
+  // Parse every whole figure in the quote (not substrings, so "1,500,000" never supports 500000).
+  const re = /(?<![\d.,])(\d{1,3}(?:,\d{3})+|\d+)(\.\d+)?(?:\s?(million|billion|thousand|m|k)(?![a-z]))?(?![\d,]*\d)/g;
+  const q = norm(quote);
+  let m;
+  while ((m = re.exec(q))) {
+    let v = Number(m[1].replace(/,/g, "") + (m[2] || ""));
+    const u = m[3];
+    if (u === "million" || u === "m") v *= 1e6;
+    else if (u === "billion") v *= 1e9;
+    else if (u === "thousand" || u === "k") v *= 1e3;
+    if (Math.abs(v - amount) < 0.5) return true;
+  }
+  return false;
 }
 
 // Returns { amount, quote } or null when no amount is stated / it could not be verified.
