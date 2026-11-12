@@ -28,7 +28,11 @@ async function body(url, max) {
   const buf = Buffer.from(await res.arrayBuffer());
   if (buf.length > max) return null;
   const cookies = new Map();
-  for (const c of res.headers.getSetCookie ? res.headers.getSetCookie() : []) { const [kv] = c.split(";"); const i = kv.indexOf("="); cookies.set(kv.slice(0, i), kv.slice(i + 1)); }
+  // Node 18 builds without getSetCookie(): headers.get() joins multiple Set-Cookie values with ", ".
+  // Split only on commas that start a new "name=" pair so Expires dates ("Wed, 21 Oct") stay intact.
+  const setCookies = res.headers.getSetCookie ? res.headers.getSetCookie()
+    : (res.headers.get("set-cookie") || "").split(/,(?=\s*[^;,=\s]+=)/).filter(Boolean);
+  for (const c of setCookies) { const [kv] = c.split(";"); const i = kv.indexOf("="); cookies.set(kv.slice(0, i), kv.slice(i + 1)); }
   return { buf, type: res.headers.get("content-type") || "", cookies };
 }
 
