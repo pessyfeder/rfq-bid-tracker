@@ -331,7 +331,7 @@ const server = http.createServer((req, res) => {
       if (p === "/api/rfqs" && req.method === "GET") return send(res, 200, feed.query(state, url.searchParams));
       const one = /^\/api\/rfqs\/([^/]+)$/.exec(p);
       if (one && req.method === "GET") {
-        const id = decodeURIComponent(one[1]);
+        let id; try { id = decodeURIComponent(one[1]); } catch { return send(res, 400, { error: "malformed id" }); } // a stray "%" is the caller's mistake, not a server error
         const rec = Object.hasOwn(state.records, id) ? state.records[id] : null; // not inherited keys like "constructor"
         return rec ? send(res, 200, feed.publicRecord(rec)) : send(res, 404, { error: "no such request" });
       }
