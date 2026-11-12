@@ -107,6 +107,8 @@
     tr.shall-row td { display: block; padding-left: 12px; }
   }
   .refreshbar { margin: 0 24px 8px; padding: 8px 12px; border-radius: 6px; background: #e8f0fb; color: var(--accent); border: 1px solid #c5d6ee; }
+  .refreshbar.warn { background: #fff4e0; color: var(--warn); border-color: #f0d9a8; }
+  .refreshbar ul { margin: 4px 0 0; padding-left: 20px; }
   .refreshbar.offline { background: #fdecea; color: var(--bad); border-color: #f3c4c0; }
 </style>
 </head>
@@ -599,21 +601,54 @@
 })();
 </script>
 <script>
-// Refresh banner: polls the service; shows "Refreshing..." while a refresh runs and reloads the page when it ends.
+// Refresh banner: polls the service. Shows what is happening ("Refreshing...", or the first-time fetch), what went wrong
+// after a refresh (failed or not-yet-set-up sources) and reloads the page, keeping the view, when a refresh ends.
 (function () {
   var bar = document.getElementById("refreshBar"), was = false, misses = 0;
+  var hasData = !!(window.RFQS && window.RFQS.length);
   function hhmm(iso) { var d = new Date(iso); return isNaN(d) ? "" : d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }); }
-  function show(msg, offline) { bar.textContent = msg; bar.className = "refreshbar" + (offline ? " offline" : ""); bar.hidden = false; }
+  function dayhm(iso) { var d = new Date(iso); return isNaN(d) ? "" : d.toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }); }
+  function show(msg, kind, notes) {
+    bar.className = "refreshbar" + (kind ? " " + kind : "");
+    bar.textContent = msg;
+    if (notes && notes.length) {
+      var ul = document.createElement("ul");
+      notes.forEach(function (t) { var li = document.createElement("li"); li.textContent = t; ul.appendChild(li); });
+      bar.appendChild(ul);
+    }
+    bar.hidden = false;
+  }
+  // What the last refresh left behind. Skipped = needs a key or login that is not set up; failed = it tried and errored.
+  function problems(st) {
+    var failed = [], skipped = [];
+    (st.sources || []).filter(function (x) { return x.schedulable; }).forEach(function (x) {
+      if (x.skipped) skipped.push(x.label + " is not set up yet (" + (x.error || "missing setting") + "), so its requests are not included.");
+      else if (x.error) failed.push(x.label + " failed: " + String(x.error).slice(0, 160) + (x.fetchedAt ? ". Showing older data from " + dayhm(x.fetchedAt) + "." : ". No data from it yet."));
+    });
+    return { failed: failed, skipped: skipped };
+  }
   function poll() {
     fetch("/api/status", { cache: "no-store" }).then(function (r) { if (!r.ok) throw 0; return r.json(); }).then(function (st) {
       misses = 0;
       if (st.refreshing) {
         was = true;
-        show("Refreshing…" + (st.refreshStartedAt ? " (started " + hhmm(st.refreshStartedAt) + ")" : "") + " Showing the previous data until it finishes.");
-      } else if (was) { if (window.saveUiState) window.saveUiState(); location.reload(); }
-      else bar.hidden = true;
+        var since = st.refreshStartedAt ? " (started " + hhmm(st.refreshStartedAt) + ")" : "";
+        show(hasData ? "Refreshing\u2026" + since + " Showing the previous data until it finishes."
+                     : "Fetching data for the first time\u2026" + since + " This takes several minutes; the page will fill in by itself.");
+        return;
+      }
+      if (was) { if (window.saveUiState) window.saveUiState(); location.reload(); return; }
+      var pr = problems(st), notes = pr.failed.concat(pr.skipped);
+      if (!hasData && !st.activeRecords) {
+        var neverRan = !(st.sources || []).some(function (x) { return x.lastAttempt; });
+        show(neverRan ? "No data yet. The first fetch starts in a moment." : "No data yet.", pr.failed.length ? "warn" : "", notes.concat(pr.failed.length ? ["The service will retry automatically."] : []));
+      } else if (notes.length) {
+        show(pr.failed.length ? "The last refresh had problems. Some data may be out of date." : "Some sources are not included.", pr.failed.length ? "warn" : "", notes);
+      } else if (st.stale) {
+        show("A refresh is due and will start shortly.");
+      } else bar.hidden = true;
     }).catch(function () {
-      if (++misses >= 2) show("Can't reach the RFQ service. The data below may be out of date.", true);
+      if (++misses >= 2) show("Can't reach the RFQ service. The data below may be out of date.", "offline");
     });
   }
   poll(); setInterval(poll, 5000);
