@@ -198,7 +198,7 @@ function statusBody() {
   return {
     schemaVersion: feed.SCHEMA_VERSION, now: new Date().toISOString(),
     refreshing: refresh.running || !!wakeTimer, stale: !refresh.running && !wakeTimer && due(), refreshStartedAt: refresh.startedAt, nextDueBy: dueAt().toISOString(),
-    generatedAt: state.generatedAt || null, latestSeq: state.seq,
+    generatedAt: state.generatedAt || null, dataAsOf: feed.dataAsOf(state), latestSeq: state.seq, // generatedAt = feed rebuilt (also on every start); dataAsOf = oldest source's last good fetch
     activeRecords: Object.values(state.records).filter((r) => r.active).length,
     sources: feed.SOURCES.map((s) => ({
       id: s.id, label: s.label, schedulable: !!s.script,
@@ -293,7 +293,7 @@ const server = http.createServer((req, res) => {
 
     if (p === "/api/health" && req.method === "GET") { // no auth: for uptime checks; reveals nothing sensitive
       const lastOk = Object.values(state.runs).map((r) => r.lastSuccess).filter(Boolean).sort().pop() || null;
-      return send(res, 200, { ok: true, lastSuccessfulRefresh: lastOk });
+      return send(res, 200, { ok: true, lastSuccessfulRefresh: lastOk, dataAsOf: feed.dataAsOf(state) }); // use dataAsOf for freshness: lastSuccessfulRefresh is the NEWEST source
     }
     if (p.startsWith("/api/")) {
       if (p === "/api/status" && req.method === "GET") return send(res, 200, statusBody());

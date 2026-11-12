@@ -12,7 +12,7 @@ None. The data is not private. Traffic is plain HTTP. The service listens on `12
 
 | Call | Purpose |
 |---|---|
-| `GET /api/health` | No auth. `{ok, lastSuccessfulRefresh}` for uptime checks. |
+| `GET /api/health` | No auth. `{ok, lastSuccessfulRefresh, dataAsOf}` for uptime checks. Use `dataAsOf` to judge freshness (`lastSuccessfulRefresh` is the newest source, so it can hide a stale one). |
 | `GET /api/status` | Per-source health: last fetch, last success, last error, record counts, `nextDueBy` (the next 5:00 after the last attempt; if already in the past, a refresh is due), `refreshing` (a refresh is running or about to start) and `stale` (a refresh is overdue but has not started). **Check this** to make sure the data is fresh. The human page polls it and shows a Refreshing banner. |
 | `GET /api/rfqs` | The requests (see filters). |
 | `GET /api/rfqs/{id}` | One request, including closed / dropped ones. |
@@ -50,11 +50,13 @@ If `more` is `true`, the page was cut off by `limit`; call again with `after=<cu
 
 ```json
 {
-  "schemaVersion": 1, "generatedAt": "2026-11-09T19:44:17Z",
+  "schemaVersion": 1, "generatedAt": "2026-11-09T19:44:17Z", "dataAsOf": "2026-11-09T19:30:02Z",
   "count": 100, "total": 298, "more": true, "cursor": 100, "latestSeq": 298,
   "rfqs": [ { ...record... } ]
 }
 ```
+
+**Freshness: use `dataAsOf`, not `generatedAt`.** `dataAsOf` is the *oldest* last successful fetch across the sources that should be running (`null` if one has never succeeded; sources skipped for a missing key are not counted). `generatedAt` is only when the feed was last rebuilt, which also happens on every service start, so it can look fresh when the data is a day old. `/api/status` has both, plus per-source `lastSuccess`.
 
 ## Record fields
 

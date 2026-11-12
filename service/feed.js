@@ -214,10 +214,20 @@ function query(state, params) {
   // `limit`, `more` is true and the next call continues exactly where this one stopped.
   const cursor = page.length ? page[page.length - 1].seq : (after !== null ? after : 0);
   return {
-    schemaVersion: SCHEMA_VERSION, generatedAt: state.generatedAt || null,
+    schemaVersion: SCHEMA_VERSION, generatedAt: state.generatedAt || null, dataAsOf: dataAsOf(state),
     count: page.length, total, more: total > page.length, cursor, latestSeq: state.seq,
     rfqs: page.map(publicRecord)
   };
 }
 
-module.exports = { SOURCES, SCHEMA_VERSION, loadState, writeAtomic, ingest, query, publicRecord, dueInstant, normalize };
+// How fresh the data is: the OLDEST last successful fetch across the sources that should be running (so one fresh source
+// cannot hide a stale one). null if any of them has never succeeded. Sources skipped for a missing key are not counted.
+// `generatedAt` is NOT a freshness signal: it is when the feed was last rebuilt, which also happens on every service start.
+function dataAsOf(state, env = process.env) {
+  const runnable = SOURCES.filter((s) => s.script && s.needsEnv.every((k) => env[k]));
+  const times = runnable.map((s) => ((state.runs || {})[s.id] || {}).lastSuccess);
+  if (!times.length || times.some((t) => !t)) return null;
+  return times.sort()[0];
+}
+
+module.exports = { SOURCES, SCHEMA_VERSION, loadState, writeAtomic, ingest, query, publicRecord, dueInstant, normalize, dataAsOf };
