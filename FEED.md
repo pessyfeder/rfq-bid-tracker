@@ -16,7 +16,7 @@ None. The data is not private. Traffic is plain HTTP. The service listens on `12
 | `GET /api/status` | Per-source health: last fetch, last success, last error, record counts, `nextDueBy` (the next 5:00 after the last attempt; if already in the past, a refresh is due), `refreshing` (a refresh is running or about to start) and `stale` (a refresh is overdue but has not started). **Check this** to make sure the data is fresh. The human page polls it and shows a Refreshing banner. |
 | `GET /api/rfqs` | The requests (see filters). |
 | `GET /api/rfqs/{id}` | One request, including closed / dropped ones. |
-| `POST /api/refresh` | Start a refresh now. `202` started, `409` already running. Takes minutes; poll `/api/status` (`refreshing`). |
+| `POST /api/refresh` | Start a refresh now. `202` started, `409` already running. Takes minutes; poll `/api/status` (`refreshing`). Loopback callers only (`403` otherwise, and cross-site browser requests are refused); set `REFRESH_TOKEN` to allow remote callers who send `Authorization: Bearer <token>` (`401` if wrong). |
 
 A file snapshot of everything is also written after each refresh to `data/feed.json` (same format as `/api/rfqs?open=0`), for a shared-folder hand-off instead of HTTP.
 

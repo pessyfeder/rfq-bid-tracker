@@ -200,6 +200,11 @@ Search
     links must be https (otherwise a dead "#"), and the service sends a Content-Security-Policy.
     Tested with hostile text in every field: shown as literal text, nothing ran. AI reading of attachments
     must only fill fields and be labelled "AI-read, verify".
+    The one exception to "no authentication" is POST /api/refresh, because it spends SAM
+    quota and Anthropic money: it is accepted only from the service machine itself (loopback),
+    and never from a cross-site browser request (an Origin that differs from Host is refused,
+    403). To allow a remote caller, set REFRESH_TOKEN in .env; the caller then sends
+    "Authorization: Bearer <token>" (401 if missing or wrong). Reads (GET) stay open.
 
 
 3. DATA INTEGRATION

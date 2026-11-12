@@ -11,6 +11,7 @@ const fs = require("fs");
 const path = require("path");
 const http = require("http");
 const zlib = require("zlib");
+const crypto = require("crypto");
 const vm = require("vm");
 const { spawn } = require("child_process");
 const { computeFacts } = require("./facts");
@@ -315,6 +316,22 @@ const server = http.createServer((req, res) => {
         return rec ? send(res, 200, feed.publicRecord(rec)) : send(res, 404, { error: "no such request" });
       }
       if (p === "/api/refresh" && req.method === "POST") {
+        // Costs SAM quota and Anthropic spend, so it is gated. With REFRESH_TOKEN set, a matching
+        // bearer token is required (from anywhere). Without it, only loopback callers are allowed,
+        // and never a cross-site browser request (Origin must be absent or same-host).
+        const token = process.env.REFRESH_TOKEN;
+        if (token) {
+          const given = /^Bearer (.+)$/i.exec(req.headers.authorization || "")?.[1] || req.headers["x-refresh-token"] || "";
+          const a = Buffer.from(String(given)), b = Buffer.from(token);
+          if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return send(res, 401, { error: "refresh token required" });
+        } else {
+          if (!local) return send(res, 403, { error: "refresh is only allowed from this machine (or set REFRESH_TOKEN)" });
+          const origin = req.headers.origin;
+          if (origin) {
+            let oh = null; try { oh = new URL(origin).host; } catch {}
+            if (oh !== req.headers.host) return send(res, 403, { error: "cross-site request refused" });
+          }
+        }
         if (refresh.running) return send(res, 409, { error: "a refresh is already running", startedAt: refresh.startedAt });
         runRefresh("api request"); // not awaited: a refresh takes minutes; poll /api/status
         return send(res, 202, { started: true });
