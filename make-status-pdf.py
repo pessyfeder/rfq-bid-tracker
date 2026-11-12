@@ -32,9 +32,9 @@ ASK=[("UT","robots.txt forbids all automated access (Bonfire). Email sent; reply
 ("OH","robots.txt forbids automated access, and the site is behind a login. Email sent; reply pending."),
 ("AL","robots.txt forbids all automated access. Email sent; reply pending."),
 ("CA","HTTP 403 to automated requests. Email sent; reply pending."),
-("NH","HTTP 403 to automated requests. Email sent; reply pending."),("TN","HTTP 403 to automated requests. Not emailed; need to call."),
+("NH","HTTP 403 to automated requests. Replied 2026-11-12: NH does not allow third-party hosting of bids. Permanently excluded."),("TN","HTTP 403 to automated requests. Not emailed; need to call."),
 ("ME","HTTP 403, and login-only since October 2025. Email sent; reply pending."),("MN","Bot challenge. Email sent; reply pending."),
-("MD","eMMA robots.txt forbids all automated access, behind a browser check. The open data bid sets stopped in 2019 (last update 2019-07-02), so no other source. Email to eMMA support drafted; not sent yet."),
+("MD","eMMA robots.txt forbids all automated access, behind a browser check. The open data bid sets stopped in 2019 (last update 2019-07-02), so no other source. Replied 2026-11-12: eMMA has no approved API or automated feed. Excluded."),
 ("CT","No automatic source. The BidBoard page is only a landing page; bids sit behind the CTsource login, and biznet.ct.gov rejects automated requests with a bot filter, which we do not bypass. Feed request to DAS.CTsource@ct.gov sent; reply pending.")]
 E=[("PA","Replied: the free DGS e-Alert emails are the only route. Built: an automatic Gmail IMAP reader. Waiting on the Google app password (PA_GMAIL_USER, PA_GMAIL_APP_PASSWORD), so 0 notices so far. robots.txt forbids automated access to the site."),
 ("AZ","Not scrapable: app.az.gov robots.txt forbids all automated access. Route: supplier registration with commodity codes, email alerts. Not subscribed yet."),

@@ -46,7 +46,12 @@ The same template works; for these, ask for permission or a feed rather than a w
 - **Texas (SPD, Comptroller):** no data feed from ESBD. Search results can be exported as CSV from the site (limit 20,000 rows). Posted solicitations can be listed on SmartBuy: Vendor > ESBD Bid Opportunities > Status = Posted (filter by start/end date). The CSV export is manual, so it is not used (policy: only automatic sources). TxDOT notices are read automatically from Texas open data instead.
 - **Pennsylvania (DGS Supplier Services):** the only notification route is eAlerts (email of open solicitations). Sign-up instructions are on the Supplier Service Center page; the e-Alerts login is dgs.internet.state.pa.us/EAlerts_V2/Login.aspx, with an "E-Alerts Guide" PDF. Bidding help: srmhelp@pa.gov.
 
-## Maryland (eMMA) - draft, not yet sent
+## Maryland (eMMA) - sent, replied: no feed (2026-11-12)
+
+**Reply (eMMA Helpdesk, DGS, 2026-11-12):** the Public Solicitations page is public and searchable by hand, but the eMMA
+Helpdesk "does not currently provide an approved API or automated data feed". So there is no automatic source for Maryland
+(robots.txt also forbids automated reads). Permanently excluded under the only-automatic-sources policy; re-check only if
+the state announces a feed or reopens its open data bid sets. The draft below is kept for reference.
 
 Why: opendata.maryland.gov only has eMMA bids through FY2019 (last update 2019-07-02), and emma.maryland.gov
 publishes `Disallow: /` in robots.txt behind a browser check, so we do not read it automatically.
@@ -155,3 +160,5 @@ and would link back to CTsource for every solicitation.
 
 Thank you,
 [Name], [title], [company], [phone], [email]
+
+- **New Hampshire (DAS Purchasing, Division of Procurement and Support Services), 2026-11-12:** "The State of New Hampshire does not allow any Third Party hosting of any bids, contracts or any other documents." Refused. NH is permanently excluded from the tracker; no feed, no scraping. Vendor resources: das.nh.gov/purchasing/vendorresources.aspx.
