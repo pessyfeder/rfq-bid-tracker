@@ -49,7 +49,7 @@ module.exports = {
   noPageReadsWhy: "TxDOT lettings have no per-notice page to read",
   noPageReadsNote: "Eligibility not read: TxDOT lettings are published as bid items. See the proposal on ESBD or the TxDOT letting page.",
   async fetch() {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = require("../et-today").etToday();
     const where = encodeURIComponent(`bid_recieved_until_date_and >= '${today}'`);
     const rows = await (await http(`${API}?$limit=20000&$where=${where}`, { timeoutMs: 90000 })).json();
     if (!Array.isArray(rows)) throw new Error("Unexpected response from data.texas.gov");

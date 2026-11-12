@@ -168,7 +168,7 @@ async function inBatches(items, size, fn) {
 }
 
 (async () => {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = require("./et-today").etToday();
   const items = await socrata({
     $where: `section_name='Procurement' AND type_of_notice_description='Solicitation' AND due_date >= '${today}'`,
     $order: "start_date DESC",
