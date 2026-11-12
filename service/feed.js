@@ -149,7 +149,7 @@ function ingest(state, now = new Date()) {
       const rec = normalize(raw, src);
       seen.add(rec.id);
       const h = hashOf(rec);
-      const old = state.records[rec.id];
+      const old = Object.hasOwn(state.records, rec.id) ? state.records[rec.id] : undefined;
       if (!old) {
         state.records[rec.id] = { ...rec, firstSeen: nowIso, lastSeen: nowIso, updatedAt: nowIso, active: true, seq: ++state.seq, _h: h };
         stats.added++;

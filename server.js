@@ -33,14 +33,21 @@ const LOG_FILE = path.join(DATA, "service.log");
   }
 })();
 
+function morningHourFromEnv() { // an invalid hour makes every date comparison NaN, which silently stops all refreshes
+  const raw = process.env.REFRESH_MORNING_HOUR, h = Number(raw || 5);
+  if (Number.isInteger(h) && h >= 0 && h <= 23) return h;
+  console.warn(`REFRESH_MORNING_HOUR="${raw}" is not an integer 0-23; using 5`);
+  return 5;
+}
 const CFG = {
   host: process.env.HOST || "127.0.0.1",           // this machine only unless HOST is set (HOST=0.0.0.0 for all interfaces)
   port: Number(process.env.PORT || 8765),
-  morningHour: Number(process.env.REFRESH_MORNING_HOUR || 5),   // daily cycle starts at this local hour; one refresh per cycle (early, so an early start-up still counts as "this morning")
+  morningHour: morningHourFromEnv(),   // daily cycle starts at this local hour; one refresh per cycle (early, so an early start-up still counts as "this morning")
   wakeDelaySec: Number(process.env.WAKE_DELAY_SEC || 45),       // after a wake, wait for Wi-Fi/VPN before fetching
   fetchTimeoutMin: Number(process.env.FETCH_TIMEOUT_MIN || 45)
 };
-const isLoopback = (h) => h === "127.0.0.1" || h === "::1" || h === "localhost";
+const ALLOWED_HOSTS = (process.env.ALLOWED_HOSTS || "").toLowerCase().split(",").map((s) => s.trim()).filter(Boolean);
+const isLoopback =(h) => h === "127.0.0.1" || h === "::1" || h === "localhost";
 
 function log(msg) {
   const line = `${new Date().toISOString()} ${msg}`;
@@ -95,13 +102,14 @@ function runFetcher(src) {
   });
 }
 
-async function runRefresh(reason) {
+// opts.only (optional Set of source ids): run just those sources; the rest keep their last data and run state.
+async function runRefresh(reason, opts = {}) {
   if (refresh.running) return false;
   refresh.running = true; refresh.startedAt = new Date().toISOString();
   rotateLog();
   log(`refresh start (${reason})`);
   try {
-    const steps = feed.SOURCES.filter((s) => s.script);
+    const steps = feed.SOURCES.filter((s) => s.script && (!opts.only || opts.only.has(s.id)));
     for (const [i, src] of steps.entries()) {
       refresh.progress = { step: i + 1, steps: steps.length, label: src.label, done: null, total: null, current: null };
       const run = state.runs[src.id] = state.runs[src.id] || {};
@@ -131,14 +139,14 @@ async function runRefresh(reason) {
 const RETRY_AFTER_MIN = Number(process.env.RETRY_AFTER_MIN || 20);
 const RETRY_MAX = Number(process.env.RETRY_MAX || 3);
 let failedAfter = [], followUps = 0, followTimer = null;
-function failures() { // sources that failed (not merely skipped) and individual states whose last fetch failed
+function failures(bySource) { // sources that failed (not merely skipped) and individual states whose last fetch failed
   const out = [];
   for (const src of feed.SOURCES.filter((s) => s.script)) {
     const run = state.runs[src.id] || {};
     if (run.error && !run.skipped) out.push(src.id);
-    for (const [code, r] of Object.entries((state.sources[src.id] || {}).states || {})) if (r && r.ok === false && !/Waiting for/.test(r.error || "")) out.push(code); // "Waiting for the Gmail login" is setup, not a dropout
+    for (const [code, r] of Object.entries((state.sources[src.id] || {}).states || {})) if (r && r.ok === false && !/Waiting for/.test(r.error || "")) out.push(bySource ? src.id : code); // "Waiting for the Gmail login" is setup, not a dropout
   }
-  return out;
+  return bySource ? [...new Set(out)] : out;
 }
 function scheduleFollowUp() {
   if (followTimer) return;
@@ -146,7 +154,7 @@ function scheduleFollowUp() {
   if (followUps >= RETRY_MAX) { log(`still failing after ${followUps} follow-up refreshes (${failedAfter.join(", ")}); next try tomorrow morning`); followUps = 0; failedAfter = []; return; }
   followUps++;
   log(`still failing: ${failedAfter.join(", ")}; follow-up refresh ${followUps}/${RETRY_MAX} in ${RETRY_AFTER_MIN} min`);
-  followTimer = setTimeout(() => { followTimer = null; runRefresh(`follow-up ${followUps}/${RETRY_MAX} after failures`); }, RETRY_AFTER_MIN * 60000);
+  followTimer = setTimeout(() => { followTimer = null; runRefresh(`follow-up ${followUps}/${RETRY_MAX} after failures`, { only: new Set(failures(true)) }); }, RETRY_AFTER_MIN * 60000); // retry only the sources that failed
 }
 
 // Schedule: one refresh per daily cycle, and cycles start at CFG.morningHour (5:00 local by default). A refresh is due when the
@@ -303,6 +311,17 @@ const server = http.createServer((req, res) => {
     const p = url.pathname.replace(/\/+$/, "") || "/";
     const local = isLoopback(req.socket.remoteAddress) || req.socket.remoteAddress === "::ffff:127.0.0.1";
 
+    // DNS-rebinding guard: a hostile page can point its own domain at 127.0.0.1 and make the browser
+    // send requests here that look same-origin and "local". The Host header then carries the attacker's
+    // domain, so only loopback names (plus any in ALLOWED_HOSTS, comma-separated) are served.
+    const hostName = (() => {
+      const h = String(req.headers.host || "").toLowerCase();
+      return h.startsWith("[") ? h.slice(0, h.indexOf("]") + 1) : h.split(":")[0];
+    })();
+    if (!(hostName === "localhost" || hostName === "127.0.0.1" || hostName === "[::1]" || ALLOWED_HOSTS.includes(hostName))) {
+      return send(res, 403, { error: "unrecognized Host header (set ALLOWED_HOSTS to add this name)" });
+    }
+
     if (p === "/api/health" && req.method === "GET") { // no auth: for uptime checks; reveals nothing sensitive
       const lastOk = Object.values(state.runs).map((r) => r.lastSuccess).filter(Boolean).sort().pop() || null;
       return send(res, 200, { ok: true, lastSuccessfulRefresh: lastOk, dataAsOf: feed.dataAsOf(state) }); // use dataAsOf for freshness: lastSuccessfulRefresh is the NEWEST source
@@ -312,7 +331,8 @@ const server = http.createServer((req, res) => {
       if (p === "/api/rfqs" && req.method === "GET") return send(res, 200, feed.query(state, url.searchParams));
       const one = /^\/api\/rfqs\/([^/]+)$/.exec(p);
       if (one && req.method === "GET") {
-        const rec = state.records[decodeURIComponent(one[1])];
+        const id = decodeURIComponent(one[1]);
+        const rec = Object.hasOwn(state.records, id) ? state.records[id] : null; // not inherited keys like "constructor"
         return rec ? send(res, 200, feed.publicRecord(rec)) : send(res, 404, { error: "no such request" });
       }
       if (p === "/api/refresh" && req.method === "POST") {
