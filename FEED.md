@@ -37,7 +37,7 @@ If `more` is `true`, the page was cut off by `limit`; call again with `after=<cu
 | Param | Meaning |
 |---|---|
 | `after=N` | Only records with `seq > N`; also includes `active:false` ones. Must be a number (`400` otherwise). |
-| `limit=N` | Page size (default 1000, whole number from 1 to 5000; out-of-range values are clamped). |
+| `limit=N` | Page size (default 1000, whole number from 1 to 5000; out-of-range values are clamped; not a number gives `400`). |
 | `level=Federal\|State\|Local` | |
 | `source=nyc\|sam\|states` | |
 | `open=0` | Include requests whose deadline has passed (default: hidden). |

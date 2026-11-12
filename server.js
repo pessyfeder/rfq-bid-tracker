@@ -175,7 +175,9 @@ function lastAttemptMs() { // newest refresh attempt across sources (any outcome
   return Math.max(0, ...Object.values(state.runs).map((r) => Date.parse(r.lastAttempt) || 0));
 }
 function dueAt() { // next morningHour:00 after the last attempt (the past, if already due)
-  const last = lastAttemptMs(); const d = new Date(last); d.setHours(CFG.morningHour, 0, 0, 0);
+  const last = lastAttemptMs();
+  if (!last) return new Date(); // nothing has run yet (epoch 0 would print as 1970): it is due now
+  const d = new Date(last); d.setHours(CFG.morningHour, 0, 0, 0);
   if (d.getTime() <= last) d.setDate(d.getDate() + 1);
   return d;
 }

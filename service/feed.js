@@ -193,6 +193,9 @@ function query(state, params, opts = {}) {
   if (params.get("after") && after === null) { // present but not a number: fail loudly instead of returning the full feed
     const err = new Error("after must be a number"); err.status = 400; throw err;
   }
+  if (params.get("limit") && num("limit") === null) {
+    const err = new Error("limit must be a number"); err.status = 400; throw err;
+  }
   const includeInactive = params.get("include_inactive") === "1" || after !== null; // incremental clients need tombstones
   const level = params.get("level"), source = params.get("source");
   const minValue = num("min_value"), maxValue = num("max_value");
