@@ -44,6 +44,9 @@ const SET_ASIDE = {
 const fmt = (d) => `${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getDate()).padStart(2, "0")}/${d.getFullYear()}`;
 
 function dueParts(iso) {
+  // Date-only value (no time): keep the calendar day as given. new Date() would read it as UTC midnight,
+  // which is the evening of the previous day in New York.
+  if (/^\d{4}-\d{2}-\d{2}$/.test(String(iso).trim())) return { due: String(iso).trim(), dueTime: "No time given" };
   const dt = new Date(iso);
   if (isNaN(dt)) return null;
   const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit" }).format(dt);
@@ -213,6 +216,9 @@ async function enrich(r, o, text, AI_KEY) {
           if (!old) {
             notices[r.id] = { rfq: r, descUrl: typeof o.description === "string" && o.description.startsWith(BASE + "/") ? o.description : null, descDone: false, tries: 0, raw: { typeOfSetAside: o.typeOfSetAside || "" } };
             added++;
+          } else if (r.dueTime === "No time given" && /^(7:00 PM EST|8:00 PM EDT)$/.test(old.rfq.dueTime || "")
+            && old.rfq.due === new Date(Date.parse(r.due) - 864e5).toISOString().slice(0, 10)) { // cached by the old date-only bug: correct silently
+            Object.assign(old.rfq, { due: r.due, dueTime: r.dueTime });
           } else if (old.rfq.due !== r.due || old.rfq.dueTime !== r.dueTime) { // deadline moved = amended
             Object.assign(old.rfq, { due: r.due, dueTime: r.dueTime }); old.rfq.details.amended = true;
           }
