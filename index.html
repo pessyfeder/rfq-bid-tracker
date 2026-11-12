@@ -430,7 +430,7 @@
   function parseQuery(q) {
     var nums = [];
     var rest = q.replace(NUM_RE, function (m, name, op, date, num, suf, num2, suf2) {
-      if (!name && !op) return m; // bare numbers/dates stay plain search words
+      if (!name && !op && (date || !(suf || suf2 || m.indexOf("$") >= 0))) return m; // bare dates and plain digits stay search words; bare "300k" / "$300,000" mean value = that
       var f = date ? FIELDS[2] : FIELDS[0]; // no field name: dates mean due date, numbers mean value
       if (name) FIELDS.forEach(function (x) { if (new RegExp("^(" + x.names + ")$").test(name.trim())) f = x; });
       if (!!date !== !!f.date) return m; // date/number mismatch: leave as plain text
@@ -532,8 +532,8 @@
     }
     var frag = document.createDocumentFragment();
     shown.forEach(function (r) {
-      var sig = (expanded[r.id] ? "1" : "0") + (scopeOpen[r.id] ? "1" : "0");
-      if (!r._els || r._els.sig !== sig) { // built once per row (and again only when its Show/Hide state changes)
+      var sig = (expanded[r.id] ? "1" : "0") + (scopeOpen[r.id] ? "1" : "0") + (r.shall ? "1" : "0");
+      if (!r._els || r._els.sig !== sig) { // built once per row (and again when its Show/Hide state or its loaded requirements list changes)
         var t = document.createElement("tbody");
         t.innerHTML = rowHtml(r);
         r._els = { sig: sig, nodes: Array.prototype.slice.call(t.children) };
