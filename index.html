@@ -579,7 +579,7 @@
     $(id).addEventListener("change", function () { clearTimeout(timer); onFilter(); });
   });
   // Keep the user's view across the reload that follows a refresh: filters, sort, open rows and scroll position.
-  var UI_KEY = "rfqUiState", FIELDS = ["q", "st", "level", "category"];
+  var UI_KEY = "rfqUiState", UI_FIELDS = ["q", "st", "level", "category"];
   function loadShall(row) { // same fetch as the Show-all-requirements button, for rows that were open before the reload
     fetch("/shall/" + encodeURIComponent(row.id)).then(function (x) { if (!x.ok) throw 0; return x.json(); })
       .then(function (j) { row.shall = j.shall || []; }, function () { row.shall = [{ text: "Could not load the requirements. Open the full RFQ document instead." }]; })
@@ -588,7 +588,7 @@
   window.saveUiState = function () {
     try {
       var o = { at: Date.now(), sort: sort, expanded: expanded, scopeOpen: scopeOpen, scrollY: window.scrollY, hideFlagged: $("hideFlagged").checked };
-      FIELDS.forEach(function (id) { o[id] = $(id).value; });
+      UI_FIELDS.forEach(function (id) { o[id] = $(id).value; });
       sessionStorage.setItem(UI_KEY, JSON.stringify(o));
     } catch (e) {}
   };
@@ -597,7 +597,7 @@
     var saved = JSON.parse(sessionStorage.getItem(UI_KEY) || "null");
     sessionStorage.removeItem(UI_KEY); // used once, for the reload right after a refresh
     if (saved && Date.now() - saved.at < 10 * 60000) {
-      FIELDS.forEach(function (id) { if (saved[id] != null) $(id).value = saved[id]; });
+      UI_FIELDS.forEach(function (id) { if (saved[id] != null) $(id).value = saved[id]; });
       $("hideFlagged").checked = saved.hideFlagged !== false;
       if (saved.sort && saved.sort.key) sort = saved.sort;
       Object.keys(saved.scopeOpen || {}).forEach(function (id) { scopeOpen[id] = true; });
