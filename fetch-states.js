@@ -9,6 +9,7 @@
 // Sources and their status: state-sources-survey.md.
 const fs = require("fs");
 const path = require("path");
+const crypto = require("crypto");
 const vm = require("vm");
 const { clean, requests } = require("./states/common");
 
@@ -88,12 +89,20 @@ async function addDocumentReads(list, prevById, adapter) {
   const readNotice = local ? async (url, r) => local(r.id.slice(adapter.code.length + 1)) : require("./states/docs").readNotice;
   const ai = require("./ai-extract");
   let reused = 0, read = 0, budget = MAX_READS, noPage = 0, shortPage = 0, noAnswer = 0, failed = 0, emptyPage = 0, sample = null;
+  const newSig = new Map(); // amended notices -> their new fingerprint, applied once the re-read succeeds
   const refused = {}; // HTTP errors by status, e.g. 401 from the portal
   const todo = [];
   for (const r of list) {
     const p = prevById.get(r.id);
     // A read that found no restriction is redone once when the reader improved (DOCS_VERSION), for states whose attachments it now reaches.
-    const stale = p && p.requires == null && (p.docsV || 0) < DOCS_VERSION && REREAD_STATES.has(adapter.code);
+    // Fingerprint of what the listing says about the notice (taken before any AI values overwrite it). If an agency amends the
+    // notice (new deadline, title, description or amount) the fingerprint changes and the notice is read again; the text-hash
+    // cache in ai-extract.js means an unchanged document still costs nothing. Rows saved before this existed have no
+    // fingerprint and are trusted once (and given one), so deploying this does not trigger a mass re-read.
+    r.aiSig = crypto.createHash("sha1").update(JSON.stringify([r.title, r.due, r.dueTime, r.scope, r.value, r.rfqUrl])).digest("hex").slice(0, 16);
+    const amended = p && p.aiRead && p.aiSig && p.aiSig !== r.aiSig;
+    if (amended) { newSig.set(r, r.aiSig); r.aiSig = p.aiSig; } // keep the old fingerprint until the re-read succeeds, so a failed one is retried next run
+    const stale = (p && p.requires == null && (p.docsV || 0) < DOCS_VERSION && REREAD_STATES.has(adapter.code)) || amended;
     if (p && p.aiRead) { r.requires = p.requires; r.scope = p.scope; r.shall = p.shall; if (p.naics) r.naics = p.naics; if (p.docDue) r.docDue = p.docDue; r.aiRead = true; if (p.docsV) r.docsV = p.docsV; } // a failed re-read keeps this
     if (p && p.aiRead && !stale) reused++;
     else if (stale) todo.push(r);
@@ -114,7 +123,9 @@ async function addDocumentReads(list, prevById, adapter) {
         if (!doc) { noPage++; return; }
         const res = await ai.extractWithPdfs(doc.text, doc.pdfs, key);
         if (!res) { if (!doc.pdfs.length && ai.plainLength(doc.text) < 200) { if (!sample) sample = { id: r.id, raw: doc.text.length, text: doc.text.replace(/<[^>]*>/g, " ").replace(/[ \t\r\n]+/g, " ").trim().slice(0, 150) }; if (ai.plainLength(doc.text) === 0) emptyPage++; else shortPage++; } else noAnswer++; return; }
-        if (res.requires !== null) r.requires = res.requires;
+        // An amended notice's old restriction no longer applies, so an unclear new read must not keep it.
+        if (res.requires !== null || newSig.has(r)) r.requires = res.requires;
+        if (newSig.has(r)) r.aiSig = newSig.get(r);
         if (res.scope) r.scope = res.scope;
         if (res.shall.length) r.shall = res.shall;
         { const n = naicsIn(doc.text); if (n) r.naics = n; } // regex on the page/Word text, not the model (PDF text is not scanned)
