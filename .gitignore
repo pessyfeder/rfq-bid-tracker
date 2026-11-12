@@ -22,7 +22,6 @@ sam-cache.json
 sam-quota.json
 
 # Personal notes and account setup (not part of the app)
-quesions.md
 anthropic-account-setup.pdf
 # Hand-exported CSVs (e.g. Texas ESBD); may be large
 imports/
@@ -37,5 +36,3 @@ Discover Group real anthropic api key.txt
 # Built distribution zip (contains node.exe)
 dist/
 
-# Built distribution zip (contains node.exe)
-dist/
