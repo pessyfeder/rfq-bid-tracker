@@ -633,6 +633,12 @@
       if (st.refreshing) {
         was = true;
         var since = st.refreshStartedAt ? " (started " + hhmm(st.refreshStartedAt) + ")" : "";
+        var pg = st.refreshProgress; // which source is running, and for the states fetch how many states are done
+        if (pg) {
+          var det = "Step " + pg.step + " of " + pg.steps + ": " + pg.label;
+          if (pg.total) det += ", " + pg.done + " of " + pg.total + " states done" + (pg.current ? " (now " + pg.current + ")" : "");
+          since += " " + det + ".";
+        }
         show(hasData ? "Refreshing\u2026" + since + " Showing the previous data until it finishes."
                      : "Fetching data for the first time\u2026" + since + " This takes several minutes; the page will fill in by itself.");
         return;

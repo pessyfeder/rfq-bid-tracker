@@ -192,8 +192,10 @@ function readPrevious() {
   }
 
   const ran = [];
+  const toRun = ADAPTERS.filter((a) => !wanted.length || wanted.includes(a.code));
   for (const a of ADAPTERS) {
     if (wanted.length && !wanted.includes(a.code)) { results[a.code] = prevStates[a.code] || { ok: false, error: "not run" }; continue; }
+    console.log(`@progress ${ran.length} ${toRun.length} ${a.code}`); // read by service/server.js for the page's refresh banner: states finished, states total, the one starting
     ran.push(a);
     await runAdapter(a);
   }

@@ -53,7 +53,9 @@ function rotateLog() { // keep the log from growing forever
 // ---- state -------------------------------------------------------------------------------------
 let state = feed.loadState(STATE_FILE);
 state.runs = state.runs || {};            // per-source: last attempt / success / error
-const refresh = { running: false, startedAt: null, child: null };
+const refresh = { running: false, startedAt: null, child: null, progress: null };
+// progress (for the page's banner): which source is running (step of steps) and, for the states fetch, how many states are done.
+// The states fetcher prints "@progress <done> <total> <CODE>" before each state.
 
 function save() {
   feed.writeAtomic(STATE_FILE, JSON.stringify(state));
@@ -73,8 +75,15 @@ function runFetcher(src) {
     if (missing.length) return resolve({ ok: false, skipped: true, error: `${missing.join(", ")} not set` });
     const child = spawn(process.execPath, [src.script], { cwd: ROOT, env: process.env, windowsHide: true });
     refresh.child = child;
-    let out = "";
-    const keep = (b) => { out = (out + b).slice(-4000); };
+    let out = "", partial = "";
+    const keep = (b) => {
+      out = (out + b).slice(-4000);
+      const lines = (partial + b).split("\n"); partial = lines.pop();
+      for (const l of lines) {
+        const m = /^@progress (\d+) (\d+) (\S+)/.exec(l);
+        if (m && refresh.progress) Object.assign(refresh.progress, { done: +m[1], total: +m[2], current: m[3] });
+      }
+    };
     child.stdout.on("data", keep); child.stderr.on("data", keep);
     const timer = setTimeout(() => { out += "\n[killed: timeout]"; killTree(child); }, CFG.fetchTimeoutMin * 60000);
     child.on("error", (e) => { clearTimeout(timer); resolve({ ok: false, error: e.message }); });
@@ -91,7 +100,9 @@ async function runRefresh(reason) {
   rotateLog();
   log(`refresh start (${reason})`);
   try {
-    for (const src of feed.SOURCES.filter((s) => s.script)) {
+    const steps = feed.SOURCES.filter((s) => s.script);
+    for (const [i, src] of steps.entries()) {
+      refresh.progress = { step: i + 1, steps: steps.length, label: src.label, done: null, total: null, current: null };
       const run = state.runs[src.id] = state.runs[src.id] || {};
       run.lastAttempt = new Date().toISOString();
       const r = await runFetcher(src);
@@ -106,7 +117,7 @@ async function runRefresh(reason) {
   } catch (e) {
     log("refresh error: " + (e.stack || e.message));
   } finally {
-    refresh.running = false; refresh.startedAt = null;
+    refresh.running = false; refresh.startedAt = null; refresh.progress = null;
   }
   scheduleFollowUp();
   return true;
@@ -197,7 +208,7 @@ const send = (res, code, body, type = "application/json") => {
 function statusBody() {
   return {
     schemaVersion: feed.SCHEMA_VERSION, now: new Date().toISOString(),
-    refreshing: refresh.running || !!wakeTimer, stale: !refresh.running && !wakeTimer && due(), refreshStartedAt: refresh.startedAt, nextDueBy: dueAt().toISOString(),
+    refreshing: refresh.running || !!wakeTimer, stale: !refresh.running && !wakeTimer && due(), refreshStartedAt: refresh.startedAt, refreshProgress: refresh.running ? refresh.progress : null, nextDueBy: dueAt().toISOString(),
     generatedAt: state.generatedAt || null, dataAsOf: feed.dataAsOf(state), latestSeq: state.seq, // generatedAt = feed rebuilt (also on every start); dataAsOf = oldest source's last good fetch
     activeRecords: Object.values(state.records).filter((r) => r.active).length,
     sources: feed.SOURCES.map((s) => ({
