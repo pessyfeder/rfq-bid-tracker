@@ -51,7 +51,7 @@ robots.txt on these sites only blocks `/craft`.
 ## Do not scrape / blocked
 - NO-BOTS (robots.txt `Disallow: /` for all): TX (ESBD), PA (eMarketplace), UT (Bonfire), OH, AL.
 - LOGIN/JS: AZ (redirects to login), OH (login redirect), NC eVP (Dynamics portal, read-only offline shell), WA WEBS (JS), KY and MI (Advantage VSS), KS, GA (browser check), VA eVA, MT (Jaggaer), NM (Bonfire/Jaggaer), WI.
-- BLOCKED: CA (403), CO (403 to the plain site, but now read through the VSS guest session, see below), ME (403; also login-only since 2025-10), NH (403; state replied 2026-11-12 that it does not allow third-party hosting of bids, so excluded for good), TN (403), MN (bot challenge).
+- BLOCKED: CA (403), CO (403 to the plain site, but now read through the VSS guest session, see below), ME (403; also login-only since 2025-10), NH (403; state replied 2026-11-12 that it does not allow third-party hosting of bids, so excluded for good), TN (403), MN (bot challenge; state replied 2026-11-12 with no feed, only SWIFT Supplier Portal registration and category codes, see state-feed-requests.md).
 
 ## Not probed at all
 VT (page 404 at the URL tried; `bgs.vermont.gov/purchasing-contracting` still to check), plus deeper pages for the LISTING states above.
