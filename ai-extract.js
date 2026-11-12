@@ -45,13 +45,15 @@ function cacheGet(key) {
   usage.hits++;
   return e.result;
 }
-function cacheSet(key, result) { loadCache()[key] = { seen: today(), result }; }
+// Both setters save at once, so an AI call already paid for survives a crash or a timeout kill.
+function cacheSet(key, result) { loadCache()[key] = { seen: today(), result }; saveCache(); }
 // Remember that this exact text gave no usable answer, so the next runs do not pay to ask again (a billed reply with no
 // parseable JSON was re-sent on every run). Retried after NEG_DAYS, or at once if the text or prompt changes (new hash).
 const NEG_DAYS = 7;
 function cacheNone(key, why) {
   console.warn("  AI reply unusable (" + why + "); not retried for " + NEG_DAYS + " days");
   loadCache()[key] = { seen: today(), neg: true, until: new Date(Date.now() + NEG_DAYS * 86400000).toISOString().slice(0, 10), result: null };
+  saveCache();
   return null;
 }
 
@@ -229,7 +231,8 @@ async function callApi(payload, apiKey) {
       res = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
         headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-        body: JSON.stringify({ model: MODEL, ...payload })
+        body: JSON.stringify({ model: MODEL, ...payload }),
+        signal: AbortSignal.timeout(180000) // a half-dead connection must not hang until the run's kill timeout
       });
     } catch (e) {
       if (attempt >= MAX_TRIES) throw new Error("Anthropic API unreachable: " + e.message);

@@ -141,7 +141,7 @@ function spend() { quota.used++; writeJson(QUOTA_FILE, quota); } // written befo
 async function samGet(url) {
   if (left() <= 0) throw new QuotaHit("daily budget used");
   spend();
-  const res = await fetch(url);
+  const res = await fetch(url, { signal: AbortSignal.timeout(60000) });
   if (res.status === 429) { quota.used = Math.max(quota.used, BUDGET); writeJson(QUOTA_FILE, quota); throw new QuotaHit("SAM.gov answered 429 (its daily limit)"); }
   if (res.status === 401 || res.status === 403) throw new Error("SAM.gov rejected the API key (HTTP " + res.status + ").");
   return res;
@@ -218,10 +218,11 @@ async function enrich(r, o, text, AI_KEY) {
           }
         }
         offset += 100;
-        if (items.length < 100 || offset >= (page.totalRecords || 0)) { finished = true; break; }
+        if (items.length < 100 || offset >= (page.totalRecords || 0)) { finished = true; cache.searchedThrough = today; cache.resume = null; }
+        else cache.resume = { from, offset }; // pick up at the next page if this run dies, runs out of budget or hits --max
+        writeJson(CACHE_FILE, cache); // saved per page: a crash or timeout keeps the pages already paid for
+        if (finished) break;
       }
-      if (finished) { cache.searchedThrough = today; cache.resume = null; }
-      else cache.resume = { from, offset }; // out of budget or hit --max: pick up at this page next run
     }
 
     // 2. Descriptions for notices that have not had one yet, newest first, while budget lasts.
@@ -241,9 +242,11 @@ async function enrich(r, o, text, AI_KEY) {
         console.error("Description/AI read failed for one notice: " + e.message);
         if (++n.tries >= 3) n.descDone = true;
       }
+      writeJson(CACHE_FILE, cache); // saved per notice: a kill keeps the requests and AI calls already spent
     }
   } catch (e) {
-    if (e instanceof QuotaHit) stopped = e.message; else throw e;
+    if (e instanceof QuotaHit) stopped = e.message;
+    else { try { writeJson(CACHE_FILE, cache); } catch (_) { /* best effort */ } throw e; }
   }
 
   // 3. Drop notices long past due, estimate values for the new ones (USAspending: separate API, no SAM quota).
@@ -251,8 +254,10 @@ async function enrich(r, o, text, AI_KEY) {
   for (const [id, n] of Object.entries(notices)) if (n.rfq.due < weekAgo) delete notices[id];
   const open = Object.values(notices).filter((n) => n.rfq.due >= today);
   const needEst = open.filter((n) => !n.estDone);
-  await require("./sam-estimates").addEstimates(needEst.map((n) => n.rfq));
-  needEst.forEach((n) => { n.estDone = true; });
+  const estFailed = new Set();
+  await require("./sam-estimates").addEstimates(needEst.map((n) => n.rfq), estFailed);
+  // A failed USAspending lookup is not "done": leave estDone unset so the next run retries it.
+  needEst.forEach((n) => { if (!estFailed.has(n.rfq)) n.estDone = true; });
   if (AI_KEY && described) { console.log(`AI read ${aiOk} of ${described} new descriptions.`); require("./ai-extract").reportUsage("SAM.gov refresh"); }
 
   writeJson(CACHE_FILE, cache);

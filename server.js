@@ -346,6 +346,7 @@ const server = http.createServer((req, res) => {
     }
     send(res, 404, { error: "not found" });
   } catch (e) {
+    if (e.status === 400) return send(res, 400, { error: e.message });
     log("request error: " + e.message);
     send(res, 500, { error: "internal error" });
   }

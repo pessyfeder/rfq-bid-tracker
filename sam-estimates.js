@@ -45,7 +45,8 @@ async function awardsForNaics(naics) {
         filters: { award_type_codes: AWARD_TYPES, naics_codes: [naics], time_period: [{ start_date: since, end_date: today }] },
         fields: ["Award ID", "Recipient Name", "Award Amount", "Description", "Start Date", "generated_internal_id"],
         sort: "Start Date", order: "desc", limit: 100, page
-      })
+      }),
+      signal: AbortSignal.timeout(60000)
     });
     if (!res.ok) throw new Error("USAspending returned HTTP " + res.status);
     const j = await res.json();
@@ -83,7 +84,9 @@ function estimate(rfq, awards) {
   return awards.length >= MIN_SIMILAR ? summarize(awards, "naics", []) : null;
 }
 
-async function addEstimates(rfqs) {
+// `failed` (optional Set) receives the rfqs whose USAspending lookup errored, so callers can retry them later
+// instead of treating them as done.
+async function addEstimates(rfqs, failed) {
   const todo = rfqs.filter((r) => r.level === "Federal" && r.value == null && !r.valueEst && /^NAICS \d{6}$/.test(r.category || ""));
   const codes = [...new Set(todo.map((r) => r.category.slice(6)))];
   const cache = new Map();
@@ -95,6 +98,7 @@ async function addEstimates(rfqs) {
   let n = 0;
   for (const r of todo) {
     const awards = cache.get(r.category.slice(6));
+    if (!awards && failed) failed.add(r);
     const est = awards && estimate(r, awards);
     if (est) { r.valueEst = est; n++; }
   }

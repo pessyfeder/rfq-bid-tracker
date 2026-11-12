@@ -50,6 +50,9 @@ function dueInstant(due, dueTime) {
   const t = /(\d{1,2}):(\d{2})\s*(AM|PM)/i.exec(dueTime || "");
   if (!d || !t) return null;
   let h = Number(t[1]) % 12; if (/pm/i.test(t[3])) h += 12;
+  // A midnight time is a date-only placeholder (e.g. NYC), not a real deadline: returning an instant
+  // would hide the notice for its whole due day. Null falls back to the date-only comparison.
+  if (h === 0 && +t[2] === 0) return null;
   const want = Date.UTC(+d[1], +d[2] - 1, +d[3], h, +t[2]);
   let guess = want;
   for (let i = 0; i < 2; i++) guess += want - etWallClock(guess); // converge on the right DST offset
@@ -187,6 +190,9 @@ function publicRecord(rec) {
 function query(state, params, opts = {}) {
   const num = (k) => (params.has(k) && params.get(k) !== "" && !isNaN(Number(params.get(k))) ? Number(params.get(k)) : null);
   const after = num("after");
+  if (params.get("after") && after === null) { // present but not a number: fail loudly instead of returning the full feed
+    const err = new Error("after must be a number"); err.status = 400; throw err;
+  }
   const includeInactive = params.get("include_inactive") === "1" || after !== null; // incremental clients need tombstones
   const level = params.get("level"), source = params.get("source");
   const minValue = num("min_value"), maxValue = num("max_value");
@@ -210,7 +216,7 @@ function query(state, params, opts = {}) {
   });
   list.sort((a, b) => a.seq - b.seq);
   const total = list.length;
-  const limit = opts.unlimited ? Infinity : Math.min(num("limit") || 1000, 5000);
+  const limit = opts.unlimited ? Infinity : Math.min(Math.max(Math.floor(num("limit") ?? 1000), 1), 5000); // at least 1, whole number
   const page = list.slice(0, limit);
   // `cursor` = highest seq returned; pass it back as ?after= next time. If the page was cut off by
   // `limit`, `more` is true and the next call continues exactly where this one stopped.
