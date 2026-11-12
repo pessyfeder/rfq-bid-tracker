@@ -1,6 +1,6 @@
 // RFQ Bid Tracker - standalone service.
 //
-// One process that (1) runs the fetchers (on wake from sleep, or every 24 h), (2) keeps the results in data/state.json,
+// One process that (1) runs the fetchers (first start/wake each morning), (2) keeps the results in data/state.json,
 // and (3) serves them as JSON to the other machine over HTTP. See FEED.md for the API and DEPLOY.md
 // for installation. No npm dependencies; Node 18+.
 //
@@ -35,7 +35,7 @@ const LOG_FILE = path.join(DATA, "service.log");
 const CFG = {
   host: process.env.HOST || "127.0.0.1",           // this machine only unless HOST is set (HOST=0.0.0.0 for all interfaces)
   port: Number(process.env.PORT || 8765),
-  maxAgeHours: Number(process.env.REFRESH_MAX_AGE_HOURS || 24), // refresh when the last attempt is this old
+  morningHour: Number(process.env.REFRESH_MORNING_HOUR || 8),   // daily cycle starts at this local hour; one refresh per cycle
   wakeDelaySec: Number(process.env.WAKE_DELAY_SEC || 45),       // after a wake, wait for Wi-Fi/VPN before fetching
   fetchTimeoutMin: Number(process.env.FETCH_TIMEOUT_MIN || 45)
 };
@@ -95,46 +95,82 @@ async function runRefresh(reason) {
     const stats = feed.ingest(state);
     save();
     log(`ingested: ${stats.added} new, ${stats.changed} changed, ${stats.deactivated} dropped`);
+    failedAfter = failures();
   } catch (e) {
     log("refresh error: " + (e.stack || e.message));
   } finally {
     refresh.running = false; refresh.startedAt = null;
   }
+  scheduleFollowUp();
   return true;
 }
 
-// Schedule: no clock times. A refresh starts only once the last refresh attempt is 24 hours old: as soon as
-// that is true while awake, or, if the machine was asleep when the 24 hours ran out, right after it wakes. The service itself is started at boot by Task
-// Scheduler ("At startup", whether or not anyone is logged on - see DEPLOY.md), so it is already
-// running when the machine wakes at the lock screen.
+// Follow-up refresh: the fetchers already retry inside a run, but a dropout can outlast that. If anything is still
+// failing when a refresh ends (or when the service starts with failures left from the last run), run another refresh
+// after RETRY_AFTER_MIN, up to RETRY_MAX times in a row, so a permanently broken source (e.g. a missing login)
+// cannot cause an endless loop. A clean refresh resets the count.
+const RETRY_AFTER_MIN = Number(process.env.RETRY_AFTER_MIN || 20);
+const RETRY_MAX = Number(process.env.RETRY_MAX || 3);
+let failedAfter = [], followUps = 0, followTimer = null;
+function failures() { // sources that failed (not merely skipped) and individual states whose last fetch failed
+  const out = [];
+  for (const src of feed.SOURCES.filter((s) => s.script)) {
+    const run = state.runs[src.id] || {};
+    if (run.error && !run.skipped) out.push(src.id);
+    for (const [code, r] of Object.entries((state.sources[src.id] || {}).states || {})) if (r && r.ok === false && !/Waiting for/.test(r.error || "")) out.push(code); // "Waiting for the Gmail login" is setup, not a dropout
+  }
+  return out;
+}
+function scheduleFollowUp() {
+  if (followTimer) return;
+  if (!failedAfter.length) { followUps = 0; return; }
+  if (followUps >= RETRY_MAX) { log(`still failing after ${followUps} follow-up refreshes (${failedAfter.join(", ")}); next try tomorrow morning`); followUps = 0; failedAfter = []; return; }
+  followUps++;
+  log(`still failing: ${failedAfter.join(", ")}; follow-up refresh ${followUps}/${RETRY_MAX} in ${RETRY_AFTER_MIN} min`);
+  followTimer = setTimeout(() => { followTimer = null; runRefresh(`follow-up ${followUps}/${RETRY_MAX} after failures`); }, RETRY_AFTER_MIN * 60000);
+}
+
+// Schedule: one refresh per daily cycle, and cycles start at CFG.morningHour (8:00 local). A refresh is due when the
+// newest attempt is older than the start of the current cycle (the most recent 8:00), or when a source has never run
+// (first install: everything runs at once, at any time of day). So the first start/wake/logon of the morning
+// refreshes, a later restart the same day does not, and a PC left on refreshes at 8:00. The service is started at
+// boot and at logon by Task Scheduler, so it is already running when the machine wakes at the lock screen.
 //
 // Wake detection: a sleeping machine freezes this process, so a tick that arrives much later than
 // scheduled means the machine was asleep. No OS hook or extra privilege is needed.
 const TICK_MS = 30000;
-const DAY_MS = () => CFG.maxAgeHours * 3600000;
+function cycleStartMs(now = Date.now()) { // most recent morningHour:00 local time (yesterday's if it has not happened yet today)
+  const d = new Date(now); d.setHours(CFG.morningHour, 0, 0, 0);
+  if (d.getTime() > now) d.setDate(d.getDate() - 1);
+  return d.getTime();
+}
 function lastAttemptMs() { // newest refresh attempt across sources (any outcome, so a broken source cannot cause a refresh loop)
   return Math.max(0, ...Object.values(state.runs).map((r) => Date.parse(r.lastAttempt) || 0));
 }
-function dueAt() { return new Date(lastAttemptMs() + DAY_MS()); }
-function due() { // the 24-hour rule: some runnable source has never run, or the newest attempt is over 24 h old
+function dueAt() { // next morningHour:00 after the last attempt (the past, if already due)
+  const last = lastAttemptMs(); const d = new Date(last); d.setHours(CFG.morningHour, 0, 0, 0);
+  if (d.getTime() <= last) d.setDate(d.getDate() + 1);
+  return d;
+}
+function due() { // some runnable source has never run, or the newest attempt predates the current morning cycle
   const runnable = feed.SOURCES.filter((s) => s.script && s.needsEnv.every((k) => process.env[k]));
-  return runnable.some((s) => !(state.runs[s.id] || {}).lastAttempt) || Date.now() - lastAttemptMs() >= DAY_MS();
+  return runnable.some((s) => !(state.runs[s.id] || {}).lastAttempt) || lastAttemptMs() < cycleStartMs();
 }
 let wakeTimer = null;
 function onWake(slept) {
   if (wakeTimer || refresh.running) return;
-  if (!due()) { log(`woke after ~${Math.round(slept)}s asleep; last refresh under ${CFG.maxAgeHours} h ago, nothing to do (next by ${dueAt().toString()})`); return; }
-  log(`woke after ~${Math.round(slept)}s asleep and ${CFG.maxAgeHours} h have passed; refreshing in ${CFG.wakeDelaySec}s (network may still be coming up)`);
-  wakeTimer = setTimeout(() => { wakeTimer = null; runRefresh("wake from sleep, 24 h or more since the last refresh"); }, CFG.wakeDelaySec * 1000);
+  if (!due()) { log(`woke after ~${Math.round(slept)}s asleep; already refreshed this morning, nothing to do (next by ${dueAt().toString()})`); return; }
+  log(`woke after ~${Math.round(slept)}s asleep and no refresh yet this morning; refreshing in ${CFG.wakeDelaySec}s (network may still be coming up)`);
+  wakeTimer = setTimeout(() => { wakeTimer = null; runRefresh("wake from sleep, first of the morning"); }, CFG.wakeDelaySec * 1000);
 }
 function startScheduler() {
   let last = Date.now();
   setInterval(() => {
     const now = Date.now(), gap = now - last; last = now;
     if (gap > TICK_MS * 3) onWake(gap / 1000);                          // slept
-    else if (!refresh.running && !wakeTimer && due()) runRefresh("24 hours since the last refresh");
+    else if (!refresh.running && !wakeTimer && due()) runRefresh("first refresh of the morning");
   }, TICK_MS);
-  log(`refresh rule: ${CFG.maxAgeHours} h after the last attempt (on wake if it came due asleep) (next by ${dueAt().toString()})`);
+  log(`refresh rule: once per day, first start/wake after ${CFG.morningHour}:00 (next by ${dueAt().toString()})`);
 }
 
 // ---- HTTP ----------------------------------------------------------------------------------------
@@ -150,7 +186,7 @@ const send = (res, code, body, type = "application/json") => {
 function statusBody() {
   return {
     schemaVersion: feed.SCHEMA_VERSION, now: new Date().toISOString(),
-    refreshing: refresh.running, refreshStartedAt: refresh.startedAt, nextDueBy: dueAt().toISOString(),
+    refreshing: refresh.running || !!wakeTimer, stale: !refresh.running && !wakeTimer && due(), refreshStartedAt: refresh.startedAt, nextDueBy: dueAt().toISOString(),
     generatedAt: state.generatedAt || null, latestSeq: state.seq,
     activeRecords: Object.values(state.records).filter((r) => r.active).length,
     sources: feed.SOURCES.map((s) => ({
@@ -290,7 +326,8 @@ if (process.argv.includes("--once")) {
     const stats = feed.ingest(state); // pick up any live-*.js already on disk
     if (stats.added || stats.changed || stats.deactivated) save();
     startScheduler();
-    if (due()) runRefresh("start-up, data missing or over a day old");
+    if (due()) runRefresh("start-up, no refresh yet this morning");
+    else { failedAfter = failures(); scheduleFollowUp(); } // failures left from the last run: retry soon, not in 24 h
   });
   const stop = () => { log("stopping"); server.close(() => process.exit(0)); setTimeout(() => process.exit(0), 3000).unref(); };
   process.on("SIGINT", stop); process.on("SIGTERM", stop);

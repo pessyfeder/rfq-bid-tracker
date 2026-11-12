@@ -106,6 +106,8 @@
     tbody tr:not(.shall-row) td:last-child { border-bottom: 0; }
     tr.shall-row td { display: block; padding-left: 12px; }
   }
+  .refreshbar { margin: 0 24px 8px; padding: 8px 12px; border-radius: 6px; background: #e8f0fb; color: var(--accent); border: 1px solid #c5d6ee; }
+  .refreshbar.offline { background: #fdecea; color: var(--bad); border-color: #f3c4c0; }
 </style>
 </head>
 <body>
@@ -113,6 +115,8 @@
   <h1>RFQ Bid Tracker</h1>
   <span class="sub">Discover Group &middot; Brooklyn, NY</span>
 </header>
+
+<div class="refreshbar" id="refreshBar" role="status" hidden></div>
 
 <div class="failbar" id="failBanner" role="alert" hidden></div>
 
@@ -564,6 +568,27 @@
   render();
   // Build every row's search text now, while the page is idle, so the first keystroke is not slower than the rest.
   setTimeout(function () { rows.forEach(function (r) { if (!r._hay) r._hay = haystack(r); }); }, 0);
+})();
+</script>
+<script>
+// Refresh banner: polls the service; shows "Refreshing..." while a refresh runs and reloads the page when it ends.
+(function () {
+  var bar = document.getElementById("refreshBar"), was = false, misses = 0;
+  function hhmm(iso) { var d = new Date(iso); return isNaN(d) ? "" : d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }); }
+  function show(msg, offline) { bar.textContent = msg; bar.className = "refreshbar" + (offline ? " offline" : ""); bar.hidden = false; }
+  function poll() {
+    fetch("/api/status", { cache: "no-store" }).then(function (r) { if (!r.ok) throw 0; return r.json(); }).then(function (st) {
+      misses = 0;
+      if (st.refreshing) {
+        was = true;
+        show("Refreshing…" + (st.refreshStartedAt ? " (started " + hhmm(st.refreshStartedAt) + ")" : "") + " Showing the previous data until it finishes.");
+      } else if (was) { location.reload(); }
+      else bar.hidden = true;
+    }).catch(function () {
+      if (++misses >= 2) show("Can't reach the RFQ service. The data below may be out of date.", true);
+    });
+  }
+  poll(); setInterval(poll, 5000);
 })();
 </script>
 </body>
