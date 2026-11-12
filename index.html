@@ -605,7 +605,7 @@
 // after a refresh (failed or not-yet-set-up sources) and reloads the page, keeping the view, when a refresh ends.
 (function () {
   var bar = document.getElementById("refreshBar"), was = false, misses = 0;
-  var hasData = !!(window.RFQS && window.RFQS.length);
+  var hasData = !!(window.RFQS && window.RFQS.length), STALE_HOURS = 36; // a daily refresh that missed one day is normal; two is not
   function hhmm(iso) { var d = new Date(iso); return isNaN(d) ? "" : d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }); }
   function dayhm(iso) { var d = new Date(iso); return isNaN(d) ? "" : d.toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }); }
   function show(msg, kind, notes) {
@@ -639,11 +639,14 @@
       }
       if (was) { if (window.saveUiState) window.saveUiState(); location.reload(); return; }
       var pr = problems(st), notes = pr.failed.concat(pr.skipped);
+      // Old data, e.g. the PC was off for days and no refresh has succeeded since. dataAsOf = the oldest source's last good fetch.
+      var ageH = st.dataAsOf ? (Date.now() - Date.parse(st.dataAsOf)) / 3600000 : 0, old = ageH > STALE_HOURS;
+      if (old) notes.unshift("The newest complete data is from " + dayhm(st.dataAsOf) + " (" + (ageH >= 48 ? Math.round(ageH / 24) + " days" : Math.round(ageH) + " hours") + " old). Check the dates before relying on it.");
       if (!hasData && !st.activeRecords) {
         var neverRan = !(st.sources || []).some(function (x) { return x.lastAttempt; });
         show(neverRan ? "No data yet. The first fetch starts in a moment." : "No data yet.", pr.failed.length ? "warn" : "", notes.concat(pr.failed.length ? ["The service will retry automatically."] : []));
       } else if (notes.length) {
-        show(pr.failed.length ? "The last refresh had problems. Some data may be out of date." : "Some sources are not included.", pr.failed.length ? "warn" : "", notes);
+        show(old ? "The data is out of date." : pr.failed.length ? "The last refresh had problems. Some data may be out of date." : "Some sources are not included.", old || pr.failed.length ? "warn" : "", notes);
       } else if (st.stale) {
         show("A refresh is due and will start shortly.");
       } else bar.hidden = true;
