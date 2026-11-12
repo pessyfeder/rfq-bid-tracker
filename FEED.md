@@ -15,7 +15,7 @@ None. The data is not private. Traffic is plain HTTP. The service listens on `12
 | `GET /api/health` | No auth. `{ok, lastSuccessfulRefresh, dataAsOf}` for uptime checks. Use `dataAsOf` to judge freshness (`lastSuccessfulRefresh` is the newest source, so it can hide a stale one). |
 | `GET /api/status` | Per-source health: last fetch, last success, last error, record counts, `nextDueBy` (the next 5:00 after the last attempt; if already in the past, a refresh is due), `refreshing` (a refresh is running or about to start) and `stale` (a refresh is overdue but has not started). **Check this** to make sure the data is fresh. The human page polls it and shows a Refreshing banner. |
 | `GET /api/rfqs` | The requests (see filters). |
-| `GET /api/rfqs/{id}` | One request, including closed / dropped ones. |
+| `GET /api/rfqs/{id}` | One request, including closed / dropped ones. `404` if the id is unknown. |
 | `POST /api/refresh` | Start a refresh now. `202` started, `409` already running. Takes minutes; poll `/api/status` (`refreshing`). Loopback callers only (`403` otherwise, and cross-site browser requests are refused); set `REFRESH_TOKEN` to allow remote callers who send `Authorization: Bearer <token>` (`401` if wrong). |
 
 A file snapshot of everything is also written after each refresh to `data/feed.json` (the full set, not truncated at the 5,000 `limit`; same record format as `/api/rfqs?open=0`), for a shared-folder hand-off instead of HTTP.
@@ -36,8 +36,8 @@ If `more` is `true`, the page was cut off by `limit`; call again with `after=<cu
 
 | Param | Meaning |
 |---|---|
-| `after=N` | Only records with `seq > N`; also includes `active:false` ones. |
-| `limit=N` | Page size (default 1000, max 5000). |
+| `after=N` | Only records with `seq > N`; also includes `active:false` ones. Must be a number (`400` otherwise). |
+| `limit=N` | Page size (default 1000, whole number from 1 to 5000; out-of-range values are clamped). |
 | `level=Federal\|State\|Local` | |
 | `source=nyc\|sam\|states` | |
 | `open=0` | Include requests whose deadline has passed (default: hidden). |
@@ -70,7 +70,7 @@ If `more` is `true`, the page was cut off by `limit`; call again with `after=<cu
 | `region` | string \| null | Place of performance / "New York City". |
 | `posted` | `YYYY-MM-DD` | |
 | `due` | `YYYY-MM-DD` | Eastern-time date. |
-| `dueTime` | string \| null | As published, e.g. `3:30 PM EST`. |
+| `dueTime` | string \| null | As published, e.g. `3:30 PM EST`. Midnight and date-only deadlines (SAM.gov sometimes gives only a day) are treated as no time given: `null`, and the page shows "No time given". |
 | `dueAt` | ISO UTC \| null | `due` + `dueTime` converted to an instant (null if no usable time). Use this to compare to "now". |
 | `hasRealDeadline` | bool | `false` = placeholder (year 2099+ or over 3 years out). |
 | `warnings` | string[] | e.g. "Posted over a year ago". The human page hides flagged rows by default. |
