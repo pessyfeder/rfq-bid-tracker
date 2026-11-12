@@ -566,7 +566,7 @@
   $("head").addEventListener("click", function (e) {
     var th = e.target.closest("th"); if (!th || th.classList.contains("nosort")) return;
     var key = th.dataset.key;
-    sort = sort.key === key ? { key: key, dir: -sort.dir } : { key: key, dir: key === "value" ? -1 : 1 };
+    sort = sort.key === key ? { key: key, dir: -sort.dir } : { key: key, dir: key === "valueSort" ? -1 : 1 };
     limit = PAGE;
     render();
   });
