@@ -35,7 +35,7 @@ const LOG_FILE = path.join(DATA, "service.log");
 const CFG = {
   host: process.env.HOST || "127.0.0.1",           // this machine only unless HOST is set (HOST=0.0.0.0 for all interfaces)
   port: Number(process.env.PORT || 8765),
-  morningHour: Number(process.env.REFRESH_MORNING_HOUR || 8),   // daily cycle starts at this local hour; one refresh per cycle
+  morningHour: Number(process.env.REFRESH_MORNING_HOUR || 5),   // daily cycle starts at this local hour; one refresh per cycle (early, so an early start-up still counts as "this morning")
   wakeDelaySec: Number(process.env.WAKE_DELAY_SEC || 45),       // after a wake, wait for Wi-Fi/VPN before fetching
   fetchTimeoutMin: Number(process.env.FETCH_TIMEOUT_MIN || 45)
 };
@@ -53,7 +53,7 @@ function rotateLog() { // keep the log from growing forever
 // ---- state -------------------------------------------------------------------------------------
 let state = feed.loadState(STATE_FILE);
 state.runs = state.runs || {};            // per-source: last attempt / success / error
-const refresh = { running: false, startedAt: null };
+const refresh = { running: false, startedAt: null, child: null };
 
 function save() {
   feed.writeAtomic(STATE_FILE, JSON.stringify(state));
@@ -61,18 +61,25 @@ function save() {
 }
 
 // ---- running the fetchers ------------------------------------------------------------------------
+function killTree(child) { // a fetcher can start its own child processes; on Windows kill() alone would leave them running
+  try {
+    if (process.platform === "win32" && child.pid) spawn("taskkill", ["/PID", String(child.pid), "/T", "/F"], { windowsHide: true, stdio: "ignore" });
+    else child.kill();
+  } catch (e) { try { child.kill(); } catch (_) {} }
+}
 function runFetcher(src) {
   return new Promise((resolve) => {
     const missing = src.needsEnv.filter((k) => !process.env[k]);
     if (missing.length) return resolve({ ok: false, skipped: true, error: `${missing.join(", ")} not set` });
     const child = spawn(process.execPath, [src.script], { cwd: ROOT, env: process.env, windowsHide: true });
+    refresh.child = child;
     let out = "";
     const keep = (b) => { out = (out + b).slice(-4000); };
     child.stdout.on("data", keep); child.stderr.on("data", keep);
-    const timer = setTimeout(() => { out += "\n[killed: timeout]"; child.kill(); }, CFG.fetchTimeoutMin * 60000);
+    const timer = setTimeout(() => { out += "\n[killed: timeout]"; killTree(child); }, CFG.fetchTimeoutMin * 60000);
     child.on("error", (e) => { clearTimeout(timer); resolve({ ok: false, error: e.message }); });
     child.on("close", (code) => {
-      clearTimeout(timer);
+      clearTimeout(timer); refresh.child = null;
       resolve({ ok: code === 0, error: code === 0 ? null : (out.trim().split("\n").slice(-3).join(" | ") || "exit " + code), tail: out.trim() });
     });
   });
@@ -158,7 +165,11 @@ function due() { // some runnable source has never run, or the newest attempt pr
 }
 let wakeTimer = null;
 function onWake(slept) {
-  if (wakeTimer || refresh.running) return;
+  if (refresh.running) { // slept mid-refresh: the fetcher's connections are dead, so stop waiting for it; it counts as failed and the follow-up retry picks it up
+    if (refresh.child) { log(`woke after ~${Math.round(slept)}s asleep during a refresh; stopping the running fetcher so it can be retried`); killTree(refresh.child); }
+    return;
+  }
+  if (wakeTimer) return;
   if (!due()) { log(`woke after ~${Math.round(slept)}s asleep; already refreshed this morning, nothing to do (next by ${dueAt().toString()})`); return; }
   log(`woke after ~${Math.round(slept)}s asleep and no refresh yet this morning; refreshing in ${CFG.wakeDelaySec}s (network may still be coming up)`);
   wakeTimer = setTimeout(() => { wakeTimer = null; runRefresh("wake from sleep, first of the morning"); }, CFG.wakeDelaySec * 1000);
@@ -316,6 +327,10 @@ const server = http.createServer((req, res) => {
 if (process.argv.includes("--once")) {
   runRefresh("--once").then(() => process.exit(0));
 } else {
+  server.on("error", (e) => { // e.g. a second copy started while the first is running
+    log(e.code === "EADDRINUSE" ? `port ${CFG.port} is already in use (another copy of the service is running); exiting` : "server error: " + e.message);
+    process.exit(e.code === "EADDRINUSE" ? 0 : 1);
+  });
   server.listen(CFG.port, CFG.host, () => {
     log(`listening on http://${CFG.host}:${CFG.port} `);
     for (const s of feed.SOURCES.filter((x) => x.script)) {
