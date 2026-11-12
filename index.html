@@ -628,7 +628,7 @@
     return { failed: failed, skipped: skipped };
   }
   function poll() {
-    fetch("/api/status", { cache: "no-store" }).then(function (r) { if (!r.ok) throw 0; return r.json(); }).then(function (st) {
+    fetch("/api/status", { cache: "no-store" }).then(function (r) { if (!r.ok) throw r.status; return r.json(); }).then(function (st) {
       misses = 0;
       if (st.refreshing) {
         was = true;
@@ -650,8 +650,10 @@
       } else if (st.stale) {
         show("A refresh is due and will start shortly.");
       } else bar.hidden = true;
-    }).catch(function () {
-      if (++misses >= 2) show("Can't reach the RFQ service. The data below may be out of date.", "offline");
+    }).catch(function (e) {
+      // 404 = something answered but it is not the RFQ service (e.g. a plain file server): it will never refresh this page.
+      if (e === 404) show("This page is not connected to the RFQ service, so it cannot refresh or check for new data. Open it at http://127.0.0.1:8765/ instead. The data below may be out of date.", "offline");
+      else if (++misses >= 2) show("Can't reach the RFQ service (it may be restarting or stopped). Retrying every 5 seconds. The data below may be out of date.", "offline");
     });
   }
   poll(); setInterval(poll, 5000);
