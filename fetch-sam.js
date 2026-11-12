@@ -66,7 +66,6 @@ function toRfq(o) {
   const office = o.officeAddress || {};
   const region = [place.city && place.city.name, place.state && (place.state.code || place.state.name)].filter(Boolean).join(", ")
     || [office.city, office.state].filter(Boolean).join(", ") || "No data";
-  const amount = o.award && Number(String(o.award.amount || "").replace(/[^0-9.]/g, ""));
 
   const requirements = [];
   if (o.typeOfSetAsideDescription) requirements.push(o.typeOfSetAsideDescription);
@@ -83,7 +82,7 @@ function toRfq(o) {
     dueTime: dp.dueTime,
     level: "Federal",
     agency: o.fullParentPathName ? o.fullParentPathName.split(".").slice(0, 2).join(" / ") : "Unknown agency",
-    value: amount > 0 ? amount : null,
+    value: null, // the v2 search API carries no award amount on open notices; estimates are filled in later
     rfqUrl: url,
     details: { region, requirements, restriction: code && requirements.length ? requirements[0] : null, amended: false }
   };
