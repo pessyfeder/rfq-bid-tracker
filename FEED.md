@@ -1,6 +1,6 @@
 # RFQ feed API (for clients of the service)
 
-The service (`server.js`) refreshes the data once 24 hours have passed since the last refresh (right after waking, if it came due during sleep) and serves it as JSON. This service does **not** judge eligibility (see spec 2a); it passes on what each request says it requires.
+The service (`server.js`) refreshes the data once per day, on the first start-up, logon or wake after 5:00 local time (set `REFRESH_MORNING_HOUR` to change the hour), and serves it as JSON. On first install, when a source has never run, every fetcher runs at once. If a source is still failing after a refresh, it retries up to 3 more times, 20 minutes apart. This service does **not** judge eligibility (see spec 2a); it passes on what each request says it requires.
 
 Base URL: `http://<service-machine>:8765` (port set by `PORT`). Schema version: **1**.
 
@@ -13,7 +13,7 @@ None. The data is not private. Traffic is plain HTTP. The service listens on `12
 | Call | Purpose |
 |---|---|
 | `GET /api/health` | No auth. `{ok, lastSuccessfulRefresh}` for uptime checks. |
-| `GET /api/status` | Per-source health: last fetch, last success, last error, record counts, `nextDueBy` (latest time the 24-hour rule will start a refresh). **Check this** to make sure the data is fresh. |
+| `GET /api/status` | Per-source health: last fetch, last success, last error, record counts, `nextDueBy` (the next 5:00 after the last attempt; if already in the past, a refresh is due), `refreshing` (a refresh is running or about to start) and `stale` (a refresh is overdue but has not started). **Check this** to make sure the data is fresh. The human page polls it and shows a Refreshing banner. |
 | `GET /api/rfqs` | The requests (see filters). |
 | `GET /api/rfqs/{id}` | One request, including closed / dropped ones. |
 | `POST /api/refresh` | Start a refresh now. `202` started, `409` already running. Takes minutes; poll `/api/status` (`refreshing`). |

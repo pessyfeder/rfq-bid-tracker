@@ -137,10 +137,10 @@ function scheduleFollowUp() {
   followTimer = setTimeout(() => { followTimer = null; runRefresh(`follow-up ${followUps}/${RETRY_MAX} after failures`); }, RETRY_AFTER_MIN * 60000);
 }
 
-// Schedule: one refresh per daily cycle, and cycles start at CFG.morningHour (8:00 local). A refresh is due when the
-// newest attempt is older than the start of the current cycle (the most recent 8:00), or when a source has never run
+// Schedule: one refresh per daily cycle, and cycles start at CFG.morningHour (5:00 local by default). A refresh is due when the
+// newest attempt is older than the start of the current cycle (the most recent morningHour:00), or when a source has never run
 // (first install: everything runs at once, at any time of day). So the first start/wake/logon of the morning
-// refreshes, a later restart the same day does not, and a PC left on refreshes at 8:00. The service is started at
+// refreshes, a later restart the same day does not, and a PC left on refreshes at morningHour:00. The service is started at
 // boot and at logon by Task Scheduler, so it is already running when the machine wakes at the lock screen.
 //
 // Wake detection: a sleeping machine freezes this process, so a tick that arrives much later than
@@ -342,7 +342,7 @@ if (process.argv.includes("--once")) {
     if (stats.added || stats.changed || stats.deactivated) save();
     startScheduler();
     if (due()) runRefresh("start-up, no refresh yet this morning");
-    else { failedAfter = failures(); scheduleFollowUp(); } // failures left from the last run: retry soon, not in 24 h
+    else { failedAfter = failures(); scheduleFollowUp(); } // failures left from the last run: retry soon, not tomorrow
   });
   const stop = () => { log("stopping"); server.close(() => process.exit(0)); setTimeout(() => process.exit(0), 3000).unref(); };
   process.on("SIGINT", stop); process.on("SIGTERM", stop);
