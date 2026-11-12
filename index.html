@@ -565,7 +565,35 @@
     $(id).addEventListener("input", function () { clearTimeout(timer); timer = setTimeout(onFilter, 0); }); // coalesce events from one keystroke
     $(id).addEventListener("change", function () { clearTimeout(timer); onFilter(); });
   });
+  // Keep the user's view across the reload that follows a refresh: filters, sort, open rows and scroll position.
+  var UI_KEY = "rfqUiState", FIELDS = ["q", "st", "level", "category"];
+  function loadShall(row) { // same fetch as the Show-all-requirements button, for rows that were open before the reload
+    fetch("/shall/" + encodeURIComponent(row.id)).then(function (x) { if (!x.ok) throw 0; return x.json(); })
+      .then(function (j) { row.shall = j.shall || []; }, function () { row.shall = [{ text: "Could not load the requirements. Open the full RFQ document instead." }]; })
+      .then(render);
+  }
+  window.saveUiState = function () {
+    try {
+      var o = { at: Date.now(), sort: sort, expanded: expanded, scopeOpen: scopeOpen, scrollY: window.scrollY, hideFlagged: $("hideFlagged").checked };
+      FIELDS.forEach(function (id) { o[id] = $(id).value; });
+      sessionStorage.setItem(UI_KEY, JSON.stringify(o));
+    } catch (e) {}
+  };
+  var restoredScroll = null;
+  try {
+    var saved = JSON.parse(sessionStorage.getItem(UI_KEY) || "null");
+    sessionStorage.removeItem(UI_KEY); // used once, for the reload right after a refresh
+    if (saved && Date.now() - saved.at < 10 * 60000) {
+      FIELDS.forEach(function (id) { if (saved[id] != null) $(id).value = saved[id]; });
+      $("hideFlagged").checked = saved.hideFlagged !== false;
+      if (saved.sort && saved.sort.key) sort = saved.sort;
+      Object.keys(saved.scopeOpen || {}).forEach(function (id) { scopeOpen[id] = true; });
+      rows.forEach(function (r) { if (saved.expanded && saved.expanded[r.id]) { expanded[r.id] = true; if (!r.shall && shallN(r)) loadShall(r); } });
+      restoredScroll = saved.scrollY;
+    }
+  } catch (e) {}
   render();
+  if (restoredScroll) window.scrollTo(0, restoredScroll);
   // Build every row's search text now, while the page is idle, so the first keystroke is not slower than the rest.
   setTimeout(function () { rows.forEach(function (r) { if (!r._hay) r._hay = haystack(r); }); }, 0);
 })();
@@ -582,7 +610,7 @@
       if (st.refreshing) {
         was = true;
         show("Refreshing…" + (st.refreshStartedAt ? " (started " + hhmm(st.refreshStartedAt) + ")" : "") + " Showing the previous data until it finishes.");
-      } else if (was) { location.reload(); }
+      } else if (was) { if (window.saveUiState) window.saveUiState(); location.reload(); }
       else bar.hidden = true;
     }).catch(function () {
       if (++misses >= 2) show("Can't reach the RFQ service. The data below may be out of date.", true);
