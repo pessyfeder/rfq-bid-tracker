@@ -540,7 +540,7 @@
     rows.forEach(function (r) {
       if (r.daysLeft >= 0 && ((r.details.warnings || []).length || r.noDue)) flagged++;
     });
-    $("count").textContent = total + " shown · " + flagged + " flagged · " +
+    $("count").textContent = total + " shown" + (f.hideFlagged ? " (" + flagged + " flagged)" : "") + " " +
       (m ? "live from " + m.source + ", updated " + new Date(m.fetchedAt).toLocaleString("en-US") : "No data");
   }
 
