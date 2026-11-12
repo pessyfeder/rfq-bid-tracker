@@ -18,7 +18,7 @@ None. The data is not private. Traffic is plain HTTP. The service listens on `12
 | `GET /api/rfqs/{id}` | One request, including closed / dropped ones. |
 | `POST /api/refresh` | Start a refresh now. `202` started, `409` already running. Takes minutes; poll `/api/status` (`refreshing`). Loopback callers only (`403` otherwise, and cross-site browser requests are refused); set `REFRESH_TOKEN` to allow remote callers who send `Authorization: Bearer <token>` (`401` if wrong). |
 
-A file snapshot of everything is also written after each refresh to `data/feed.json` (same format as `/api/rfqs?open=0`), for a shared-folder hand-off instead of HTTP.
+A file snapshot of everything is also written after each refresh to `data/feed.json` (the full set, not truncated at the 5,000 `limit`; same record format as `/api/rfqs?open=0`), for a shared-folder hand-off instead of HTTP.
 
 ## Reading it: the incremental pattern (recommended)
 

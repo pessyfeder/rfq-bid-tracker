@@ -219,14 +219,15 @@ leaves the old live file untouched, so old data stays; a failed state keeps its 
 and is flagged on the page and in /api/status.
 
  - NYC City Record (fetch-nyc.js): LIVE. Open Procurement solicitations from NYC Open
-   Data, no key needed. Optional AI read (needs ANTHROPIC_API_KEY): stated amount,
+   Data, no key needed. Read by paging the Socrata API (5,000 rows a page, transient errors
+   retried, so no rows are silently dropped). Optional AI read (needs ANTHROPIC_API_KEY): stated amount,
    requires, scope, key "shall" points. Then similar-award value estimates.
-   Run: node fetch-nyc.js [--max 500]
+   Run: node fetch-nyc.js [--max 500]  (--max = most open solicitations loaded)
  - SAM.gov Opportunities (fetch-sam.js): LIVE. Solicitations and combined
    synopsis/solicitations posted in the last 30 days. Needs SAM_API_KEY (free; environment
    only). Quota-aware (SAM_DAILY_BUDGET, default 10 requests a day): each description is read
    once, and a backlog resumes the next day. Optional AI read as above.
-   Run: node fetch-sam.js [--days 30 --max 300]
+   Run: node fetch-sam.js [--days 30 --max 5000 --budget N]  (--max = most new notices added per run)
  - State portals (fetch-states.js): LIVE, 28 adapters, one per state in states/ (a failing
    state does not stop the others; one retry pass after a pause):
      DE IN IA LA MS SC ID VT TX (TxDOT lettings only) RI NY WY KS FL NE WV MO SD OK AR CO AK HI,
@@ -234,7 +235,7 @@ and is flagged on the page and in /api/status.
    Each notice needs a title, https link and due date, else it is dropped. Then USAspending
    value estimates and the AI read of the notice page and attachments (needs
    ANTHROPIC_API_KEY; capped at STATE_MAX_READS = 60 new reads per run, soonest deadline
-   first; earlier reads are reused). Portals that forbid reads or need a login are marked
+   first; earlier reads are reused; a notice whose listing changed, i.e. an amendment, is re-read). Portals that forbid reads or need a login are marked
    noPageReads and show a "Not read" note. Run: node fetch-states.js [DE NV ...]
    Per-state status and the reasons for parked states: state-sources-survey.md,
    state-fetch-status.pdf, state-feed-requests.md.
@@ -288,7 +289,8 @@ Fetchers and helpers (project root)
  sam-estimates.js    USAspending similar-award estimates (federal and state NAICS lookups).
  stated-amount.js    Keyword pass that finds a contract amount stated in a notice (no key).
  ai-extract.js       Claude Haiku reader: requires, scope, "shall" points, stated amount.
-                     Validates output strictly, caches in ai-cache.json, logs cost.
+                     Validates output strictly, caches in ai-cache.json, logs cost. Retries 429/5xx/network
+                     errors with backoff; a bad key or retired model id stops the run with one message.
 
 State adapters (states/)
  <state>.js          One adapter each { code, name, fetch() } for the portals listed in
@@ -309,6 +311,10 @@ Docs and notes
  rfq-bid-tracker notes.md Scratch notes (not part of the app).
  make-status-pdf.py  Regenerates state-fetch-status.pdf (needs reportlab).
  state-fetch-status.pdf  Per-state fetch status report.
+
+Other settings (environment or .env): PORT, HOST, REFRESH_TOKEN, REFRESH_MORNING_HOUR, WAKE_DELAY_SEC (45),
+FETCH_TIMEOUT_MIN (45), RETRY_AFTER_MIN, RETRY_MAX, SAM_DAILY_BUDGET, STATE_MAX_READS (60),
+STATE_RETRY_WAIT_SEC (60), STATE_REREAD_ONLY, BSO_DEBUG, SAM_BASE (offline testing only).
 
 Generated at run time (git-ignored): live-*.js, data/ (state.json, feed.json, service.log,
 backups), ai-cache.json, ai-usage.log, sam-cache.json, sam-quota.json, *-run.log.
