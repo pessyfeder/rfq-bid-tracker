@@ -1,8 +1,8 @@
 // RFQ Bid Tracker - standalone service.
 //
 // One process that (1) runs the fetchers (first start/wake each morning), (2) keeps the results in data/state.json,
-// and (3) serves them as JSON to the other machine over HTTP. See FEED.md for the API and DEPLOY.md
-// for installation. No npm dependencies; Node 18+.
+// and (3) serves them as JSON to the other machine over HTTP. See FEED.md for the API and spec.txt
+// for the rest. No npm dependencies; Node 18+.
 //
 //   node server.js            start the service
 //   node server.js --once     run one refresh now, write data/feed.json, exit (no HTTP)

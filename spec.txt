@@ -96,7 +96,13 @@ Toolbar and behavior
  - Count line: "n of N requests", source(s) and when the data was last updated.
  - The long "shall" list is not loaded with the page: it is fetched per notice from the
    service (/shall/<id>) when "Show all requirements" is opened.
- - No paging: all matching requests are always shown.
+ - Paging: requests are drawn 100 at a time, with "Show N more" and "Show all" buttons, so filtering
+   and resizing stay fast. The count line still reports the full match count. Changing a filter or
+   the sort goes back to the first 100.
+ - Filters, sort, open rows and scroll position are kept across the automatic reload after a refresh.
+ - Banners: Refreshing (shows the step and how many states are done), first-install notice, a
+   warning when the data is over 36 hours old (from dataAsOf), and an offline message that says how
+   old the data is. The page explains when it is served by something other than the RFQ service.
  - Click a header to sort; click again to reverse.
  - Narrow screens (900px or less): each request becomes a labelled card.
 
@@ -174,9 +180,12 @@ Search
     existing server only if it is well maintained (patched, backed up, HTTPS) and run
     the app as its own low-privilege user or in Docker; if it is old, neglected or hosts
     something important, a separate VPS ($5-10/month) is cheaper than the risk. Also
-    open: Linux or Windows server (decides the setup steps in DEPLOY.md).
- n. Refresh trigger: DECIDED. Fetchers run automatically once 24 hours have passed since the last attempt
-    (right after waking, if the 24 hours ran out during sleep) (no fixed time of day; see DEPLOY.md). The AI cache file (ai-cache.json) must persist on the
+    open: Linux or Windows server.
+ n. Refresh trigger: DECIDED. Fetchers run automatically once a day, on the first start-up, logon or
+    wake after 5:00 local time (REFRESH_MORNING_HOUR changes the hour); after a wake the service waits
+    45 s for the network. A source still failing is retried up to 3 times, 20 minutes apart. On first
+    install every source runs at once. A fetcher frozen by sleep is stopped after FETCH_TIMEOUT_MIN
+    (45) and retried. The AI cache file (ai-cache.json) must persist on the
     server between runs, otherwise every notice is re-read and re-billed. Estimated AI
     cost is a few cents a day, roughly $1 to $3 a month (a projection, not a measurement;
     check ai-usage.log and the Anthropic Console). The earlier figure of about 50 cents
@@ -198,8 +207,9 @@ Search
 How it works: node fetchers write generated live-*.js files (git-ignored); server.js runs them,
 merges the result into data/state.json, serves it as JSON (FEED.md) and serves the page
 (index.html), which loads live-sam.js, live-nyc.js and live-states.js and merges them. The
-data shape is documented at the top of data.js. Fetchers run once 24 hours have passed since
-the last attempt (right after waking, if it came due asleep; see DEPLOY.md). A failed fetch
+data shape is documented at the top of data.js. Fetchers run once a day, on the first
+start-up, logon or wake after 5:00 local time (REFRESH_MORNING_HOUR); sources that still fail are
+retried up to 3 times, 20 minutes apart (RETRY_AFTER_MIN, RETRY_MAX). A failed fetch
 leaves the old live file untouched, so old data stays; a failed state keeps its last notices
 and is flagged on the page and in /api/status.
 
@@ -223,10 +233,11 @@ and is flagged on the page and in /api/status.
    noPageReads and show a "Not read" note. Run: node fetch-states.js [DE NV ...]
    Per-state status and the reasons for parked states: state-sources-survey.md,
    state-fetch-status.pdf, state-feed-requests.md.
- - Pennsylvania (states/pennsylvania.js): written but NOT registered. PA forbids automated
-   reads; the only route is DGS's eAlert emails, read over IMAP from a dedicated Gmail
-   account (PA_GMAIL_USER, PA_GMAIL_APP_PASSWORD). Waiting on the Google app password;
-   until it is registered in fetch-states.js PA shows nothing.
+ - Pennsylvania (states/pennsylvania.js): written but NOT registered (it is not in the
+   ADAPTERS list in fetch-states.js, and a state waiting for setup is not retried). PA forbids
+   automated reads; the only route is DGS's eAlert emails, read over IMAP (read-only) from a
+   dedicated Gmail account (PA_GMAIL_USER, PA_GMAIL_APP_PASSWORD). Waiting on the Google app
+   password; until it is registered PA shows nothing.
  - Not started: SAM.gov Entity API (vendor registrations), DIBBS and eBuy (need logins or
    scraping). Add one at a time. Rule: only fully automatic sources are kept; manual CSV or
    .eml routes were removed.
@@ -286,16 +297,13 @@ State adapters (states/)
 
 Docs and notes
  spec.txt            This file.
- DEPLOY.md           Installing and running the service (Task Scheduler, keys, hosting).
  FEED.md             The JSON feed API for client apps.
  anthropic-key-setup.md   Steps to create and fund the Anthropic key (no secrets).
  state-sources-survey.md  Survey of every state's source and its status.
  state-feed-requests.md   Feed-request emails to states that forbid automated reads.
  rfq-bid-tracker notes.md Scratch notes (not part of the app).
- make-status-pdf.py, make-email-states-pdf.py  Regenerate state-fetch-status.pdf and
-                     email-alert-states.pdf (need reportlab).
- App Status.pdf, search_google.pdf, state-fetch-status.pdf, email-alert-states.pdf
-                     Status and reference PDFs.
+ make-status-pdf.py  Regenerates state-fetch-status.pdf (needs reportlab).
+ state-fetch-status.pdf  Per-state fetch status report.
 
 Generated at run time (git-ignored): live-*.js, data/ (state.json, feed.json, service.log,
 backups), ai-cache.json, ai-usage.log, sam-cache.json, sam-quota.json, *-run.log.
@@ -305,7 +313,7 @@ backups), ai-cache.json, ai-usage.log, sam-cache.json, sam-quota.json, *-run.log
 ---------
  - Table, filters, search, Bid factors and fetch-health banner built (index.html).
    Bid status tracking was removed; it belongs to the separate bidding app.
- - Standalone service built (server.js): scheduled fetches + JSON feed (FEED.md, DEPLOY.md).
+ - Standalone service built (server.js): scheduled fetches + JSON feed (FEED.md).
  - Live feeds: NYC, SAM.gov and 28 state portals. PA waits on a Gmail app password; other
    states are parked pending a feed or email route (state-sources-survey.md).
  - AI read with caching and cost reporting built (also reads state attachments).
