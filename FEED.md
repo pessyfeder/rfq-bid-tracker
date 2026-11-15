@@ -1,6 +1,6 @@
 # RFQ feed API (for clients of the service)
 
-The service (`server.js`) refreshes the data once per day, on the first start-up, logon or wake after 5:00 local time (set `REFRESH_MORNING_HOUR` to change the hour), and serves it as JSON. On first install, when a source has never run, every fetcher runs at once. If a source is still failing after a refresh, it retries up to 3 more times, 20 minutes apart. This service does **not** judge eligibility (see spec 2a); it passes on what each request says it requires.
+The service (`server.js`) refreshes the data once per day, on the first check or wake after 5:00 local time (set `REFRESH_MORNING_HOUR` to change the hour), and serves it as JSON. On first install, when a source has never run, every fetcher runs at once. If a source is still failing after a refresh, it retries up to 3 more times, 20 minutes apart. This service does **not** judge eligibility (see spec 2a); it passes on what each request says it requires.
 
 Base URL: `http://<service-machine>:8765` (port set by `PORT`). Schema version: **1**.
 

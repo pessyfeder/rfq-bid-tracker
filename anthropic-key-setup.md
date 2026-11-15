@@ -45,10 +45,10 @@ Either person can do this once they are inside Israel's organization.
 
 The scripts read the key from the environment variable `ANTHROPIC_API_KEY` (see `fetch-nyc.js`, `fetch-sam.js`, `ai-extract.js`). If it is not set they skip the AI step and the app still works with basic values.
 
-Background jobs (systemd, Windows Task Scheduler) do not inherit a login shell's variables, so set it where the job runs:
+Background jobs (systemd, services) do not inherit a login shell's variables, so set it where the job runs:
 
 - **Linux (systemd):** create `/etc/rfq-bid-tracker.env` containing the line `ANTHROPIC_API_KEY=sk-ant-...`, owned by root with `chmod 600`, and load it with `EnvironmentFile=/etc/rfq-bid-tracker.env` in the service unit.
-- **Windows:** set it as a system environment variable (System Properties > Environment Variables) or in the scheduled task's environment, then restart the task or service.
+- **Windows:** set it as a system environment variable (System Properties > Environment Variables) then restart the service.
 
 The same applies to `SAM_API_KEY` (the free SAM.gov key from SAM.gov > Account Details > API Key).
 

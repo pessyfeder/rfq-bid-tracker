@@ -3,6 +3,6 @@
   "version": "1.0.0",
   "private": true,
   "description": "Standalone RFQ feed service: fetches solicitations every 24 h and serves them as JSON.",
-  "scripts": { "start": "node server.js", "refresh": "node server.js --once" },
+  "scripts": { "refresh": "node server.js --once" },
   "engines": { "node": ">=18" }
 }

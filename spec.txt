@@ -181,7 +181,7 @@ Search
     the app as its own low-privilege user or in Docker; if it is old, neglected or hosts
     something important, a separate VPS ($5-10/month) is cheaper than the risk. Also
     open: Linux or Windows server.
- n. Refresh trigger: DECIDED. Fetchers run automatically once a day, on the first start-up, logon or
+ n. Refresh trigger: DECIDED. Fetchers run automatically once a day, on the first check or
     wake after 5:00 local time (REFRESH_MORNING_HOUR changes the hour); after a wake the service waits
     45 s for the network. A source still failing is retried up to 3 times, 20 minutes apart. On first
     install every source runs at once. A fetcher frozen by sleep is stopped after FETCH_TIMEOUT_MIN
@@ -218,7 +218,7 @@ How it works: node fetchers write generated live-*.js files (git-ignored); serve
 merges the result into data/state.json, serves it as JSON (FEED.md) and serves the page
 (index.html), which loads live-sam.js, live-nyc.js and live-states.js and merges them. The
 data shape is documented at the top of data.js. Fetchers run once a day, on the first
-start-up, logon or wake after 5:00 local time (REFRESH_MORNING_HOUR); sources that still fail are
+check or wake after 5:00 local time (REFRESH_MORNING_HOUR); sources that still fail are
 retried up to 3 times, 20 minutes apart (RETRY_AFTER_MIN, RETRY_MAX). A failed fetch
 leaves the old live file untouched, so old data stays; a failed state keeps its last notices
 and is flagged on the page and in /api/status.
@@ -269,7 +269,7 @@ Things that trip up newcomers (from notes)
 ---------------------------------
 Service and page
  server.js           The one running process. Loads .env, runs the fetchers (24 h rule, wake
-                     detection, startup), ingests results, and serves HTTP: the page and
+                     detection), ingests results, and serves HTTP: the page and
                      its scripts (this machine only), /api/health, /api/status (incl.
                      per-state health), /api/rfqs, /api/rfqs/<id>, POST /api/refresh,
                      /shall/<id>. Builds a slimmed live-states.js for the page. --once =
@@ -282,8 +282,7 @@ Service and page
  facts.js            Bid-factor keyword rules (FACT_RULES), shared by the page and server.
  data.js             Documents the notice data shape (comment only; no data).
  sample-data.js      Invented demo rows, loaded only on *.github.io.
- start.cmd           Windows launcher: runs server.js and restarts it if it exits.
- package.json        npm start / npm run refresh; Node 18+, no dependencies.
+ package.json        npm run refresh; Node 18+, no dependencies.
  .claude/launch.json Local preview config for the editor (git-ignored).
 
 Fetchers and helpers (project root)
