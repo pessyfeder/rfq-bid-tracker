@@ -380,14 +380,14 @@ const server = http.createServer((req, res) => {
         }
         if (refresh.running) return send(res, 409, { error: "a refresh is already running", startedAt: refresh.startedAt });
         // ?failed=1: retry only the sources that failed last time (what the page does on load), not everything.
-        let only;
+        let only, states;
         if (url.searchParams.get("failed") === "1") {
           const ids = failures(true);
           if (!ids.length) return send(res, 200, { started: false, reason: "nothing failed" });
           only = new Set(ids);
+          states = failedStateCodes(); // within a source, re-run only the states that failed (same as the scheduled follow-up)
         }
         // ?portal=sam | nyc | states | state:XX: refresh just that portal (Federal, local, all states, or one state).
-        let states;
         const portal = url.searchParams.get("portal");
         if (portal) {
           // Comma-separated list, e.g. sam,nyc,state:NY,state:CA. "states" = every state; state:XX = just that state.
