@@ -24,12 +24,20 @@
   // Short hover text: just the stretch of text around the match, not the whole paragraph.
   function excerpt(text, m) {
     text = String(text).replace(/\s+/g, " ").trim();
-    var max = 140;
-    if (text.length <= max) return text;
+    var max = 120;
     var at = Math.max(0, text.indexOf(m[0]));
-    var start = Math.max(0, at - 50);
-    var end = Math.min(text.length, start + max);
-    return (start > 0 ? "…" : "") + text.slice(start, end).trim() + (end < text.length ? "…" : "");
+    // The sentence holding the match: from the previous ". " to the next one.
+    var start = text.lastIndexOf(". ", at);
+    start = start < 0 ? 0 : start + 2;
+    var end = text.indexOf(". ", at);
+    end = end < 0 ? text.length : end + 1;
+    var s = text.slice(start, end);
+    if (s.length <= max) return s;
+    // Still long: keep a window around the match, cut at word boundaries.
+    var a = Math.max(0, at - start - 40), b = Math.min(s.length, a + max);
+    if (a > 0) a = s.indexOf(" ", a) + 1 || a;
+    if (b < s.length) { var sp = s.lastIndexOf(" ", b); if (sp > a) b = sp; }
+    return (a > 0 ? "…" : "") + s.slice(a, b).trim() + (b < s.length ? "…" : "");
   }
   function keyFacts(r) {
     var x = r.details || {};
