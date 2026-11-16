@@ -175,7 +175,7 @@ function scheduleFollowUp() {
   if (followUps >= RETRY_MAX) { log(`still failing after ${followUps} follow-up refreshes (${failedAfter.join(", ")}); next try tomorrow morning`); gaveUp = { sources: failures(true), attempts: followUps }; followInfo = null; followUps = 0; failedAfter = []; return; }
   followUps++;
   log(`still failing: ${failedAfter.join(", ")}; follow-up refresh ${followUps}/${RETRY_MAX} in ${RETRY_AFTER_MIN} min`);
-  followInfo = { at: new Date(Date.now() + RETRY_AFTER_MIN * 60000).toISOString(), attempt: followUps, max: RETRY_MAX, sources: failures(true) };
+  followInfo = { at: new Date(Date.now() + RETRY_AFTER_MIN * 60000).toISOString(), attempt: followUps, max: RETRY_MAX, sources: failures(true), states: failedStateCodes() };
   followTimer = setTimeout(() => { followTimer = null; followInfo = null; runRefresh(`follow-up ${followUps}/${RETRY_MAX} after failures`, { only: new Set(failures(true)), states: failedStateCodes() }); }, RETRY_AFTER_MIN * 60000); // retry only the sources that failed
 }
 
