@@ -30,6 +30,8 @@
   .fbtn .caret { font-size: 10px; margin-left: 4px; }
   .fpanel { position: absolute; z-index: 30; top: calc(100% + 4px); left: 0; width: 280px; max-width: calc(100vw - 24px); background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; box-shadow: 0 6px 20px rgba(28, 36, 48, .15); }
   .fpanel[hidden] { display: none; }
+  .fpanel.fsub { position: static; width: auto; max-width: none; border: 0; border-top: 1px solid var(--line); border-radius: 0; box-shadow: none; padding: 8px 0 0; margin-top: 8px; }
+  .fpanel.fsub .flist { max-height: 180px; }
   .fttl { font-weight: 600; margin-bottom: 6px; }
   .fnote { color: var(--muted); font-size: 12px; margin: 0 0 6px; }
   .frow { display: flex; align-items: center; gap: 8px; padding: 4px 0; cursor: pointer; }
@@ -419,7 +421,7 @@
     return r.requires;
   }
   var FILTERS = [
-    { key: "st",       label: "State",        type: "list", get: function (r) { return [r.st]; }, name: stName },
+    { key: "st",       label: "State",        type: "list", get: function (r) { return [r.st]; }, name: stName, into: "level" }, // lives inside the Municipality dropdown
     { key: "category", label: "Category",     type: "list", get: function (r) { return [r.category]; } },
     { key: "elig",     label: "Eligibility",  type: "list", get: eligValues, note: "Hides requests that list any unchecked requirement." },
     { key: "posted",   label: "Posted",       type: "date" },
@@ -497,9 +499,11 @@
       h += '<button type="button" class="freset" data-reset>Reset</button>';
     }
     p.innerHTML = h;
-    w.appendChild(b); w.appendChild(p); $("filters").appendChild(w);
     fwraps[f.key] = { btn: b, panel: p };
+    if (f.into) { p.className = "fpanel fsub"; p.hidden = false; return; } // appended to its host panel below
+    w.appendChild(b); w.appendChild(p); $("filters").appendChild(w);
   });
+  FILTERS.forEach(function (f) { if (f.into) fwraps[f.into].panel.appendChild(fwraps[f.key].panel); });
 
   function fdesc(f) { // text for the chip of an active range filter
     var o = R[f.key], a = o.a, b = o.b, parts = [];
@@ -513,8 +517,10 @@
     var chips = [];
     FILTERS.forEach(function (f) {
       var x = fwraps[f.key], on = isActive(f), n = f.type === "list" ? hiddenN(f) : 0;
-      x.btn.classList.toggle("on", on);
-      x.btn.innerHTML = esc(f.label) + (n ? " (" + n + " hidden)" : "") + ' <span class="caret">&#9662;</span>';
+      var sub = FILTERS.filter(function (s) { return s.into === f.key; })[0]; // a filter nested in this one's dropdown
+      var nb = n + (sub ? hiddenN(sub) : 0);
+      x.btn.classList.toggle("on", on || !!(sub && isActive(sub)));
+      x.btn.innerHTML = esc(f.label) + (nb ? " (" + nb + " hidden)" : "") + ' <span class="caret">&#9662;</span>';
       if (f.type === "list") {
         var all = x.panel.querySelector("[data-all]"), tot = listValues(f).length;
         all.checked = n === 0; all.indeterminate = n > 0 && n < tot;
@@ -533,7 +539,7 @@
     fc.hidden = !chips.length;
   }
   function closePanels(except) {
-    FILTERS.forEach(function (f) { if (f.key !== except) fwraps[f.key].panel.hidden = true; });
+    FILTERS.forEach(function (f) { if (f.key !== except && !f.into) fwraps[f.key].panel.hidden = true; });
   }
   function applyFilters() { syncFilters(); limit = PAGE; render(); }
 
