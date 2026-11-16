@@ -89,9 +89,11 @@
   .chip { display: inline-block; background: #eef1f5; border-radius: 4px; padding: 1px 6px; margin: 0 4px 4px 0; font-size: 12px; }
   .chip.flag { background: #fdecea; color: var(--bad); font-weight: 600; }
   .chip.amend { background: #fff3cd; color: #7a5b00; font-weight: 600; }
-  .drow { display: flex; gap: 8px; align-items: baseline; margin-bottom: 3px; }
-  .dl { flex: 0 0 44px; font-size: 10px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
-  .dv { min-width: 0; }
+  .dlist { margin: 0 0 8px; padding-left: 16px; font-size: 13px; }
+  .dlist li { margin-bottom: 3px; }
+  .dlist + .dlist { margin-top: -5px; }
+  .dlist li b { color: var(--muted); font-weight: 600; }
+  .dlist .chip { margin: 0 4px 2px 0; }
   .dstatus { margin-bottom: 4px; }
   .days { font-weight: 600; }
   .left { font-size: 12px; margin-top: 2px; }
@@ -657,18 +659,19 @@
   function detailsHtml(r) {
     // Always in the same order: status chips, then labeled Region and Terms rows. Empty rows are left out.
     // Bid factors are in the Eligibility cell.
+    // A small chart: fixed rows (Status, Region, Terms), label cell on the left, value on the right; "None" when empty.
     var x = r.details, h = "";
     var status = x.amended ? '<span class="chip amend">Amended</span>' : "";
     (x.warnings || []).forEach(function (w) { status += '<span class="chip amend">&#9888; ' + esc(w) + "</span>"; });
-    if (status) h += '<div class="dstatus">' + status + "</div>";
+    h += detailRow("Status", status);
     h += detailRow("Region", esc(x.region));
     // Restrictions / set-asides live in the Eligibility column only; other requirement notes are the Terms row.
     var inElig = (r.requires || []).map(function (q) { return q.toLowerCase(); });
     h += detailRow("Terms", x.requirements.filter(function (q) { return inElig.indexOf(String(q).toLowerCase()) < 0 && !(x.restriction && q === x.restriction); })
       .map(function (q) { return '<span class="chip">' + esc(q) + "</span>"; }).join(""));
-    return h;
+    return h ? '<ul class="dlist">' + h + "</ul>" : "";
   }
-  function detailRow(label, inner) { return inner ? '<div class="drow"><span class="dl">' + label + '</span><span class="dv">' + inner + "</span></div>" : ""; }
+  function detailRow(label, inner) { return inner ? '<li><b>' + label + ":</b> " + inner + "</li>" : ""; }
 
   var SCOPE_MAX = 220;
   var scopeOpen = {}; // request id -> true when full description is shown
@@ -681,13 +684,55 @@
     return '<div class="req-title">' + esc(shown) + "</div>" +
       (long ? '<button class="toggle title-toggle" data-id="' + esc(r.id) + '" aria-expanded="' + open + '">' + (open ? "Show less" : "Show more") + "</button>" : "");
   }
+  // Pulls the few useful facts out of the description as short labeled bullets. Left out: anything the other columns already
+  // show (the title, dates, bonds / licences / other Bid factors, how to submit, contacts, IDs). The full text stays one click away.
+  function decodeText(s) { try { return new DOMParser().parseFromString(String(s), "text/html").documentElement.textContent; } catch (e) { return String(s); } }
+  function clip(s, n) { s = String(s).replace(/\s+/g, " ").trim().replace(/[\s,;:.]+$/, ""); return s.length > n ? s.slice(0, n - 1).replace(/\s+\S*$/, "") + "…" : s; }
+  function words(s) { return String(s).toLowerCase().replace(/[^a-z0-9 ]/g, " ").split(/\s+/).filter(function (w) { return w.length > 2; }); }
+  var DROP_LABEL = /^(event id|solicitation|source system|unspsc|questions? due|anticipated|buyer|issuing officer|addendum|close date|posted)\b/i;
+  var DROP_TEXT = /@|https?:\/\/|www\.|\b\d{3}[-.)\s]\d{3,4}[-.\s]\d{4}\b|see (the )?(attach|solicitation|document)|submit|upload|bidders? (are|must|should)|proposals? (are )?due|written questions|addend|acknowledg|please|contact|portal|passport|click|vendor resources|due (no later|by|on)|\b(posted|issued) by\b|not a state-agency|meeting|participation|exchange of information|keywords? search|insert the|see the notice|for pql|only certified|open-ended|ongoing basis|accepted and reviewed|\bEPIN\b/i;
+  function keyPoints(r) {
+    var raw = decodeText(r.scope || "").replace(/\s+/g, " ").trim(), out = [], m;
+    if (!raw) return out;
+    function add(label, v, n) { v = clip(v, n || 110); if (v && out.length < 6) out.push(label ? [label, v] : [null, v]); }
+    var tw = words(r.title);
+    var s = raw;
+    // TxDOT style: "Title. Local District Let. Houston District. Type of work: X. Limits: A to B. Up to N working days. Work includes: ..."
+    if ((m = /Type of work:\s*(.+?)\.\s/i.exec(s))) add("Work", m[1]);
+    if ((m = /Limits:\s*(.+?)(?:\.\s|$)/i.exec(s))) { var lim = m[1].split(/\s+to\s+/i); var l0 = (lim[0] || "").trim(), l1 = (lim[1] || "").trim(); add("Limits", l0 && l1 && l0.toLowerCase() !== l1.toLowerCase() ? l0 + " to " + l1 : (l0 || l1)); }
+    if (out.length && (m = /\b([A-Z][a-z]+) District\b/.exec(s))) add("District", m[1]);
+    if ((m = /Up to ([\d,]+) (working|calendar) days/i.exec(s))) add("Duration", m[1] + " " + m[2].toLowerCase() + " days");
+    if ((m = /Work includes:\s*(.+?)\.?$/i.exec(s))) add("Includes", m[1].split(/;\s*/).slice(0, 3).join("; "), 130);
+    if (out.length) return out;
+    // Supply buys (SAM / DLA style)
+    if ((m = /\b(?:procure(?:ment)?|purchase|supply|buy|seeking quotes? (?:to buy|for))(?: of)?\s+(?:a total of\s+)?([\d,]+)\s+(?:each\s+(?:of\s+)?)?/i.exec(s))) add("Quantity", m[1]);
+    if ((m = /\bNSN\s*(\d{13})/i.exec(s))) add("NSN", m[1]);
+    if ((m = /deliver(?:y|ed|ing)?\s+to\s+([^,.;]+?)(?=\s+(?:within|under|on|,)|[,.;]|$)/i.exec(s))) add("Deliver to", m[1]);
+    if ((m = /within\s+(\d+\s+days(?:\s+(?:after|ARO)\s*\w*)?)/i.exec(s))) add("Delivery", "within " + m[1]);
+    if ((m = /\b(one-year[^,.;]*|indefinite[- ]delivery[^,.;]*)/i.exec(s))) add("Contract", m[1]);
+    if ((m = /approved source[s]?\s*([A-Z0-9][^,.;]*)?|source-controlled drawing|qualified products list|limited to listed approved sources/i.exec(s))) add("Source", m[0]);
+    if (out.length) return out;
+    // Any other description: keep short sentences that say something new.
+    s.split(/(?<=[.!?])\s+(?=[A-Z0-9])/).forEach(function (sent) {
+      if (out.length >= 1) return; // one summary sentence is enough; the rest is in the full description
+      sent = sent.trim();
+      var lab = /^([A-Za-z][A-Za-z .&\/-]{1,24}):\s+(\S.*)$/.exec(sent);
+      if (DROP_TEXT.test(sent) || (lab && DROP_LABEL.test(lab[1])) || DROP_LABEL.test(sent) || sent.length < 12) return;
+      if (/^[A-Z0-9][A-Z0-9 ._|\/-]{4,}$/.test(sent) || /^[A-Z]{1,6}[-\d][\w-]*\b[^a-z]*$/.test(sent)) return; // bare IDs / codes
+      var sw = words(sent), common = sw.filter(function (w) { return tw.indexOf(w) >= 0; }).length;
+      if (sw.length && common / sw.length >= 0.6) return; // repeats the title
+      if (computeFacts({ scope: sent, id: "", details: {} }).length) return; // shown as Eligibility / Bid factors
+      if (lab) add(lab[1], lab[2], 90); else add(null, sent, 140);
+    });
+    return out;
+  }
   function scopeHtml(r, open) {
     if (!r.scope) return '<div class="scope"><span class="na">' + esc(r.details && r.details.readWhy ? "Not read: " + r.details.readWhy + ". The source data has no description." : "No data") + "</span></div>";
-    var long = r.scope.length > SCOPE_MAX;
-    var text = long && !open ? r.scope.slice(0, SCOPE_MAX - 3).trim() + "..." : r.scope;
-    return '<div class="scope">' + esc(sentence(text)) + "</div>" +
+    var pts = keyPoints(r);
+    return (pts.length ? '<ul class="dlist">' + pts.map(function (p) { return "<li>" + (p[0] ? "<b>" + esc(p[0]) + ":</b> " : "") + esc(sentence(p[1])) + "</li>"; }).join("") + "</ul>" : "") +
       (r.aiRead ? '<div class="elig-note">AI read, please verify.</div>' : "") +
-      (long ? '<button class="toggle scope-toggle" data-id="' + esc(r.id) + '" aria-expanded="' + open + '">' + (open ? "Show less" : "Show more") + "</button> " : "");
+      (open ? '<div class="scope">' + esc(sentence(decodeText(r.scope))) + "</div>" : "") +
+      '<button class="toggle scope-toggle" data-id="' + esc(r.id) + '" aria-expanded="' + open + '">' + (open ? "Hide full description" : "Full description") + "</button> ";
   }
 
   // Eligibility cell followed by the Bid factors box (kept in its own wrapper).
