@@ -676,10 +676,8 @@
     var items = eligList(r);
     var found = items.length - (r.requires ? r.requires.length : 0); // items taken from the Details notes
     if (found > 0) {
-      var kw = items.some(function (d) { return d.kw; });
       return "<td>" + items.map(function (d) { return '<span class="elig chip"' + (d.why ? ' title="' + esc(d.why) + '"' : "") + ">" + esc(d.label) + "</span>"; }).join(" ") +
-        (r.requires == null ? '<div class="elig-note">Set-asides and other restrictions were not read from the notice.</div>' : "") +
-        (kw ? '<div class="elig-note">Matched on title/scope keywords only.</div>' : "") + ai + "</td>";
+        ai + "</td>";
     }
     if (r.requires == null) {
       // Page was read but never says who may bid (e.g. Delaware's pages hold only title, dates and a contact)
