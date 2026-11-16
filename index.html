@@ -429,7 +429,7 @@
   var FILTERS = [
     { key: "st",       label: "State",        type: "list", get: function (r) { return [r.st]; }, name: stName, into: "level" }, // lives inside the Municipality dropdown
     { key: "category", label: "Category",     type: "list", get: function (r) { return [r.category]; } },
-    { key: "elig",     label: "Eligibility",  type: "list", get: eligValues, note: "Hides requests that list any unchecked requirement." },
+    { key: "elig",     label: "Eligibility",  type: "list", get: eligValues, note: "Shows requests that list at least one checked requirement." },
     { key: "posted",   label: "Posted",       type: "date" },
     { key: "due",      label: "End date",     type: "date", flag: "noDueOk", flagLabel: "Include requests with no real due date" },
     { key: "days",     label: "Days left",    type: "num", note: "Requests with no due date follow the End date setting.",
@@ -814,7 +814,9 @@
     // column filters
     for (var li = 0; li < f.lists.length; li++) {
       var vs = f.lists[li].get(r), hid = H[f.lists[li].key];
-      for (var vi = 0; vi < vs.length; vi++) if (hid[vs[vi]]) return false;
+      var anyShown = false; // a request stays when at least one of its values is ticked
+      for (var vi = 0; vi < vs.length; vi++) if (!hid[vs[vi]]) { anyShown = true; break; }
+      if (!anyShown) return false;
     }
     if (R.posted.a && r.posted < R.posted.a) return false;
     if (R.posted.b && r.posted > R.posted.b) return false;
