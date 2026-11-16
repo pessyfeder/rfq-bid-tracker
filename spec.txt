@@ -20,6 +20,13 @@ Status dropdown was removed; bid tracking lives in the separate bidding app.)
  2  Category        Type of work. NYC: City Record category. SAM.gov: "NAICS <code>". States: the
                     portal's category (UNSPSC codes become a readable name).
  3  Eligibility     Chips listing everything the RFQ requires to bid (Israel decides); "Not read" if unknown.
+                    Chips come from the notice's requires[] plus items found in the notice text
+                    and Details notes (licence, clearance, background check, prequalification,
+                    set-aside, vendor registration, restriction). Colors: red = gate (notice
+                    requirements, restriction, prequalification, set-aside); amber = effort
+                    (vendor registration, anything the notice says can be waived, e.g.
+                    "Prequalification required (unless waived)"). Bonds, insurance, pre-bid,
+                    proposal guarantee and local preference stay under Bid factors only.
                     The app does NOT judge eligibility: there is no company profile
                     and no yes / no result (DECIDED, see 2a). Sortable. AI-read rows
                     say "AI-extracted, please verify."
@@ -77,16 +84,23 @@ Bid factors (box at the top of Details)
    red   = gate: TSA-checked workers, security clearance, background checks /
            fingerprinting, license / certification
    amber = cost / effort: bonds, insurance minimums, prevailing / living wage, mandatory
-           site visit / pre-bid, 24/7 or after-hours
-   blue  = info: set-aside / preference, past performance / references, multi-year term
- Bonds, pre-bid meetings and background checks are chips, not dedicated or filterable
- fields (decided).
+           site visit / pre-bid, 24/7 or after-hours, proposal / bid guarantee
+   blue  = info: local / in-state preference, past performance / references, multi-year term
+ Bonds, pre-bid meetings and background checks are chips, not dedicated fields (decided).
+ All bid factors stay in Details; the Eligibility column adds its own gate items on top.
 
 Toolbar and behavior
- - Search box (see below).
- - Filters: State (every state that has data, plus US = federal and NYC), Municipality
-   (All levels / Federal / State / Local), Category. A state whose last fetch failed or was
-   partial is marked in the State dropdown.
+ - "Filter by" column filters (one panel per column, with value lists, ranges and dates);
+   active filters show as removable chips above the table. The value counts in each list
+   follow the Hide closed checkbox. The State list covers every state that has data, plus
+   US = federal and NYC; a state whose last fetch failed or was partial is marked.
+   The free-text search box was REMOVED from the toolbar; the Search section below
+   describes the query syntax still in the code, which has no input box right now.
+ - Refresh control: a pill toggle All / Failed / Specific plus a Refresh button.
+   Specific opens a multi-select of portals (Federal, NYC, all states, or single states).
+   The button calls POST /api/refresh with ?failed=1 or ?portal=sam,nyc,state:NY (comma list).
+   An unknown portal or state code gets 400 instead of an empty run. Failed re-runs only the
+   failed states. The refresh banner names the sources and states being retried.
  - Fetch-health banner above the table: red when a state's last fetch failed (older notices are
    still shown, with the date of the last good fetch), amber when partial, and a notice if
    live-states.js did not load. Hidden when every state fetched fine.
@@ -106,7 +120,7 @@ Toolbar and behavior
  - Click a header to sort; click again to reverse.
  - Narrow screens (900px or less): each request becomes a labelled card.
 
-Search
+Search (query syntax in the code; no search box in the toolbar at present)
  Free-text words must all match (AND) anywhere in the request, including dates and values.
  Plus optional structured pieces:
    numbers:   "value > 300k", "value 100k-500k", "days left <= 7", "days left: 22".

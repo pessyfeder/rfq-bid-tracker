@@ -619,9 +619,11 @@
   }
   // Everything that may decide eligibility: what the notice says an offeror must hold, plus the items found in Details.
   // Same null / [] meaning as r.requires, except that items found in Details count even when the restriction was not read.
+  // Items from the notice are gates, except ones the notice says can be waived.
+  function reqSev(q) { return /unless waived/i.test(q) ? "cost" : "hard"; }
   function eligList(r) {
     var base = r.requires == null ? [] : r.requires, seen = {}, out = [];
-    base.forEach(function (q) { seen[String(q).toLowerCase()] = 1; out.push({ label: String(q), sev: "hard", why: "" }); });
+    base.forEach(function (q) { seen[String(q).toLowerCase()] = 1; out.push({ label: String(q), sev: reqSev(q), why: "" }); });
     detailElig(r).forEach(function (d) { var k = d.label.toLowerCase(); if (!seen[k]) { seen[k] = 1; out.push(d); } });
     return out;
   }
@@ -684,7 +686,7 @@
       if (!r.aiRead) return '<td><span class="elig unclear">Not read</span><div class="elig-note">' + esc((r.details && r.details.readNote) || "Restriction not read from the RFQ; check the document.") + "</div></td>";
       return '<td><span class="elig yes">No requirements found</span>' + ai + "</td>";
     }
-    return "<td>" + r.requires.map(function (q) { return '<span class="elig chip hard">' + esc(q) + "</span>"; }).join(" ") + ai + "</td>";
+    return "<td>" + r.requires.map(function (q) { return '<span class="elig chip ' + reqSev(q) + '">' + esc(q) + "</span>"; }).join(" ") + ai + "</td>";
   }
 
   // Est. value cell. Always says where the number came from.
