@@ -83,7 +83,8 @@
   .more { padding: 14px; text-align: center; border-top: 1px solid var(--line); }
   .more button { font: inherit; padding: 6px 14px; margin: 0 4px; border: 1px solid var(--line); border-radius: 6px; background: var(--card); cursor: pointer; }
   td.num, th.num { text-align: left; font-variant-numeric: tabular-nums; }
-  .req-title { font-weight: 600; }
+  .req-title { font-weight: 600; font-size: 15px; }
+  .req-orig { color: var(--muted); font-size: 12px; margin-top: 2px; }
   .agency { color: var(--muted); font-size: 12px; }
   .buyer { font-weight: 600; font-size: 13px; margin-top: 4px; }
   .lead { margin: 2px 0 6px; line-height: 1.35; }
@@ -695,9 +696,15 @@
     var t = sentence(r.title) || "";
     // Say "meeting" in the title itself instead of using a separate chip.
     if (isPreSol(r) && !/meeting/i.test(t)) t = /conferences?/i.test(t) ? t.replace(/conference/i, "meeting").replace(/conferences/i, "meetings") : t + " (meeting)";
-    var long = t.length > TITLE_MAX;
-    var shown = long && !open ? t.slice(0, TITLE_MAX - 3).trim() + "..." : t;
-    return '<div class="req-title">' + esc(shown) + "</div>" +
+    // Headline = a plain-English line saying what is being requested (written by the AI step). The agency's own wording stays below it.
+    var plain = r.plainTitle ? sentence(r.plainTitle) : "";
+    var orig = plain && plain.toLowerCase().replace(/[^a-z0-9]/g, "") !== t.toLowerCase().replace(/[^a-z0-9]/g, "");
+    var head = plain ? plain : t;
+    if (plain && isPreSol(r) && !/meeting/i.test(head)) head += " (meeting)";
+    var long = (orig ? t : head).length > TITLE_MAX;
+    var shown = long && !open ? (orig ? t : head).slice(0, TITLE_MAX - 3).trim() + "..." : (orig ? t : head);
+    return '<div class="req-title">' + esc(head) + "</div>" +
+      (orig ? '<div class="req-orig" title="The agency&rsquo;s own wording">Listed as: ' + esc(shown) + "</div>" : "") +
       (long ? '<button class="toggle title-toggle" data-id="' + esc(r.id) + '" aria-expanded="' + open + '">' + (open ? "Show less" : "Show more") + "</button>" : "");
   }
   // Pulls the few useful facts out of the description as short labeled bullets. Left out: anything the other columns already
@@ -707,6 +714,13 @@
   function words(s) { return String(s).toLowerCase().replace(/[^a-z0-9 ]/g, " ").split(/\s+/).filter(function (w) { return w.length > 2; }); }
   var DROP_LABEL = /^(event id|solicitation|source system|unspsc|questions? due|anticipated|buyer|issuing officer|addendum|close date|posted)\b/i;
   var DROP_TEXT = /@|https?:\/\/|www\.|\b\d{3}[-.)\s]\d{3,4}[-.\s]\d{4}\b|see (the )?(attach|solicitation|document)|submit|upload|bidders? (are|must|should)|proposals? (are )?due|written questions|addend|acknowledg|please|contact|portal|passport|click|vendor resources|due (no later|by|on)|\b(posted|issued) by\b|not a state-agency|meeting|participation|exchange of information|keywords? search|insert the|see the notice|for pql|only certified|open-ended|ongoing basis|accepted and reviewed|\bEPIN\b/i;
+  // Spells out Texas road abbreviations ("AT FM 664" -> "At Farm to Market Road 664").
+  var ROAD_NAMES = { FM: "Farm to Market Road", RM: "Ranch to Market Road", SH: "State Highway", US: "U.S. Highway", IH: "Interstate", SL: "State Loop", SS: "State Spur", BU: "Business U.S. Highway", BS: "Business State Highway", BI: "Business Interstate", PR: "Park Road", CR: "County Road", RE: "Recreational Road", FS: "Farm to Market Spur", SP: "Spur", LP: "Loop", NASA: "NASA Road" };
+  function roadName(t) {
+    t = String(t).trim().replace(/\s+/g, " ");
+    t = t.replace(/\b(FM|RM|SH|US|IH|SL|SS|BU|BS|BI|PR|CR|RE|FS|SP|LP)\s*0*(\d+[A-Z]?)\b/g, function (_, k, n) { return ROAD_NAMES[k] + " " + n; });
+    return t.replace(/^(AT|NEAR|AND)\b/, function (w) { return w.charAt(0) + w.slice(1).toLowerCase(); });
+  }
   function keyPoints(r) {
     var raw = decodeText(r.scope || "").replace(/\s+/g, " ").trim(), out = [], m;
     if (!raw) return out;
@@ -715,7 +729,7 @@
     var s = raw;
     // TxDOT style: "Title. Local District Let. Houston District. Type of work: X. Limits: A to B. Up to N working days. Work includes: ..."
     if ((m = /Type of work:\s*(.+?)\.\s/i.exec(s))) add("Work", m[1]);
-    if ((m = /Limits:\s*(.+?)(?:\.\s|$)/i.exec(s))) { var lim = m[1].split(/\s+to\s+/i); var l0 = (lim[0] || "").trim(), l1 = (lim[1] || "").trim(); add("Limits", l0 && l1 && l0.toLowerCase() !== l1.toLowerCase() ? l0 + " to " + l1 : (l0 || l1)); }
+    if ((m = /Limits:\s*(.+?)(?:\.\s|$)/i.exec(s))) { var lim = m[1].split(/\s+to\s+/i); var l0 = roadName(lim[0] || ""), l1 = roadName(lim[1] || ""); add("Limits", l0 && l1 && l0.toLowerCase() !== l1.toLowerCase() ? l0 + " to " + l1 : (l0 || l1), 160); }
     if (out.length && (m = /\b([A-Z][a-z]+) District\b/.exec(s))) add("District", m[1]);
     if ((m = /Up to ([\d,]+) (working|calendar) days/i.exec(s))) add("Duration", "Up to " + m[1] + " " + m[2].toLowerCase() + " days");
     if ((m = /Work includes:\s*(.+?)\.?$/i.exec(s))) add("Includes", m[1].split(/;\s*/).slice(0, 3).join("; "), 130);
