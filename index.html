@@ -519,6 +519,7 @@
       var x = fwraps[f.key], on = isActive(f), n = f.type === "list" ? hiddenN(f) : 0;
       var sub = FILTERS.filter(function (s) { return s.into === f.key; })[0]; // a filter nested in this one's dropdown
       var nb = n + (sub ? hiddenN(sub) : 0);
+      if (sub) fwraps[sub.key].panel.hidden = !!H[f.key].State; // unchecking "State" removes the State list
       x.btn.classList.toggle("on", on || !!(sub && isActive(sub)));
       x.btn.innerHTML = esc(f.label) + (nb ? " (" + nb + " hidden)" : "") + ' <span class="caret">&#9662;</span>';
       if (f.type === "list") {
