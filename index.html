@@ -89,7 +89,10 @@
   .chip { display: inline-block; background: #eef1f5; border-radius: 4px; padding: 1px 6px; margin: 0 4px 4px 0; font-size: 12px; }
   .chip.flag { background: #fdecea; color: var(--bad); font-weight: 600; }
   .chip.amend { background: #fff3cd; color: #7a5b00; font-weight: 600; }
-  .region { font-weight: 600; margin-bottom: 4px; }
+  .drow { display: flex; gap: 8px; align-items: baseline; margin-bottom: 3px; }
+  .dl { flex: 0 0 44px; font-size: 10px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  .dv { min-width: 0; }
+  .dstatus { margin-bottom: 4px; }
   .days { font-weight: 600; }
   .left { font-size: 12px; margin-top: 2px; }
   .left.urgent { color: var(--bad); font-weight: 600; }
@@ -652,16 +655,20 @@
   }
 
   function detailsHtml(r) {
-    var x = r.details, h = '<div class="region">' + esc(x.region) + "</div>" + factsHtml(r);
-    // Restrictions / set-asides live in the Eligibility column only; show other notes here.
+    // Always in the same order: status chips, then labeled Region and Terms rows. Empty rows are left out.
+    // Bid factors are in the Eligibility cell.
+    var x = r.details, h = "";
+    var status = x.amended ? '<span class="chip amend">Amended</span>' : "";
+    (x.warnings || []).forEach(function (w) { status += '<span class="chip amend">&#9888; ' + esc(w) + "</span>"; });
+    if (status) h += '<div class="dstatus">' + status + "</div>";
+    h += detailRow("Region", esc(x.region));
+    // Restrictions / set-asides live in the Eligibility column only; other requirement notes are the Terms row.
     var inElig = (r.requires || []).map(function (q) { return q.toLowerCase(); });
-    if (x.amended) h += '<span class="chip amend">Amended</span>';
-    (x.warnings || []).forEach(function (w) { h += '<span class="chip amend">&#9888; ' + esc(w) + "</span>"; });
-    x.requirements.forEach(function (q) {
-      if (inElig.indexOf(String(q).toLowerCase()) < 0 && !(x.restriction && q === x.restriction)) h += '<span class="chip">' + esc(q) + "</span>";
-    });
+    h += detailRow("Terms", x.requirements.filter(function (q) { return inElig.indexOf(String(q).toLowerCase()) < 0 && !(x.restriction && q === x.restriction); })
+      .map(function (q) { return '<span class="chip">' + esc(q) + "</span>"; }).join(""));
     return h;
   }
+  function detailRow(label, inner) { return inner ? '<div class="drow"><span class="dl">' + label + '</span><span class="dv">' + inner + "</span></div>" : ""; }
 
   var SCOPE_MAX = 220;
   var scopeOpen = {}; // request id -> true when full description is shown
@@ -683,7 +690,12 @@
       (long ? '<button class="toggle scope-toggle" data-id="' + esc(r.id) + '" aria-expanded="' + open + '">' + (open ? "Show less" : "Show more") + "</button> " : "");
   }
 
+  // Eligibility cell followed by the Bid factors box (kept in its own wrapper).
   function eligCell(r) {
+    var h = eligCellBase(r), f = factsHtml(r);
+    return f ? h.replace(/<\/td>$/, f + "</td>") : h;
+  }
+  function eligCellBase(r) {
     var ai = r.aiRead ? '<div class="elig-note">AI read, please verify.</div>' : "";
     var items = eligList(r);
     var found = items.length - (r.requires ? r.requires.length : 0); // items taken from the Details notes

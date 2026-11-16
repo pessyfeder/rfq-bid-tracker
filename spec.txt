@@ -66,11 +66,13 @@ Status dropdown was removed; bid tracking lives in the separate bidding app.)
                        awards. "How estimated" lists the method and 5 recent examples.
                     d) "Not published" when none of the above exists.
                     DEFAULT SORT: descending by this value; unknown values last.
-10  Details         ONE merged column. Top to bottom:
-                    1) region
-                    2) "Bid factors" box (see below)
-                    3) chips: "Restricted: ..." (red), Amended, warnings, plain
-                       requirement chips (e.g. selection method, mandatory pre-bid)
+10  Details         ONE merged column, same order in every cell. Top to bottom:
+                    1) status chips (Amended, warnings), only when present
+                    2) labeled rows, left out when empty: "Region" (small muted label;
+                       kept because Municipality shows only Federal / State / Local),
+                       "Terms" (plain requirement chips, e.g. selection method,
+                       mandatory pre-bid). The "Bid factors" box (see below) is in the
+                       Eligibility cell.
                     4) scope summary, cut at 220 characters with Show more / Show less
                     5) "Show all requirements (n)" toggle that opens a full-width row of
                        the key "shall" statements with section/page refs and a link to
