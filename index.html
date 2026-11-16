@@ -164,6 +164,7 @@
 <div class="toolbar">
   <span class="sub">Filter by</span>
   <span class="filters" id="filters"></span>
+  <label><input type="checkbox" id="hideClosed" checked> Hide closed</label>
   <label title="Placeholder deadlines (more than 3 years out) and notices posted over a year ago"><input type="checkbox" id="hideFlagged" checked> Hide flagged</label>
   <span class="sub" id="count"></span>
   <span class="refresh-ctl">
@@ -665,10 +666,10 @@
     var q = "";
     return { lists: FILTERS.filter(function (x) { return x.type === "list" && hiddenN(x); }),
       days: [pnum(R.days.a), pnum(R.days.b)], value: [pnum(R.value.a), pnum(R.value.b)],
-      hideFlagged: $("hideFlagged").checked, pq: q ? parseQuery(q) : null };
+      hideClosed: $("hideClosed").checked, hideFlagged: $("hideFlagged").checked, pq: q ? parseQuery(q) : null };
   }
   function matches(r, f) {
-    if (r.daysLeft < 0) return false; // closed bids are never shown
+    if (f.hideClosed && r.daysLeft < 0) return false;
     // column filters
     for (var li = 0; li < f.lists.length; li++) {
       var vs = f.lists[li].get(r), hid = H[f.lists[li].key];
@@ -863,7 +864,7 @@
   });
   $("moreBtn").addEventListener("click", function () { limit += PAGE; render(); });
   $("allBtn").addEventListener("click", function () { limit = Infinity; render(); });
-  ["hideFlagged"].forEach(function (id) {
+  ["hideClosed", "hideFlagged"].forEach(function (id) {
     function onFilter() { limit = PAGE; render(); }
     var timer;
     $(id).addEventListener("input", function () { clearTimeout(timer); timer = setTimeout(onFilter, 0); }); // coalesce events from one keystroke
@@ -878,7 +879,7 @@
   }
   window.saveUiState = function () {
     try {
-      var o = { at: Date.now(), sort: sort, expanded: expanded, scopeOpen: scopeOpen, scrollY: window.scrollY, hideFlagged: $("hideFlagged").checked, H: H, R: R };
+      var o = { at: Date.now(), sort: sort, expanded: expanded, scopeOpen: scopeOpen, scrollY: window.scrollY, hideClosed: $("hideClosed").checked, hideFlagged: $("hideFlagged").checked, H: H, R: R };
       UI_FIELDS.forEach(function (id) { o[id] = $(id).value; });
       sessionStorage.setItem(UI_KEY, JSON.stringify(o));
     } catch (e) {}
@@ -889,6 +890,7 @@
     sessionStorage.removeItem(UI_KEY); // used once, for the reload right after a refresh
     if (saved && Date.now() - saved.at < 10 * 60000) {
       UI_FIELDS.forEach(function (id) { if (saved[id] != null) $(id).value = saved[id]; });
+      $("hideClosed").checked = saved.hideClosed !== false;
       $("hideFlagged").checked = saved.hideFlagged !== false;
       if (saved.sort && saved.sort.key) sort = saved.sort;
       if (saved.H) FILTERS.forEach(function (x) { if (x.type === "list" && saved.H[x.key]) H[x.key] = saved.H[x.key]; });
