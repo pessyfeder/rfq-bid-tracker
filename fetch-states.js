@@ -205,6 +205,8 @@ function readPrevious() {
   }
 
   const ran = [];
+  const unknown = wanted.filter((c) => !ADAPTERS.some((a) => a.code === c));
+  if (unknown.length) { console.error(`Unknown state code(s): ${unknown.join(", ")}; nothing to run.`); process.exit(2); }
   const toRun = ADAPTERS.filter((a) => !wanted.length || wanted.includes(a.code));
   for (const a of ADAPTERS) {
     if (wanted.length && !wanted.includes(a.code)) { results[a.code] = prevStates[a.code] || { ok: false, error: "not run" }; continue; }

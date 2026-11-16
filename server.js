@@ -160,6 +160,12 @@ function failures(bySource) { // sources that failed (not merely skipped) and in
   return bySource ? [...new Set(out)] : out;
 }
 // Per source: the individual state codes to re-run. Omitted when the whole script failed (then it re-runs everything).
+// State codes that have an adapter, read from states/*.js (fetch-states.js is a script, so it cannot be required here).
+function stateCodes() {
+  const dir = path.join(__dirname, "states"), out = new Set();
+  for (const f of fs.readdirSync(dir)) for (const m of fs.readFileSync(path.join(dir, f), "utf8").matchAll(/code:\s*"([A-Z]{2,8})"/g)) out.add(m[1]);
+  return out;
+}
 function failedStateCodes() {
   const out = {};
   for (const src of feed.SOURCES.filter((s) => s.script)) {
@@ -393,8 +399,11 @@ const server = http.createServer((req, res) => {
           // Comma-separated list, e.g. sam,nyc,state:NY,state:CA. "states" = every state; state:XX = just that state.
           only = new Set(); const codes = []; let allStates = false;
           for (const part of portal.split(",")) {
-            const m = /^state:([A-Za-z]{2})$/.exec(part);
-            if (m) codes.push(m[1].toUpperCase());
+            const m = /^state:([A-Za-z]{2,8})$/.exec(part);
+            if (m) {
+              if (!stateCodes().has(m[1].toUpperCase())) return send(res, 400, { error: "unknown state: " + m[1] }); // e.g. TX (now TXDOT): would otherwise run nothing and show up as a failed refresh
+              codes.push(m[1].toUpperCase());
+            }
             else if (part === "states") allStates = true;
             else if (feed.SOURCES.some((s) => s.script && s.id === part)) only.add(part);
             else return send(res, 400, { error: "unknown portal" });
