@@ -21,9 +21,41 @@
   .toolbar select { field-sizing: content; } /* fit the selected text, not the longest option */
   .toolbar input[type=search] { min-width: 220px; }
   .toolbar label { color: var(--muted); display: flex; gap: 6px; align-items: center; }
+  /* Per-column filters: a button per column opens a small panel; active filters show as chips below the toolbar */
+  .filters { display: contents; }
+  .fwrap { position: relative; }
+  .fbtn { font: inherit; padding: 6px 10px; border: 1px solid var(--line); border-radius: 6px; background: #fff; color: var(--ink); cursor: pointer; white-space: nowrap; }
+  .fbtn:hover { border-color: #c4ccd8; }
+  .fbtn.on { background: #e8eef8; color: var(--accent); border-color: var(--accent); font-weight: 600; }
+  .fbtn .caret { font-size: 10px; margin-left: 4px; }
+  .fpanel { position: absolute; z-index: 30; top: calc(100% + 4px); left: 0; width: 280px; max-width: calc(100vw - 24px); background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; box-shadow: 0 6px 20px rgba(28, 36, 48, .15); }
+  .fpanel[hidden] { display: none; }
+  .fttl { font-weight: 600; margin-bottom: 6px; }
+  .fnote { color: var(--muted); font-size: 12px; margin: 0 0 6px; }
+  .frow { display: flex; align-items: center; gap: 8px; padding: 4px 0; cursor: pointer; }
+  .frow .n { margin-left: auto; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+  .frow.all { border-bottom: 1px solid var(--line); padding-bottom: 6px; margin-bottom: 4px; font-weight: 600; }
+  .flist { max-height: 260px; overflow-y: auto; }
+  .frange { display: flex; gap: 8px; }
+  .frange label { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; color: var(--muted); font-size: 12px; }
+  .frange input { width: 100%; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; font: inherit; color: var(--ink); }
+  .fpresets { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 4px; }
+  .fpresets button, .freset { font: inherit; font-size: 12px; padding: 3px 8px; border: 1px solid var(--line); border-radius: 12px; background: #fff; color: var(--ink); cursor: pointer; }
+  .freset { border: 0; background: none; color: var(--accent); text-decoration: underline; padding: 0; margin-top: 6px; }
+  .fchips { padding: 0 24px 10px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .fchips[hidden] { display: none; }
+  .fchip { font: inherit; font-size: 12px; padding: 2px 8px; border: 0; border-radius: 12px; background: #e8eef8; color: var(--accent); cursor: pointer; }
+  .fchip:hover { background: #d8e3f4; }
+  .fclear { font: inherit; font-size: 12px; border: 0; background: none; color: var(--accent); text-decoration: underline; cursor: pointer; }
+  @media (max-width: 900px) { .fchips { padding: 0 12px 10px; } }
   .refresh-ctl { display: flex; gap: 10px; align-items: center; }
   .refresh-ctl button { font: inherit; padding: 6px 14px; border: 1px solid var(--accent); border-radius: 6px; background: var(--accent); color: #fff; cursor: pointer; white-space: nowrap; }
   .refresh-ctl button:disabled { opacity: .55; cursor: default; }
+  .refresh-ctl .seg { display: inline-flex; }
+  .refresh-ctl .seg button { background: #fff; color: var(--muted); border-color: var(--line); border-radius: 0; padding: 6px 12px; }
+  .refresh-ctl .seg button:first-child { border-radius: 6px 0 0 6px; }
+  .refresh-ctl .seg button:last-child { border-radius: 0 6px 6px 0; margin-left: -1px; }
+  .refresh-ctl .seg button.on { background: #e8eef8; color: var(--accent); border-color: var(--accent); position: relative; font-weight: 600; }
   .refresh-hint { color: var(--muted); font-size: 12px; max-width: 280px; line-height: 1.3; }
   .wrap { margin: 0 24px 24px; background: var(--card); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
   table { border-collapse: collapse; width: 100%; table-layout: auto; }
@@ -131,20 +163,19 @@
 
 <div class="toolbar">
   <input type="search" id="q" placeholder="Search: filter by specification">
-  <select id="st"><option value="">All states</option></select>
-  <select id="level">
-    <option value="">All levels</option>
-    <option>Federal</option><option>State</option><option>Local</option>
-  </select>
-  <select id="category"><option value="">All categories</option></select>
+  <span class="sub">Filter by</span>
+  <span class="filters" id="filters"></span>
   <label title="Placeholder deadlines (more than 3 years out) and notices posted over a year ago"><input type="checkbox" id="hideFlagged" checked> Hide flagged</label>
   <span class="sub" id="count"></span>
   <span class="refresh-ctl">
+    <span class="seg" id="refreshMode" title="What the Refresh button fetches">
+      <button type="button" data-v="all" class="on">Refresh all</button><button type="button" data-v="failed">Refresh failed</button>
+    </span>
     <button type="button" id="refreshBtn">Refresh data</button>
-    <select id="refreshMode" title="What the Refresh button fetches"><option value="all">Refresh all</option><option value="failed">Refresh failed</option></select>
     <span class="refresh-hint">Data refreshes automatically on start-up. Press this button to refresh manually</span>
   </span>
 </div>
+<div class="fchips" id="fchips" hidden></div>
 
 <div class="wrap">
   <table>
@@ -356,20 +387,164 @@
   var STATE_NAMES = { AL: "Alabama", AK: "Alaska", AZ: "Arizona", AR: "Arkansas", CA: "California", CO: "Colorado", CT: "Connecticut", DE: "Delaware", DC: "District of Columbia", FL: "Florida", GA: "Georgia", HI: "Hawaii", ID: "Idaho", IL: "Illinois", IN: "Indiana", IA: "Iowa", KS: "Kansas", KY: "Kentucky", LA: "Louisiana", ME: "Maine", MD: "Maryland", MA: "Massachusetts", MI: "Michigan", MN: "Minnesota", MS: "Mississippi", MO: "Missouri", MT: "Montana", NE: "Nebraska", NV: "Nevada", NH: "New Hampshire", NJ: "New Jersey", NM: "New Mexico", NY: "New York", NC: "North Carolina", ND: "North Dakota", OH: "Ohio", OK: "Oklahoma", OR: "Oregon", PA: "Pennsylvania", RI: "Rhode Island", SC: "South Carolina", SD: "South Dakota", TN: "Tennessee", TX: "Texas", UT: "Utah", VT: "Vermont", VA: "Virginia", WA: "Washington", WV: "West Virginia", WI: "Wisconsin", WY: "Wyoming" };
   var stCount = {};
   rows.forEach(function (r) { stCount[r.st] = (stCount[r.st] || 0) + 1; });
-  Object.keys(STATE_NAMES).concat(["US", "NYC"]).sort().forEach(function (code) {
-    var o = document.createElement("option");
-    o.value = code;
+  function stName(code) {
     var issue = (window.STATE_ISSUES || {})[code] || (code === "TX" && (window.STATE_ISSUES || {}).TXDOT);
-    o.textContent = (issue ? "⚠ " : "") + code + " (" + (stCount[code] || 0) + ")" + (issue === "failed" ? " - fetch failed" : issue ? " - partial" : "");
-    if (!stCount[code]) o.style.color = "#999";
-    if (issue) o.style.color = issue === "failed" ? "#b3261e" : "#b26a00";
-    $("st").appendChild(o);
+    var nm = code === "US" ? "Federal (US)" : code === "NYC" ? "New York City" : (STATE_NAMES[code] || code) + " (" + code + ")";
+    return (issue ? "⚠ " : "") + nm + (issue === "failed" ? " - fetch failed" : issue ? " - partial" : "");
+  }
+
+  // ---- Per-column filters ----
+  // List filters (state, category, eligibility, municipality) store what is HIDDEN, so "Select all" = nothing hidden and
+  // values that first appear after a refresh show up by default. A request is hidden when any of its values is hidden.
+  function eligValues(r) {
+    if (r.requires == null) return [r.aiRead ? "Not stated" : "Not read"];
+    if (!r.requires.length) return [r.aiRead ? "No requirements found" : "Not read"];
+    return r.requires;
+  }
+  var FILTERS = [
+    { key: "st",       label: "State",        type: "list", get: function (r) { return [r.st]; }, name: stName },
+    { key: "category", label: "Category",     type: "list", get: function (r) { return [r.category]; } },
+    { key: "elig",     label: "Eligibility",  type: "list", get: eligValues, note: "Hides requests that list any unchecked requirement." },
+    { key: "posted",   label: "Posted",       type: "date" },
+    { key: "due",      label: "End date",     type: "date", flag: "noDueOk", flagLabel: "Include requests with no real due date" },
+    { key: "days",     label: "Days left",    type: "num", note: "Requests with no due date follow the End date setting.",
+      presets: [["Next 7 days", "", "7"], ["Next 14 days", "", "14"], ["Next 30 days", "", "30"]] },
+    { key: "level",    label: "Municipality", type: "list", get: function (r) { return [r.level]; }, order: ["Federal", "State", "Local"] },
+    { key: "value",    label: "Est. value",   type: "num", flag: "unknownOk", flagLabel: "Include requests with no known value", hint: "e.g. 50k",
+      presets: [["Under $50K", "", "50k"], ["$50K to $500K", "50k", "500k"], ["Over $500K", "500k", ""]] }
+  ];
+  var H = {};                       // key -> { hiddenValue: true }
+  var R = { posted: {}, due: {}, days: {}, value: {}, noDueOk: true, unknownOk: true }; // key -> { a: from/min, b: to/max }
+  function resetFilter(f) {
+    if (f.type === "list") H[f.key] = {};
+    else R[f.key] = { a: "", b: "" };
+    if (f.flag) R[f.flag] = true;
+  }
+  FILTERS.forEach(resetFilter);
+  var counts = {}; // key -> { value: number of open requests }
+  FILTERS.forEach(function (f) {
+    if (f.type !== "list") return;
+    var c = counts[f.key] = {};
+    rows.forEach(function (r) { if (!(r.daysLeft < 0)) f.get(r).forEach(function (v) { c[v] = (c[v] || 0) + 1; }); });
+  });
+  function pnum(s) { // "50000", "$50,000", "50k", "1.5m"
+    var m = String(s == null ? "" : s).replace(/[$,\s]/g, "").match(/^(\d*\.?\d+)([kmb])?$/i);
+    return m ? parseFloat(m[1]) * ({ k: 1e3, m: 1e6, b: 1e9 }[(m[2] || "").toLowerCase()] || 1) : null;
+  }
+  function hiddenN(f) { return Object.keys(H[f.key]).length; }
+  function isActive(f) {
+    if (f.type === "list") return hiddenN(f) > 0;
+    var o = R[f.key];
+    return !!(f.type === "date" ? (o.a || o.b) : (pnum(o.a) != null || pnum(o.b) != null)) || (f.flag && !R[f.flag]);
+  }
+  function listValues(f) {
+    var vals = Object.keys(counts[f.key]);
+    var nm = f.name || function (v) { return v; };
+    return f.order ? f.order.filter(function (v) { return counts[f.key][v]; }) : vals.sort(function (x, y) { return nm(x).localeCompare(nm(y)); });
+  }
+
+  var fwraps = {}; // key -> { btn, panel }
+  FILTERS.forEach(function (f) {
+    var w = document.createElement("span"); w.className = "fwrap";
+    var b = document.createElement("button"); b.type = "button"; b.className = "fbtn"; b.dataset.key = f.key;
+    var p = document.createElement("div"); p.className = "fpanel"; p.dataset.key = f.key; p.hidden = true;
+    var h = '<div class="fttl">' + esc(f.label) + "</div>";
+    if (f.note) h += '<p class="fnote">' + esc(f.note) + "</p>";
+    if (f.type === "list") {
+      var nm = f.name || function (v) { return v; };
+      h += '<label class="frow all"><input type="checkbox" data-all> Select all</label><div class="flist">' +
+        listValues(f).map(function (v) {
+          return '<label class="frow"><input type="checkbox" data-v="' + esc(v) + '"> ' + esc(nm(v)) + '<span class="n">' + counts[f.key][v] + "</span></label>";
+        }).join("") + "</div>";
+    } else {
+      var kind = f.type === "date" ? "date" : "text", ph = f.type === "num" ? (f.hint ? 'placeholder="' + esc(f.hint) + '"' : 'inputmode="numeric"') : "";
+      h += '<div class="frange"><label>' + (f.type === "date" ? "From" : "Min") + '<input type="' + kind + '" data-p="a" ' + ph + ">" +
+        "</label><label>" + (f.type === "date" ? "To" : "Max") + '<input type="' + kind + '" data-p="b" ' + ph + "></label></div>";
+      if (f.presets) h += '<div class="fpresets">' + f.presets.map(function (q) {
+        return '<button type="button" data-a="' + q[1] + '" data-b="' + q[2] + '">' + esc(q[0]) + "</button>";
+      }).join("") + "</div>";
+      if (f.flag) h += '<label class="frow"><input type="checkbox" data-flag="' + f.flag + '"> ' + esc(f.flagLabel) + "</label>";
+      h += '<button type="button" class="freset" data-reset>Reset</button>';
+    }
+    p.innerHTML = h;
+    w.appendChild(b); w.appendChild(p); $("filters").appendChild(w);
+    fwraps[f.key] = { btn: b, panel: p };
   });
 
-  // Category filter options
-  Array.from(new Set(rows.map(function (r) { return r.category; }))).sort().forEach(function (c) {
-    var o = document.createElement("option"); o.textContent = c; $("category").appendChild(o);
+  function fdesc(f) { // text for the chip of an active range filter
+    var o = R[f.key], a = o.a, b = o.b, parts = [];
+    function fmtv(v) { return f.type === "date" ? fmtDate(v) : f.key === "value" ? compact(pnum(v)) : String(pnum(v)); }
+    var hasA = f.type === "date" ? !!a : pnum(a) != null, hasB = f.type === "date" ? !!b : pnum(b) != null;
+    if (hasA && hasB) parts.push(fmtv(a) + " to " + fmtv(b)); else if (hasA) parts.push(f.type === "date" ? "from " + fmtv(a) : fmtv(a) + " or more"); else if (hasB) parts.push(f.type === "date" ? "to " + fmtv(b) : "up to " + fmtv(b));
+    if (f.flag && !R[f.flag]) parts.push(f.key === "due" ? "no undated" : "no unknown");
+    return f.label + ": " + parts.join(", ");
+  }
+  function syncFilters() {
+    var chips = [];
+    FILTERS.forEach(function (f) {
+      var x = fwraps[f.key], on = isActive(f), n = f.type === "list" ? hiddenN(f) : 0;
+      x.btn.classList.toggle("on", on);
+      x.btn.innerHTML = esc(f.label) + (n ? " (" + n + " hidden)" : "") + ' <span class="caret">&#9662;</span>';
+      if (f.type === "list") {
+        var all = x.panel.querySelector("[data-all]"), tot = listValues(f).length;
+        all.checked = n === 0; all.indeterminate = n > 0 && n < tot;
+        Array.prototype.forEach.call(x.panel.querySelectorAll("[data-v]"), function (cb) { cb.checked = !H[f.key][cb.dataset.v]; });
+        var nm = f.name || function (v) { return v; };
+        if (n && n <= 3) Object.keys(H[f.key]).forEach(function (v) { chips.push('<button type="button" class="fchip" data-unhide="' + f.key + '" data-v="' + esc(v) + '">Hide ' + esc(nm(v)) + " &#10005;</button>"); });
+        else if (n) chips.push('<button type="button" class="fchip" data-reset="' + f.key + '">' + esc(f.label) + ": " + n + " hidden &#10005;</button>");
+      } else {
+        Array.prototype.forEach.call(x.panel.querySelectorAll("[data-p]"), function (inp) { if (inp !== document.activeElement && inp.value !== R[f.key][inp.dataset.p]) inp.value = R[f.key][inp.dataset.p]; });
+        var fl = x.panel.querySelector("[data-flag]"); if (fl) fl.checked = R[f.flag];
+        if (on) chips.push('<button type="button" class="fchip" data-reset="' + f.key + '">' + esc(fdesc(f)) + " &#10005;</button>");
+      }
+    });
+    var fc = $("fchips");
+    fc.innerHTML = chips.join("") + (chips.length > 1 ? '<button type="button" class="fclear" data-clearall>Clear all</button>' : "");
+    fc.hidden = !chips.length;
+  }
+  function closePanels(except) {
+    FILTERS.forEach(function (f) { if (f.key !== except) fwraps[f.key].panel.hidden = true; });
+  }
+  function applyFilters() { syncFilters(); limit = PAGE; render(); }
+
+  $("filters").addEventListener("click", function (e) {
+    var f, btn = e.target.closest(".fbtn");
+    if (btn) {
+      var p = fwraps[btn.dataset.key].panel, open = p.hidden;
+      closePanels(btn.dataset.key); p.hidden = !open;
+      p.style.left = ""; p.style.right = "";
+      if (open) { var rc = p.getBoundingClientRect(); if (rc.right > window.innerWidth - 8) { p.style.left = "auto"; p.style.right = "0"; } }
+      return;
+    }
+    var panel = e.target.closest(".fpanel"); if (!panel) return;
+    f = FILTERS.filter(function (x) { return x.key === panel.dataset.key; })[0];
+    var pr = e.target.closest("[data-a]"), rs = e.target.closest("[data-reset]");
+    if (pr) { R[f.key].a = pr.dataset.a; R[f.key].b = pr.dataset.b; applyFilters(); }
+    else if (rs) { resetFilter(f); applyFilters(); }
   });
+  $("filters").addEventListener("change", function (e) {
+    var t = e.target, panel = t.closest(".fpanel"); if (!panel) return;
+    var f = FILTERS.filter(function (x) { return x.key === panel.dataset.key; })[0];
+    if (t.hasAttribute("data-all")) { H[f.key] = {}; if (!t.checked) listValues(f).forEach(function (v) { H[f.key][v] = true; }); }
+    else if (t.dataset.v != null) { if (t.checked) delete H[f.key][t.dataset.v]; else H[f.key][t.dataset.v] = true; }
+    else if (t.dataset.flag) R[t.dataset.flag] = t.checked;
+    else return;
+    applyFilters();
+  });
+  $("filters").addEventListener("input", function (e) {
+    var t = e.target, panel = t.closest(".fpanel"); if (!panel || !t.dataset.p) return;
+    R[panel.dataset.key][t.dataset.p] = t.value;
+    applyFilters();
+  });
+  $("fchips").addEventListener("click", function (e) {
+    var b = e.target.closest("button"); if (!b) return;
+    if (b.hasAttribute("data-clearall")) FILTERS.forEach(resetFilter);
+    else if (b.dataset.unhide) delete H[b.dataset.unhide][b.dataset.v];
+    else if (b.dataset.reset) resetFilter(FILTERS.filter(function (x) { return x.key === b.dataset.reset; })[0]);
+    applyFilters();
+  });
+  document.addEventListener("click", function (e) { if (!e.target.closest(".fwrap")) closePanels(); });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape") closePanels(); });
 
   function renderHead() {
     $("head").innerHTML = COLUMNS.map(function (c) {
@@ -480,14 +655,33 @@
   // Read the filter controls and parse the search text once per render (not once per row).
   function makeFilter() {
     var q = $("q").value.trim().toLowerCase();
-    return { st: $("st").value, level: $("level").value, category: $("category").value,
+    return { lists: FILTERS.filter(function (x) { return x.type === "list" && hiddenN(x); }),
+      days: [pnum(R.days.a), pnum(R.days.b)], value: [pnum(R.value.a), pnum(R.value.b)],
       hideFlagged: $("hideFlagged").checked, pq: q ? parseQuery(q) : null };
   }
   function matches(r, f) {
-    if (f.st && r.st !== f.st) return false;
-    if (f.level && r.level !== f.level) return false;
-    if (f.category && r.category !== f.category) return false;
     if (r.daysLeft < 0) return false; // closed bids are never shown
+    // column filters
+    for (var li = 0; li < f.lists.length; li++) {
+      var vs = f.lists[li].get(r), hid = H[f.lists[li].key];
+      for (var vi = 0; vi < vs.length; vi++) if (hid[vs[vi]]) return false;
+    }
+    if (R.posted.a && r.posted < R.posted.a) return false;
+    if (R.posted.b && r.posted > R.posted.b) return false;
+    if (r.noDue) { if (!R.noDueOk) return false; }
+    else {
+      if (R.due.a && r.due < R.due.a) return false;
+      if (R.due.b && r.due > R.due.b) return false;
+      if (f.days[0] != null && r.daysLeft < f.days[0]) return false;
+      if (f.days[1] != null && r.daysLeft > f.days[1]) return false;
+    }
+    if (r.valueSort == null) { if (!R.unknownOk) return false; }
+    else if (f.value[0] != null || f.value[1] != null) {
+      var e = r.valueEst, lo = r.valueSort, hi = r.valueSort; // an estimated range matches when any part of it overlaps
+      if (r.value == null && e && e.kind === "similar") { lo = e.low; hi = e.high; }
+      if (f.value[0] != null && hi < f.value[0]) return false;
+      if (f.value[1] != null && lo > f.value[1]) return false;
+    }
     if (f.hideFlagged && ((r.details.warnings || []).length || r.noDue)) return false;
     var pq = f.pq;
     if (pq) {
@@ -661,14 +855,14 @@
   });
   $("moreBtn").addEventListener("click", function () { limit += PAGE; render(); });
   $("allBtn").addEventListener("click", function () { limit = Infinity; render(); });
-  ["q", "st", "level", "category", "hideFlagged"].forEach(function (id) {
+  ["q", "hideFlagged"].forEach(function (id) {
     function onFilter() { limit = PAGE; render(); }
     var timer;
     $(id).addEventListener("input", function () { clearTimeout(timer); timer = setTimeout(onFilter, 0); }); // coalesce events from one keystroke
     $(id).addEventListener("change", function () { clearTimeout(timer); onFilter(); });
   });
   // Keep the user's view across the reload that follows a refresh: filters, sort, open rows and scroll position.
-  var UI_KEY = "rfqUiState", UI_FIELDS = ["q", "st", "level", "category"];
+  var UI_KEY = "rfqUiState", UI_FIELDS = ["q"];
   function loadShall(row) { // same fetch as the Show-all-requirements button, for rows that were open before the reload
     fetch("/shall/" + encodeURIComponent(row.id)).then(function (x) { if (!x.ok) throw 0; return x.json(); })
       .then(function (j) { row.shall = j.shall || []; }, function () { row.shall = [{ text: "Could not load the requirements. Open the full RFQ document instead." }]; })
@@ -676,7 +870,7 @@
   }
   window.saveUiState = function () {
     try {
-      var o = { at: Date.now(), sort: sort, expanded: expanded, scopeOpen: scopeOpen, scrollY: window.scrollY, hideFlagged: $("hideFlagged").checked };
+      var o = { at: Date.now(), sort: sort, expanded: expanded, scopeOpen: scopeOpen, scrollY: window.scrollY, hideFlagged: $("hideFlagged").checked, H: H, R: R };
       UI_FIELDS.forEach(function (id) { o[id] = $(id).value; });
       sessionStorage.setItem(UI_KEY, JSON.stringify(o));
     } catch (e) {}
@@ -689,11 +883,14 @@
       UI_FIELDS.forEach(function (id) { if (saved[id] != null) $(id).value = saved[id]; });
       $("hideFlagged").checked = saved.hideFlagged !== false;
       if (saved.sort && saved.sort.key) sort = saved.sort;
+      if (saved.H) FILTERS.forEach(function (x) { if (x.type === "list" && saved.H[x.key]) H[x.key] = saved.H[x.key]; });
+      if (saved.R) FILTERS.forEach(function (x) { if (x.type !== "list" && saved.R[x.key]) R[x.key] = saved.R[x.key]; R.noDueOk = saved.R.noDueOk !== false; R.unknownOk = saved.R.unknownOk !== false; });
       Object.keys(saved.scopeOpen || {}).forEach(function (id) { scopeOpen[id] = true; });
       rows.forEach(function (r) { if (saved.expanded && saved.expanded[r.id]) { expanded[r.id] = true; if (!r.shall && shallN(r)) loadShall(r); } });
       restoredScroll = saved.scrollY;
     }
   } catch (e) {}
+  syncFilters();
   render();
   if (restoredScroll) window.scrollTo(0, restoredScroll);
   // Build every row's search text now, while the page is idle, so the first keystroke is not slower than the rest.
@@ -737,9 +934,18 @@
     fetch("/api/refresh?failed=1", { method: "POST" }).then(function () { poll(); }, function () {});
   }
   var btn = document.getElementById("refreshBtn");
-  var modeSel = document.getElementById("refreshMode");
-  try { var m = localStorage.getItem("rfqRefreshMode"); if (m === "all" || m === "failed") modeSel.value = m; } catch (e) {}
-  modeSel.addEventListener("change", function () { try { localStorage.setItem("rfqRefreshMode", modeSel.value); } catch (e) {} });
+  var modeEl = document.getElementById("refreshMode");
+  var modeBtns = modeEl.querySelectorAll("button");
+  var modeSel = { value: "all", set disabled(d) { for (var i = 0; i < modeBtns.length; i++) modeBtns[i].disabled = d; } };
+  function setMode(v) {
+    modeSel.value = v;
+    for (var i = 0; i < modeBtns.length; i++) modeBtns[i].classList.toggle("on", modeBtns[i].dataset.v === v);
+  }
+  try { var m = localStorage.getItem("rfqRefreshMode"); if (m === "all" || m === "failed") setMode(m); } catch (e) {}
+  for (var bi = 0; bi < modeBtns.length; bi++) modeBtns[bi].addEventListener("click", function () {
+    setMode(this.dataset.v);
+    try { localStorage.setItem("rfqRefreshMode", modeSel.value); } catch (e) {}
+  });
   btn.addEventListener("click", function () {
     btn.disabled = true; btn.textContent = "Starting…";
     fetch("/api/refresh" + (modeSel.value === "failed" ? "?failed=1" : ""), { method: "POST" }).then(function (r) {
