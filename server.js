@@ -292,7 +292,7 @@ const PAGE_HEADERS = {
 let slim = { mtime: 0, js: null, shall: new Map() };
 function slimStates() {
   const p = path.join(ROOT, "live-states.js");
-  const mtime = fs.statSync(p).mtimeMs;
+  const mtime = fs.statSync(p).mtimeMs + fs.statSync(path.join(ROOT, "facts.js")).mtimeMs; // rebuild when the fact rules change too
   if (slim.js && slim.mtime === mtime) return slim;
   const sandbox = { window: {} };
   vm.runInNewContext(fs.readFileSync(p, "utf8"), sandbox, { timeout: 10000 }); // our own generated file
