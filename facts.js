@@ -21,6 +21,16 @@
     { label: "Multi-year / renewal term",  sev: "info", re: /option (year|period)|base (year|period)|\b\d+[- ]year (contract|term)|renewal/i }
   ];
   var KEYWORD_ONLY = /^(NY|WY|DE|TXDOT|ID|KS|PA)-/;
+  // Short hover text: just the stretch of text around the match, not the whole paragraph.
+  function excerpt(text, m) {
+    text = String(text).replace(/\s+/g, " ").trim();
+    var max = 140;
+    if (text.length <= max) return text;
+    var at = Math.max(0, text.indexOf(m[0]));
+    var start = Math.max(0, at - 50);
+    var end = Math.min(text.length, start + max);
+    return (start > 0 ? "…" : "") + text.slice(start, end).trim() + (end < text.length ? "…" : "");
+  }
   function keyFacts(r) {
     var x = r.details || {};
     var src = [];
@@ -34,7 +44,8 @@
     var out = [];
     FACT_RULES.forEach(function (rule) {
       for (var i = 0; i < src.length; i++) {
-        if (rule.re.test(src[i])) { var f = { label: rule.label, sev: rule.sev, why: src[i] }; if (rule.gate) f.gate = true; if (kw) f.kw = true; out.push(f); return; }
+        var m = rule.re.exec(src[i]);
+        if (m) { var f = { label: rule.label, sev: rule.sev, why: excerpt(src[i], m) }; if (rule.gate) f.gate = true; if (kw) f.kw = true; out.push(f); return; }
       }
     });
     return out;
