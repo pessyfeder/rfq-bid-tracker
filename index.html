@@ -71,9 +71,10 @@
   table { table-layout: fixed; }
   th:nth-child(1) { width: 13%; } th:nth-child(2) { width: 10%; } th:nth-child(3) { width: 12%; }
   th:nth-child(4) { width: 7%; }  th:nth-child(5) { width: 9%; min-width: 100px; }  th:nth-child(6) { width: 5%; min-width: 56px; }
-  th:nth-child(7) { width: 8%; min-width: 108px; }  th:nth-child(8) { width: 8%; }  th:nth-child(9) { width: 11%; }
+  th:nth-child(7) { width: 6%; min-width: 84px; }  th:nth-child(8) { width: 8%; }  th:nth-child(9) { width: 11%; }
   /* Est. value is column 9; Details (10) takes the rest */
   th { overflow-wrap: normal; }
+  th:nth-child(7) { overflow-wrap: anywhere; } /* Municipality: wrap the word rather than cut it off */
   tr.shall-row td { text-align: left; }
   th { text-align: left; position: sticky; top: 0; background: #eef1f5; font-size: 11px; text-transform: uppercase; letter-spacing: .02em; color: var(--muted); cursor: pointer; user-select: none; }
   th.nosort { cursor: default; }
@@ -172,6 +173,7 @@
 <header>
   <h1>RFQ Bid Tracker</h1>
   <span class="sub">Discover Group &middot; Brooklyn, NY</span>
+  <span class="sub">Eligibility, bid factors, summaries, requirements and stated amounts marked &ldquo;AI read, please verify&rdquo; were extracted by AI from the notice; check them against the source.</span>
 </header>
 
 <div class="refreshbar" id="refreshBar" role="status" hidden></div>
@@ -701,7 +703,7 @@
     if ((m = /Type of work:\s*(.+?)\.\s/i.exec(s))) add("Work", m[1]);
     if ((m = /Limits:\s*(.+?)(?:\.\s|$)/i.exec(s))) { var lim = m[1].split(/\s+to\s+/i); var l0 = (lim[0] || "").trim(), l1 = (lim[1] || "").trim(); add("Limits", l0 && l1 && l0.toLowerCase() !== l1.toLowerCase() ? l0 + " to " + l1 : (l0 || l1)); }
     if (out.length && (m = /\b([A-Z][a-z]+) District\b/.exec(s))) add("District", m[1]);
-    if ((m = /Up to ([\d,]+) (working|calendar) days/i.exec(s))) add("Duration", m[1] + " " + m[2].toLowerCase() + " days");
+    if ((m = /Up to ([\d,]+) (working|calendar) days/i.exec(s))) add("Duration", "Up to " + m[1] + " " + m[2].toLowerCase() + " days");
     if ((m = /Work includes:\s*(.+?)\.?$/i.exec(s))) add("Includes", m[1].split(/;\s*/).slice(0, 3).join("; "), 130);
     if (out.length) return out;
     // Supply buys (SAM / DLA style)
@@ -944,7 +946,7 @@
       var open = expanded[r.id];
       var shallRow = open ? '<tr class="shall-row"><td colspan="' + COLUMNS.length + '"><h4>Key requirements ("shall")' + (r.aiRead ? " &middot; AI read, please verify" : "") + '</h4><ul>' +
         (r.shall || []).map(function (s) { return "<li>" + esc(s.text) + (s.ref ? ' <span class="ref">[' + esc(s.ref) + "]</span>" : "") + "</li>"; }).join("") +
-        '</ul><a href="' + esc(safeUrl(r.rfqUrl)) + '" target="_blank" rel="noopener">Open the full RFQ document</a></td></tr>' : "";
+        '</ul>' + (r.aiRead ? '<div class="elig-note">AI read, please verify against the full RFQ document.</div>' : "") + '<a href="' + esc(safeUrl(r.rfqUrl)) + '" target="_blank" rel="noopener">Open the full RFQ document</a></td></tr>' : "";
       return '<tr>' +
         '<td>' + titleHtml(r, !!titleOpen[r.id]) + '<div class="agency">' + esc(sentence(r.agency)) + "</div></td>" +
         "<td>" + esc(r.category).replace(/\//g, "/<wbr>") + "</td>" +
@@ -958,7 +960,7 @@
         valueCell(r) +
         "<td>" + detailsHtml(r) +
           scopeHtml(r, !!scopeOpen[r.id]) +
-          (shallN(r) ? '<button class="toggle" data-id="' + esc(r.id) + '" aria-expanded="' + !!open + '">' + (open ? "Hide" : "Show") + " all requirements (" + shallN(r) + ")</button>" : "") +
+          (shallN(r) ? '<button class="toggle" data-id="' + esc(r.id) + '" aria-expanded="' + !!open + '">' + (open ? "Hide" : "Show") + " all requirements (" + shallN(r) + ")</button>" + (r.aiRead ? '<div class="elig-note">AI read, please verify.</div>' : "") : "") +
           "</td></tr>" + shallRow;
     }
     var frag = document.createDocumentFragment();
