@@ -379,7 +379,7 @@
       dueSort: noDue ? null : r.due,
       daysLeft: noDue ? null : diffDays(todayStr, r.due),
       // Eligibility sort: fewest requirements first; "Not read" (null) last
-      eligRank: r.requires == null ? null : r.requires.length,
+      eligRank: r.requires == null && !eligList(r).length ? null : eligList(r).length,
       // one number to sort by: published value, else amount stated in the notice, else the similar-awards median
       valueSort: r.value != null ? r.value : r.valueEst ? (r.valueEst.kind === "stated" ? r.valueEst.amount : r.valueEst.median) : null
     });
@@ -409,6 +409,8 @@
   // List filters (state, category, eligibility, municipality) store what is HIDDEN, so "Select all" = nothing hidden and
   // values that first appear after a refresh show up by default. A request is hidden when any of its values is hidden.
   function eligValues(r) {
+    var items = eligList(r);
+    if (items.length) return items.map(function (d) { return d.label; });
     if (r.requires == null) return [r.aiRead ? "Not stated" : "Not read"];
     if (!r.requires.length) return [r.aiRead ? "No requirements found" : "Not read"];
     return r.requires;
@@ -589,8 +591,47 @@
   // sev "hard" = a gate (can we even qualify / staff it); "cost" = adds cost or effort; "info" = good to know.
   // Bid factors come precomputed from the server (r.facts); facts.js computes them here when the page is opened without it.
   function keyFacts(r) { return r.facts || (window.computeFacts ? window.computeFacts(r) : []); }
+  // Details notes that can decide whether a firm may bid. They are read from the same text as the Bid factors
+  // (requirements, restriction, scope, key points) and listed in the Eligibility column instead of under Details.
+  function isEligFact(label) {
+    return ["TSA-checked workers", "Security clearance", "Background checks / fingerprinting", "License / certification",
+      "Bid / performance bond", "Insurance minimums", "Mandatory site visit / pre-bid"].indexOf(label) >= 0;
+  }
+  // Conditions on who may bid that the Bid factors do not cover. Checked against the title, scope, key points and Details notes.
+  function eligRules() { return [
+    // Same wording as the TxDOT fetcher's own item, so the two merge into one chip instead of showing twice.
+    { label: "Prequalification required (unless waived)", re: /\bpre-?qualif(ied|ication)\b[^.]{0,30}\bunless waived\b/i },
+    { label: "Prequalification required", re: /\bpre-?qualif(ied|ication)\b(?![^.]{0,30}\b(unless waived|not required)\b)|\bmust be pre-?qualified\b/i },
+    { label: "Proposal / bid guarantee", re: /\b(proposal|bid) (guarantee|security|deposit)\b/i },
+    { label: "Small / minority / veteran-owned set-aside", re: /\b(small business|SBE|DBE|MBE|WBE|M\/WBE|minority|women|veteran|service-disabled)[- ]?(owned|enterprise|set-?aside|only)?\b[^.]{0,40}\b(set-?aside|only|required|participation goal)\b/i },
+    { label: "Vendor registration required", re: /\b(must|shall|required to) (be )?(registered|register|enrolled)\b|\bregistration (is )?required\b/i },
+    { label: "Local / in-state preference", re: /\b(local|in-state|resident) (vendor|bidder|business|preference)\b/i }
+  ]; }
+  function detailElig(r) {
+    var out = [];
+    var x0 = r.details || {};
+    var src = [r.title, r.scope].concat((r.shall || []).map(function (s) { return s.text; }), x0.requirements || []);
+    eligRules().forEach(function (rule) {
+      for (var i = 0; i < src.length; i++) {
+        if (src[i] && rule.re.test(src[i])) { out.push({ label: rule.label, why: String(src[i]).slice(0, 200), kw: !r.aiRead && !r.requires }); return; }
+      }
+    });
+    keyFacts(r).forEach(function (k) { if (isEligFact(k.label)) out.push({ label: k.label, why: String(k.why).slice(0, 200), kw: !!k.kw }); });
+    var x = r.details || {};
+    if (x.restriction && (r.requires || []).map(function (q) { return String(q).toLowerCase(); }).indexOf(String(x.restriction).toLowerCase()) < 0 &&
+        !/ only$/i.test(x.restriction)) out.push({ label: x.restriction, why: "Restriction in the notice" });
+    return out;
+  }
+  // Everything that may decide eligibility: what the notice says an offeror must hold, plus the items found in Details.
+  // Same null / [] meaning as r.requires, except that items found in Details count even when the restriction was not read.
+  function eligList(r) {
+    var base = r.requires == null ? [] : r.requires, seen = {}, out = [];
+    base.forEach(function (q) { seen[String(q).toLowerCase()] = 1; out.push({ label: String(q), why: "" }); });
+    detailElig(r).forEach(function (d) { var k = d.label.toLowerCase(); if (!seen[k]) { seen[k] = 1; out.push(d); } });
+    return out;
+  }
   function factsHtml(r) {
-    var f = keyFacts(r);
+    var f = keyFacts(r).filter(function (k) { return !isEligFact(k.label); });
     if (!f.length) return "";
     return '<div class="facts"><div class="facts-h">Bid factors' + (r.aiRead ? " &middot; AI read, please verify" : (f[0] && f[0].kw ? " &middot; keyword match on title/scope only" : "")) + "</div>" +
       f.map(function (k) {
@@ -632,6 +673,14 @@
 
   function eligCell(r) {
     var ai = r.aiRead ? '<div class="elig-note">AI read, please verify.</div>' : "";
+    var items = eligList(r);
+    var found = items.length - (r.requires ? r.requires.length : 0); // items taken from the Details notes
+    if (found > 0) {
+      var kw = items.some(function (d) { return d.kw; });
+      return "<td>" + items.map(function (d) { return '<span class="elig chip"' + (d.why ? ' title="' + esc(d.why) + '"' : "") + ">" + esc(d.label) + "</span>"; }).join(" ") +
+        (r.requires == null ? '<div class="elig-note">Set-asides and other restrictions were not read from the notice.</div>' : "") +
+        (kw ? '<div class="elig-note">Matched on title/scope keywords only.</div>' : "") + ai + "</td>";
+    }
     if (r.requires == null) {
       // Page was read but never says who may bid (e.g. Delaware's pages hold only title, dates and a contact)
       if (r.aiRead) return '<td><span class="elig unclear">Not stated</span><div class="elig-note">' + esc((r.details && r.details.readNote) || "The notice was read but does not say who may bid. Check the agency's documents or contact.") + "</div>" + ai + "</td>";
@@ -773,7 +822,7 @@
       "category": function (r) { return r.category; }, "agency": function (r) { return r.agency; },
       "request": function (r) { return r.title; }, "title": function (r) { return r.title; },
       "region": function (r) { return r.details.region; },
-      "eligibility": function (r) { return (r.requires || []).join(" "); }
+      "eligibility": function (r) { return eligList(r).map(function (d) { return d.label; }).join(" "); }
     };
     rest = rest.replace(new RegExp("(?<![a-z])(" + Object.keys(TEXT).join("|") + ")\\s*:\\s*(\"[^\"]*\"|\\S+)", "g"), function (m, name, val) {
       val = val.replace(/"/g, "").toLowerCase();
@@ -797,7 +846,7 @@
     // Free text matches only these fields, never the notice text. Reserved words (federal/state/local,
     // "no due date", values, days left) are handled in parseQuery against their own field.
     [r.title, r.agency, r.category, r.details && r.details.region].forEach(function (v) { if (v) parts.push(String(v)); });
-    (r.requires || []).forEach(function (q) { parts.push(String(q)); });
+    eligList(r).forEach(function (d) { parts.push(d.label); });
     ["posted", "due"].forEach(function (k) { if (r[k] && !(k === "due" && r.noDue)) parts.push(fmtDate(r[k])); });
     return parts.join(" ").toLowerCase();
   }
