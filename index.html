@@ -85,6 +85,9 @@
   td.num, th.num { text-align: left; font-variant-numeric: tabular-nums; }
   .req-title { font-weight: 600; }
   .agency { color: var(--muted); font-size: 12px; }
+  .buyer { font-weight: 600; font-size: 13px; margin-top: 4px; }
+  .lead { margin: 2px 0 6px; line-height: 1.35; }
+  abbr.gloss { text-decoration: underline dotted; cursor: help; }
   .badge { display: inline-block; padding: 1px 8px; border-radius: 10px; color: #fff; font-size: 12px; font-weight: 600; }
   .badge.Federal { background: var(--federal); } .badge.State { background: var(--state); } .badge.Local { background: var(--local); }
   .chip { display: inline-block; background: #eef1f5; border-radius: 4px; padding: 1px 6px; margin: 0 4px 4px 0; font-size: 12px; }
@@ -682,6 +685,12 @@
   var titleOpen = {}; // request id -> true when the full request title is shown
   // A pre-solicitation conference is a vendor meeting about a future bid, not a bid.
   function isPreSol(r) { return /pre[-\s]?solicitation/i.test(r.title || ""); }
+  // The buyer, bold and unabbreviated: the lowest level of "Dept of Defense / Dept of the Army" is who actually wants the work.
+  function agencyHtml(r) {
+    var full = sentence(r.agency) || "", parts = full.split(/\s+\/\s+/), top = parts.length > 1 ? parts[0] : "";
+    var main = parts[parts.length - 1];
+    return '<div class="buyer" title="' + esc(full) + '">' + esc(main) + "</div>" + (top ? '<div class="agency">' + esc(top) + "</div>" : "");
+  }
   function titleHtml(r, open) {
     var t = sentence(r.title) || "";
     var long = t.length > TITLE_MAX;
@@ -732,11 +741,18 @@
     });
     return out;
   }
+  // Federal jargon spelled out on hover (and shown with a dotted underline).
+  var GLOSSARY = { IDIQ: "Indefinite Delivery / Indefinite Quantity: a contract for an unspecified number of orders over its term", MILCON: "Military construction", USACE: "US Army Corps of Engineers", IIS: "Interagency and International Services", RFQ: "Request for quotation", RFP: "Request for proposal", IFB: "Invitation for bid", NAICS: "North American Industry Classification System code", SDVOSB: "Service-disabled veteran-owned small business", HUBZone: "Historically Underutilized Business Zone", GSA: "General Services Administration", DLA: "Defense Logistics Agency", NSN: "National Stock Number", SCA: "Service Contract Act", BPA: "Blanket purchase agreement", "O&M": "Operations and maintenance", MATOC: "Multiple Award Task Order Contract", SATOC: "Single Award Task Order Contract" };
+  var GLOSS_RE = new RegExp("(^|[^A-Za-z0-9])(" + Object.keys(GLOSSARY).join("|") + ")(?![A-Za-z0-9])", "g");
+  function glossHtml(text) { // text is raw; returns safe HTML with <abbr> hovers
+    return esc(text).replace(GLOSS_RE, function (m, pre, k) { return pre + '<abbr class="gloss" title="' + esc(GLOSSARY[k]) + '">' + k + "</abbr>"; });
+  }
   function scopeHtml(r, open) {
     if (!r.scope) return '<div class="scope"><span class="na">' + esc(r.details && r.details.readWhy ? "Not read: " + r.details.readWhy + ". The source data has no description." : "No data") + "</span></div>";
-    var pts = keyPoints(r);
-    return (pts.length ? '<ul class="dlist">' + pts.map(function (p) { return "<li>" + (p[0] ? "<b>" + esc(p[0]) + ":</b> " : "") + esc(sentence(p[1])) + "</li>"; }).join("") + "</ul>" : "") +
-      (r.aiRead ? '<div class="elig-note">AI read, please verify.</div>' : "") +
+    // An AI-read notice gets its plain-English one-liner (buyer, work, place) in full; other notices keep the extracted key points.
+    var lead = r.aiRead && r.scope.length <= 300 ? '<div class="lead">' + glossHtml(sentence(decodeText(r.scope))) + "</div>" : "";
+    var pts = lead ? [] : keyPoints(r);
+    return lead + (pts.length ? '<ul class="dlist">' + pts.map(function (p) { return "<li>" + (p[0] ? "<b>" + esc(p[0]) + ":</b> " : "") + esc(sentence(p[1])) + "</li>"; }).join("") + "</ul>" : "") +
       (open ? '<div class="scope">' + esc(sentence(decodeText(r.scope))) + "</div>" : "") +
       '<button class="toggle scope-toggle" data-id="' + esc(r.id) + '" aria-expanded="' + open + '">' + (open ? "Hide full description" : "Full description") + "</button> ";
   }
@@ -747,7 +763,7 @@
     return f ? h.replace(/<\/td>$/, f + "</td>") : h;
   }
   function eligCellBase(r) {
-    var ai = r.aiRead ? '<div class="elig-note">AI read, please verify.</div>' : "";
+    var ai = ""; // one "AI read, please verify" note per row sits under the agency (see rowHtml)
     var items = eligList(r);
     var found = items.length - (r.requires ? r.requires.length : 0); // items taken from the Details notes
     if (found > 0) {
@@ -775,7 +791,7 @@
     var e = r.valueEst;
     if (r.value != null) return '<td class="num">' + money(r.value) + '<div class="val-note">' + esc(r.valueLabel || "Published by the agency") + "</div></td>";
     if (e && e.kind === "stated") {
-      return '<td class="num">' + money(e.amount) + '<div class="val-note">Stated in the notice &middot; AI read, please verify</div>' +
+      return '<td class="num">' + money(e.amount) + '<div class="val-note">Stated in the notice</div>' +
         '<details class="val-ex"><summary>Where from</summary><div>Quoted from the notice: &ldquo;' + esc(e.quote) + "&rdquo;</div></details></td>";
     }
     if (e && e.kind === "similar") {
@@ -805,7 +821,7 @@
     }
     // A notice that was never read cannot be said to state no amount: say that it was not looked for.
     if (!r.aiRead) return '<td class="num"><span class="na">Not known</span><div class="val-note">Notice not read, so a stated amount was not looked for; too few similar past awards to estimate</div></td>';
-    return '<td class="num"><span class="na">Not published</span><div class="val-note">No stated amount found in the notice; too few similar past awards (federal needs a valid NAICS code) &middot; AI read, please verify</div></td>';
+    return '<td class="num"><span class="na">Not published</span><div class="val-note">No stated amount found in the notice; too few similar past awards (federal needs a valid NAICS code)</div></td>';
   }
 
   // Read the filter controls and parse the search text once per render (not once per row).
@@ -952,7 +968,7 @@
         (r.shall || []).map(function (s) { return "<li>" + esc(s.text) + (s.ref ? ' <span class="ref">[' + esc(s.ref) + "]</span>" : "") + "</li>"; }).join("") +
         '</ul>' + (r.aiRead ? '<div class="elig-note">AI read, please verify against the full RFQ document.</div>' : "") + '<a href="' + esc(safeUrl(r.rfqUrl)) + '" target="_blank" rel="noopener">Open the full RFQ document</a></td></tr>' : "";
       return '<tr>' +
-        '<td>' + titleHtml(r, !!titleOpen[r.id]) + '<div class="agency">' + esc(sentence(r.agency)) + "</div></td>" +
+        '<td>' + titleHtml(r, !!titleOpen[r.id]) + agencyHtml(r) + (r.aiRead ? '<div class="elig-note">AI read, please verify.</div>' : "") + "</td>" +
         "<td>" + esc(r.category).replace(/\//g, "/<wbr>") + "</td>" +
         eligCell(r) +
         "<td>" + fmtDate(r.posted) + "</td>" +
@@ -964,7 +980,7 @@
         valueCell(r) +
         "<td>" + detailsHtml(r) +
           scopeHtml(r, !!scopeOpen[r.id]) +
-          (shallN(r) ? '<button class="toggle" data-id="' + esc(r.id) + '" aria-expanded="' + !!open + '">' + (open ? "Hide" : "Show") + " all requirements (" + shallN(r) + ")</button>" + (r.aiRead ? '<div class="elig-note">AI read, please verify.</div>' : "") : "") +
+          (shallN(r) ? '<button class="toggle" data-id="' + esc(r.id) + '" aria-expanded="' + !!open + '">' + (open ? "Hide" : "Show") + " all requirements (" + shallN(r) + ")</button>" : "") +
           "</td></tr>" + shallRow;
     }
     var frag = document.createDocumentFragment();
