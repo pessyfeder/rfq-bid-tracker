@@ -109,6 +109,7 @@
   .elig.chip.hard { background: #fdecea; color: var(--bad); }
   .elig.chip.cost { background: #fff3cd; color: #7a5b00; }
   .elig.chip.possible { background: #f4f5f7; color: #555; border: 1px dashed #b8bcc4; font-weight: 400; }
+  .elig.chip.meeting { background: #e0f2f1; color: #00695c; margin-top: 4px; }
   .elig.unclear { background: #efe6f8; color: #5a2d82; } /* "Not read" / "No document access": purple, distinct from every eligibility and details chip */
   .elig-note { margin-top: 4px; font-size: 12px; color: var(--muted); }
   td.num:nth-child(9) { white-space: nowrap; font-size: clamp(10px, 1.05vw, 13px); }
@@ -679,11 +680,14 @@
   var scopeOpen = {}; // request id -> true when full description is shown
   var TITLE_MAX = 110;
   var titleOpen = {}; // request id -> true when the full request title is shown
+  // A pre-solicitation conference is a vendor meeting about a future bid, not a bid.
+  function isPreSol(r) { return /pre[-\s]?solicitation/i.test(r.title || ""); }
   function titleHtml(r, open) {
     var t = sentence(r.title) || "";
     var long = t.length > TITLE_MAX;
     var shown = long && !open ? t.slice(0, TITLE_MAX - 3).trim() + "..." : t;
     return '<div class="req-title">' + esc(shown) + "</div>" +
+      (isPreSol(r) ? '<div><span class="elig chip meeting" title="A conference to review the draft solicitation with vendors, not the bid itself. The actual solicitation is usually posted later.">Pre-solicitation meeting</span></div>' : "") +
       (long ? '<button class="toggle title-toggle" data-id="' + esc(r.id) + '" aria-expanded="' + open + '">' + (open ? "Show less" : "Show more") + "</button>" : "");
   }
   // Pulls the few useful facts out of the description as short labeled bullets. Left out: anything the other columns already
@@ -955,7 +959,7 @@
         "<td>" + (r.noDue ? (/eMarketplace/.test(r.dueTime || "") ? esc(r.dueTime) : "No real due date") : '<span style="white-space:nowrap">' + fmtDate(r.due) + '</span><div class="agency">' + esc(r.dueTime) + "</div>") + "</td>" +
         leftCell(r) +
         '<td><span class="badge ' + esc(r.level) + '">' + esc(r.level) + "</span></td>" +
-        '<td><a href="' + esc(safeUrl(r.rfqUrl)) + '" target="_blank" rel="noopener" title="Source posting">Open RFQ</a>' +
+        '<td><a href="' + esc(safeUrl(r.rfqUrl)) + '" target="_blank" rel="noopener" title="Source posting">' + (isPreSol(r) ? "Open notice" : "Open RFQ") + "</a>" +
           (r.aiRead ? "" : '<div><span class="elig unclear" title="The documents behind this posting were not read, so the details shown are only what the listing itself gives. Open the posting to see the rest.">No document access</span></div>') + "</td>" +
         valueCell(r) +
         "<td>" + detailsHtml(r) +
