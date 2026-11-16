@@ -765,10 +765,10 @@
   function scopeHtml(r, open) {
     if (!r.scope) return '<div class="scope"><span class="na">' + esc(r.details && r.details.readWhy ? "Not read: " + r.details.readWhy + ". The source data has no description." : "No data") + "</span></div>";
     // An AI-read notice gets its plain-English one-liner (buyer, work, place) in full; other notices keep the extracted key points.
-    var lead = r.aiRead && r.scope.length <= 300 ? '<div class="lead">' + glossHtml(sentence(decodeText(r.scope))) + "</div>" : "";
+    var lead = r.aiRead && r.scope.length <= 300 ? '<ul class="dlist"><li>' + glossHtml(sentence(decodeText(r.scope))) + "</li></ul>" : "";
     var pts = lead ? [] : keyPoints(r);
     return lead + (pts.length ? '<ul class="dlist">' + pts.map(function (p) { return "<li>" + (p[0] ? "<b>" + esc(p[0]) + ":</b> " : "") + esc(sentence(p[1])) + "</li>"; }).join("") + "</ul>" : "") +
-      (open ? '<div class="scope">' + esc(sentence(decodeText(r.scope))) + "</div>" : "") +
+      (open ? '<ul class="dlist"><li class="scope">' + esc(sentence(decodeText(r.scope))) + "</li></ul>" : "") +
       '<button class="toggle scope-toggle" data-id="' + esc(r.id) + '" aria-expanded="' + open + '">' + (open ? "Hide full description" : "Full description") + "</button> ";
   }
 
