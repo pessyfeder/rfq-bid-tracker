@@ -18,9 +18,10 @@
   .sample { background: #fff3cd; color: #7a5b00; padding: 2px 8px; border-radius: 10px; font-size: 12px; }
   .toolbar { padding: 4px 24px 12px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
   .toolbar input, .toolbar select { padding: 6px 10px; border: 1px solid var(--line); border-radius: 6px; background: #fff; font: inherit; }
+  .toolbar select { field-sizing: content; } /* fit the selected text, not the longest option */
   .toolbar input[type=search] { min-width: 220px; }
   .toolbar label { color: var(--muted); display: flex; gap: 6px; align-items: center; }
-  .refresh-ctl { margin-left: auto; display: flex; gap: 10px; align-items: center; }
+  .refresh-ctl { display: flex; gap: 10px; align-items: center; }
   .refresh-ctl button { font: inherit; padding: 6px 14px; border: 1px solid var(--accent); border-radius: 6px; background: var(--accent); color: #fff; cursor: pointer; white-space: nowrap; }
   .refresh-ctl button:disabled { opacity: .55; cursor: default; }
   .refresh-hint { color: var(--muted); font-size: 12px; max-width: 280px; line-height: 1.3; }
