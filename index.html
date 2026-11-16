@@ -423,6 +423,57 @@
     return (issue ? "⚠ " : "") + nm + (issue === "failed" ? " - fetch failed" : issue ? " - partial" : "");
   }
 
+  // ---- NAICS codes in words ("NAICS 541990" alone is ambiguous) ----
+  var NAICS_SECTOR = { "11": "Agriculture, Forestry, Fishing and Hunting", "21": "Mining, Oil and Gas", "22": "Utilities", "23": "Construction",
+    "31": "Manufacturing", "32": "Manufacturing", "33": "Manufacturing", "42": "Wholesale Trade", "44": "Retail Trade", "45": "Retail Trade",
+    "48": "Transportation", "49": "Warehousing and Postal Services", "51": "Information", "52": "Finance and Insurance", "53": "Real Estate, Rental and Leasing",
+    "54": "Professional, Scientific and Technical Services", "55": "Management of Companies", "56": "Administrative, Support and Waste Management Services",
+    "61": "Educational Services", "62": "Health Care and Social Assistance", "71": "Arts, Entertainment and Recreation", "72": "Accommodation and Food Services",
+    "81": "Other Services (Repair, Personal, Civic)", "92": "Public Administration" };
+  var NAICS_TITLE = {
+    "236220": "Commercial and Institutional Building Construction", "237110": "Water and Sewer Line Construction", "237310": "Highway, Street and Bridge Construction",
+    "237990": "Other Heavy and Civil Engineering Construction", "238110": "Poured Concrete Foundation and Structure Contractors", "238210": "Electrical Contractors",
+    "238220": "Plumbing, Heating and Air-Conditioning Contractors", "238910": "Site Preparation Contractors", "238990": "All Other Specialty Trade Contractors",
+    "311999": "All Other Miscellaneous Food Manufacturing", "332999": "All Other Miscellaneous Fabricated Metal Product Manufacturing",
+    "334210": "Telephone Apparatus Manufacturing", "334220": "Radio, TV and Wireless Equipment Manufacturing", "334290": "Other Communications Equipment Manufacturing",
+    "334310": "Audio and Video Equipment Manufacturing", "334419": "Other Electronic Component Manufacturing", "334510": "Electromedical and Electrotherapeutic Apparatus Manufacturing",
+    "334516": "Analytical Laboratory Instrument Manufacturing", "339113": "Surgical Appliance and Supplies Manufacturing",
+    "423450": "Medical, Dental and Hospital Equipment Wholesalers", "423490": "Other Professional Equipment and Supplies Wholesalers", "423610": "Electrical Apparatus and Equipment Wholesalers",
+    "423690": "Other Electronic Parts and Equipment Wholesalers", "423710": "Hardware Wholesalers", "423840": "Industrial Supplies Wholesalers", "424120": "Stationery and Office Supplies Wholesalers",
+    "484110": "General Freight Trucking, Local", "485999": "All Other Transit and Ground Passenger Transportation", "488190": "Other Support Activities for Air Transportation",
+    "492110": "Couriers and Express Delivery Services", "493110": "General Warehousing and Storage", "511210": "Software Publishers", "517311": "Wired Telecommunications Carriers",
+    "517312": "Wireless Telecommunications Carriers", "517810": "Other Telecommunications", "518210": "Data Processing, Hosting and Related Services",
+    "519290": "Web Search Portals and Other Information Services", "531120": "Lessors of Nonresidential Buildings", "531190": "Lessors of Other Real Estate Property",
+    "532490": "Other Commercial and Industrial Machinery Rental and Leasing", "541110": "Offices of Lawyers", "541211": "Offices of Certified Public Accountants",
+    "541219": "Other Accounting Services", "541310": "Architectural Services", "541330": "Engineering Services", "541340": "Drafting Services", "541350": "Building Inspection Services",
+    "541360": "Geophysical Surveying and Mapping Services", "541370": "Surveying and Mapping (except Geophysical) Services", "541380": "Testing Laboratories",
+    "541410": "Interior Design Services", "541511": "Custom Computer Programming Services", "541512": "Computer Systems Design Services", "541513": "Computer Facilities Management Services",
+    "541519": "Other Computer Related Services", "541611": "Administrative Management and General Management Consulting", "541612": "Human Resources Consulting Services",
+    "541613": "Marketing Consulting Services", "541614": "Process, Physical Distribution and Logistics Consulting", "541618": "Other Management Consulting Services",
+    "541620": "Environmental Consulting Services", "541690": "Other Scientific and Technical Consulting Services", "541715": "Research and Development in Physical, Engineering and Life Sciences",
+    "541720": "Research and Development in Social Sciences and Humanities", "541810": "Advertising Agencies", "541820": "Public Relations Agencies", "541830": "Media Buying Agencies",
+    "541840": "Media Representatives", "541850": "Outdoor Advertising", "541860": "Direct Mail Advertising", "541870": "Advertising Material Distribution Services",
+    "541890": "Other Services Related to Advertising", "541910": "Marketing Research and Public Opinion Polling", "541921": "Photography Studios, Portrait",
+    "541922": "Commercial Photography", "541930": "Translation and Interpretation Services", "541940": "Veterinary Services", "541990": "All Other Professional, Scientific and Technical Services",
+    "561110": "Office Administrative Services", "561210": "Facilities Support Services", "561311": "Employment Placement Agencies", "561320": "Temporary Help Services",
+    "561410": "Document Preparation Services", "561421": "Telephone Answering Services", "561422": "Telemarketing Bureaus and Other Contact Centers", "561439": "Other Business Service Centers",
+    "561499": "All Other Business Support Services", "561612": "Security Guards and Patrol Services", "561621": "Security Systems Services", "561720": "Janitorial Services",
+    "561730": "Landscaping Services", "561790": "Other Services to Buildings and Dwellings", "561910": "Packaging and Labeling Services", "561990": "All Other Support Services",
+    "562111": "Solid Waste Collection", "562910": "Remediation Services", "562998": "All Other Miscellaneous Waste Management Services", "611430": "Professional and Management Development Training",
+    "611519": "Other Technical and Trade Schools", "611699": "All Other Miscellaneous Schools and Instruction", "611710": "Educational Support Services",
+    "621111": "Offices of Physicians", "621399": "Offices of All Other Miscellaneous Health Practitioners", "621511": "Medical Laboratories", "621999": "All Other Miscellaneous Ambulatory Health Care Services",
+    "623990": "Other Residential Care Facilities", "624190": "Other Individual and Family Services", "712110": "Museums", "721110": "Hotels and Motels",
+    "722310": "Food Service Contractors", "811210": "Electronic Equipment Repair and Maintenance", "811219": "Other Electronic and Precision Equipment Repair and Maintenance",
+    "811310": "Commercial and Industrial Machinery Repair and Maintenance", "811490": "Other Personal and Household Goods Repair and Maintenance", "812320": "Drycleaning and Laundry Services",
+    "812910": "Pet Care Services", "813910": "Business Associations", "921190": "Other General Government Support", "928110": "National Security" };
+  // "NAICS 541990" -> "NAICS 541990 - All Other Professional, Scientific and Technical Services" (sector name when the exact code isn't listed)
+  function catLabel(r) {
+    var c = r.category || "", m = /^NAICS (\d{6})$/.exec(c);
+    if (!m) return c;
+    var t = NAICS_TITLE[m[1]] || NAICS_SECTOR[m[1].slice(0, 2)];
+    return t ? c + " \u2013 " + t : c;
+  }
+
   // ---- Per-column filters ----
   // List filters (state, category, eligibility, municipality) store what is HIDDEN, so "Select all" = nothing hidden and
   // values that first appear after a refresh show up by default. A request is hidden when any of its values is hidden.
@@ -435,7 +486,7 @@
   }
   var FILTERS = [
     { key: "st",       label: "State",        type: "list", get: function (r) { return [r.st]; }, name: stName, into: "level" }, // lives inside the Municipality dropdown
-    { key: "category", label: "Category",     type: "list", get: function (r) { return [r.category]; } },
+    { key: "category", label: "Category",     type: "list", get: function (r) { return [catLabel(r)]; } },
     { key: "elig",     label: "Eligibility",  type: "list", get: eligValues, note: "Shows requests that list at least one checked requirement." },
     { key: "posted",   label: "Posted",       type: "date" },
     { key: "due",      label: "End date",     type: "date", flag: "noDueOk", flagLabel: "Include requests with no real due date" },
@@ -819,7 +870,7 @@
         return '<td class="num">~' + compact(e.median) + '<div class="val-range">range ' + compact(e.low) + "&ndash;" + compact(e.high) + "</div>" +
           '<div class="val-note">' + (e.basis === "naics" ? "Broad estimate: recent federal awards in this NAICS code, no keyword match" : "Estimate from past federal awards with matching keywords") + "</div>" +
           '<details class="val-ex"><summary>How estimated</summary><div>Not the agency&rsquo;s figure and not read from this notice. ' +
-          "Median and 25th&ndash;75th percentile of " + e.n + " contract awards (purchase orders, delivery orders, definitive contracts) in " + esc(e.naics ? "NAICS " + e.naics + " (mapped from this notice’s UNSPSC codes)" : r.category) +
+          "Median and 25th&ndash;75th percentile of " + e.n + " contract awards (purchase orders, delivery orders, definitive contracts) in " + esc(e.naics ? "NAICS " + e.naics + " (mapped from this notice’s UNSPSC codes)" : catLabel(r)) +
           " from any agency over the last " + e.years + " years, from USAspending.gov. " +
           (e.basis === "naics" ? "Too few award descriptions shared keywords with this title, so this is the typical size of awards in this NAICS code. " : "Matched on title keywords: " + esc(e.keywords.join(", ")) + ". ") +
           "Federal award sizes vary widely; treat as a rough guide. Most recent:</div><ul>" + list + "</ul></details></td>";
@@ -926,7 +977,7 @@
     // "column: text" limits the text to that column, e.g. "municipality: local", "category: construction"
     var TEXT = {
       "municipality": function (r) { return r.level; }, "level": function (r) { return r.level; },
-      "category": function (r) { return r.category; }, "agency": function (r) { return r.agency; },
+      "category": function (r) { return catLabel(r); }, "agency": function (r) { return r.agency; },
       "request": function (r) { return r.title; }, "title": function (r) { return r.title; },
       "region": function (r) { return r.details.region; },
       "eligibility": function (r) { return eligList(r).map(function (d) { return d.label; }).join(" "); }
@@ -952,7 +1003,7 @@
     var parts = [];
     // Free text matches only these fields, never the notice text. Reserved words (federal/state/local,
     // "no due date", values, days left) are handled in parseQuery against their own field.
-    [r.title, r.agency, r.category, r.details && r.details.region].forEach(function (v) { if (v) parts.push(String(v)); });
+    [r.title, r.agency, catLabel(r), r.details && r.details.region].forEach(function (v) { if (v) parts.push(String(v)); });
     eligList(r).forEach(function (d) { parts.push(d.label); });
     ["posted", "due"].forEach(function (k) { if (r[k] && !(k === "due" && r.noDue)) parts.push(fmtDate(r[k])); });
     return parts.join(" ").toLowerCase();
@@ -985,7 +1036,7 @@
         '</ul>' + (r.aiRead ? '<div class="elig-note">AI read, please verify against the full RFQ document.</div>' : "") + '<a href="' + esc(safeUrl(r.rfqUrl)) + '" target="_blank" rel="noopener">Open the full RFQ document</a></td></tr>' : "";
       return '<tr>' +
         '<td>' + titleHtml(r, !!titleOpen[r.id]) + agencyHtml(r) + (r.aiRead ? '<div class="elig-note">AI read, please verify.</div>' : "") + "</td>" +
-        "<td>" + esc(r.category).replace(/\//g, "/<wbr>") + "</td>" +
+        "<td>" + esc(catLabel(r)).replace(/\//g, "/<wbr>") + "</td>" +
         eligCell(r) +
         "<td>" + fmtDate(r.posted) + "</td>" +
         "<td>" + (r.noDue ? (/eMarketplace/.test(r.dueTime || "") ? esc(r.dueTime) : "No real due date") : '<span style="white-space:nowrap">' + fmtDate(r.due) + '</span><div class="agency">' + esc(r.dueTime) + "</div>") + "</td>" +
