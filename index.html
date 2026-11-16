@@ -20,6 +20,10 @@
   .toolbar input, .toolbar select { padding: 6px 10px; border: 1px solid var(--line); border-radius: 6px; background: #fff; font: inherit; }
   .toolbar input[type=search] { min-width: 220px; }
   .toolbar label { color: var(--muted); display: flex; gap: 6px; align-items: center; }
+  .refresh-ctl { margin-left: auto; display: flex; gap: 10px; align-items: center; }
+  .refresh-ctl button { font: inherit; padding: 6px 14px; border: 1px solid var(--accent); border-radius: 6px; background: var(--accent); color: #fff; cursor: pointer; white-space: nowrap; }
+  .refresh-ctl button:disabled { opacity: .55; cursor: default; }
+  .refresh-hint { color: var(--muted); font-size: 12px; max-width: 280px; line-height: 1.3; }
   .wrap { margin: 0 24px 24px; background: var(--card); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
   table { border-collapse: collapse; width: 100%; table-layout: auto; }
   th, td { padding: 8px 8px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--line); overflow-wrap: break-word; }
@@ -134,6 +138,10 @@
   <select id="category"><option value="">All categories</option></select>
   <label title="Placeholder deadlines (more than 3 years out) and notices posted over a year ago"><input type="checkbox" id="hideFlagged" checked> Hide flagged</label>
   <span class="sub" id="count"></span>
+  <span class="refresh-ctl">
+    <button type="button" id="refreshBtn">Refresh data</button>
+    <span class="refresh-hint">Data refreshes automatically on start-up. Press this button to refresh manually</span>
+  </span>
 </div>
 
 <div class="wrap">
@@ -227,6 +235,87 @@
   function diffDays(a, b) { return Math.round((d(b) - d(a)) / DAY); }
   function fmtDate(s) { return d(s).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }); }
   function money(n) { return n == null ? null : "$" + n.toLocaleString("en-US"); }
+  // Source text is often ALL CAPS, sometimes mixed into otherwise normal text. Runs of 3+ all-caps words are shown in
+  // sentence case, except acronyms (kept uppercase) and proper nouns (capitalized). Everything else is left alone.
+  var COMMON = "a an and any are as at be by for from if in into is it its of on or per the their then this to up via with within without all not no new old non pre post out off over under not but can may will shall has had was were who how our your one two use used each both than also only such upon like when where while".split(" ");
+  var KNOWN = "us usa ih sh fm sl tx ny nyc nys id iq rfq rfp ifb itb hvac ada llc inc lp gis led ii iii iv vi vii viii ix txdot dot hvac ups cctv ev dpg sow naics unspsc pbx lan wan wifi voip scada plc ats svop".split(" ");
+  var SUFFIX = /^(rd|st|ave|blvd|dr|hwy|pkwy|ln|ct|fwy|mt|ft)$/i;
+  var DIRECTION = /^(north|south|east|west|northeast|northwest|southeast|southwest)$/i;
+  var STATES = ["Alabama","Alaska","Arizona","Arkansas","California","Colorado","Connecticut","Delaware","Florida","Georgia","Hawaii","Idaho","Illinois","Indiana","Iowa","Kansas","Kentucky","Louisiana","Maine","Maryland","Massachusetts","Michigan","Minnesota","Mississippi","Missouri","Montana","Nebraska","Nevada","New Hampshire","New Jersey","New Mexico","New York","North Carolina","North Dakota","Ohio","Oklahoma","Oregon","Pennsylvania","Rhode Island","South Carolina","South Dakota","Tennessee","Texas","Utah","Vermont","Virginia","Washington","West Virginia","Wisconsin","Wyoming","Brooklyn","Manhattan","Queens","Bronx","Staten Island"];
+  var proper = null;
+  // Proper nouns: state/borough names, plus capitalized mid-sentence words in the data whose lowercase form never appears.
+  function learnProper() {
+    proper = {};
+    STATES.forEach(function (n) { if (n.indexOf(" ") < 0) proper[n.toLowerCase()] = n; });
+    var lower = {}, caps = {};
+    (window.RFQS || []).forEach(function (r) {
+      [r.title, r.agency, r.scope, r.category].forEach(function (v) {
+        if (!v || typeof v !== "string") return;
+        var prevEnd = true;
+        v.split(/\s+/).forEach(function (t) {
+          var w = t.replace(/^[^A-Za-z]+|[^A-Za-z]+$/g, "");
+          if (/^[a-z]+$/.test(w)) lower[w] = true;
+          else if (!prevEnd && /^[A-Z][a-z]{2,}$/.test(w)) caps[w.toLowerCase()] = w;
+          prevEnd = /[.!?:]$/.test(t);
+        });
+      });
+    });
+    Object.keys(caps).forEach(function (k) { if (!lower[k] && !proper[k] && COMMON.indexOf(k) < 0) proper[k] = caps[k]; });
+  }
+  function isAcronym(w) {
+    var l = w.toLowerCase();
+    if (/\d/.test(w) || KNOWN.indexOf(l) >= 0) return true;
+    if (COMMON.indexOf(l) >= 0 || SUFFIX.test(w) || proper[l]) return false;
+    return w.length <= 3 || !/[aeiouy]/i.test(w);
+  }
+  function sentence(s) {
+    s = String(s == null ? "" : s);
+    if (!/[A-Z]{2}/.test(s)) return s;
+    if (!proper) learnProper();
+    var tok = s.split(/(\s+)/), out = [], run = [];
+    function isCaps(t) { return /[A-Z]/.test(t) && !/[a-z]/.test(t); }
+    function flush() {
+      var words = run.filter(function (r) { return /[A-Za-z]{2}/.test(r.t); }).length;
+      if (words < 3) { run.forEach(function (r) { out.push(r.t); }); run = []; return; }
+      // lower-case everything first, then restore acronyms / proper nouns / street names
+      var items = run.map(function (r) {
+        var m = r.t.match(/^([^A-Za-z0-9]*)([A-Za-z0-9][A-Za-z0-9'&]*)(.*)$/);
+        return m ? { pre: m[1], w: m[2], post: m[3], ws: false } : { pre: r.t, w: "", post: "", ws: /^\s+$/.test(r.t) };
+      });
+      var words2 = items.filter(function (it) { return it.w; });
+      words2.forEach(function (it) {
+        var l = it.w.toLowerCase();
+        it.out = isAcronym(it.w) ? it.w.toUpperCase() : proper[l] ? proper[l] : SUFFIX.test(l) ? l.charAt(0).toUpperCase() + l.slice(1) : l;
+      });
+      // names directly before a street suffix ("NORTH CENTRAL ST") are proper nouns
+      for (var k = 0; k < words2.length; k++) {
+        if (SUFFIX.test(words2[k].w) && !/\d/.test(words2[k].w)) {
+          for (var b = k - 1; b >= 0 && COMMON.indexOf(words2[b].w.toLowerCase()) < 0 && !/[;:,.]$/.test(words2[b].post) && !/^(from|to)$/i.test(words2[b].w); b--) {
+            if (isAcronym(words2[b].w) && /\d/.test(words2[b].w)) break;
+            words2[b].out = words2[b].out === words2[b].w.toUpperCase() && KNOWN.indexOf(words2[b].w.toLowerCase()) >= 0 ? words2[b].out : words2[b].w.charAt(0) + words2[b].w.slice(1).toLowerCase();
+          }
+        }
+      }
+      var start = run[0].start;
+      items.forEach(function (it) {
+        if (!it.w) { out.push(it.pre); return; }
+        var o = it.out;
+        if (start) o = o.charAt(0).toUpperCase() + o.slice(1);
+        start = /[.!?]$/.test(it.post);
+        out.push(it.pre + o + it.post);
+      });
+      run = [];
+    }
+    var prevEnd = true;
+    tok.forEach(function (t) {
+      if (/^\s+$/.test(t)) { if (run.length) run.push({ t: t, start: false }); else out.push(t); return; }
+      if (isCaps(t) || (run.length && !/[a-z]/.test(t))) run.push({ t: t, start: prevEnd });
+      else { flush(); out.push(t); }
+      prevEnd = /[.!?]$/.test(t);
+    });
+    flush();
+    return out.join("");
+  }
   function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
   // Links only ever open https pages; anything else (javascript:, data:) becomes a dead link.
   function safeUrl(u) { return /^https:\/\//i.test(String(u)) ? String(u) : "#"; }
@@ -325,7 +414,7 @@
     if (!r.scope) return '<div class="scope"><span class="na">' + esc(r.details && r.details.readWhy ? "Not read: " + r.details.readWhy + ". The source data has no description." : "No data") + "</span></div>";
     var long = r.scope.length > SCOPE_MAX;
     var text = long && !open ? r.scope.slice(0, SCOPE_MAX - 3).trim() + "..." : r.scope;
-    return '<div class="scope">' + esc(text) + "</div>" +
+    return '<div class="scope">' + esc(sentence(text)) + "</div>" +
       (r.aiRead ? '<div class="elig-note">AI read, please verify.</div>' : "") +
       (long ? '<button class="toggle scope-toggle" data-id="' + esc(r.id) + '" aria-expanded="' + open + '">' + (open ? "Show less" : "Show more") + "</button> " : "");
   }
@@ -509,7 +598,7 @@
         (r.shall || []).map(function (s) { return "<li>" + esc(s.text) + (s.ref ? ' <span class="ref">[' + esc(s.ref) + "]</span>" : "") + "</li>"; }).join("") +
         '</ul><a href="' + esc(safeUrl(r.rfqUrl)) + '" target="_blank" rel="noopener">Open the full RFQ document</a></td></tr>' : "";
       return '<tr>' +
-        '<td><div class="req-title">' + esc(r.title) + '</div><div class="agency">' + esc(r.agency) + "</div></td>" +
+        '<td><div class="req-title">' + esc(sentence(r.title)) + '</div><div class="agency">' + esc(sentence(r.agency)) + "</div></td>" +
         "<td>" + esc(r.category).replace(/\//g, "/<wbr>") + "</td>" +
         eligCell(r) +
         "<td>" + fmtDate(r.posted) + "</td>" +
@@ -636,9 +725,32 @@
     });
     return { failed: failed, skipped: skipped };
   }
+  // Opening or reloading the page retries sources whose last fetch failed, once per page load. Not for the reload
+  // this page does itself when a refresh ends (that would loop for as long as a source keeps failing).
+  var retried = false;
+  try { if (sessionStorage.getItem("rfqAutoReload")) { sessionStorage.removeItem("rfqAutoReload"); retried = true; } } catch (e) {}
+  function retryFailed(st) {
+    retried = true;
+    if (!problems(st).failed.length) return;
+    fetch("/api/refresh?failed=1", { method: "POST" }).then(function () { poll(); }, function () {});
+  }
+  var btn = document.getElementById("refreshBtn");
+  btn.addEventListener("click", function () {
+    btn.disabled = true; btn.textContent = "Starting…";
+    fetch("/api/refresh", { method: "POST" }).then(function (r) {
+      if (!r.ok && r.status !== 409) throw r.status; // 409 = one is already running: just show its progress
+      retried = true; poll();
+    }).catch(function (e) {
+      btn.disabled = false; btn.textContent = "Refresh data";
+      show(e === 403 || e === 401 ? "The service refused the refresh request (it only accepts it from this machine, or needs REFRESH_TOKEN)."
+                                  : "Could not start a refresh. Is the RFQ service running?", "offline");
+    });
+  });
   function poll() {
     fetch("/api/status", { cache: "no-store" }).then(function (r) { if (!r.ok) throw r.status; return r.json(); }).then(function (st) {
       misses = 0; lastAsOf = st.dataAsOf || lastAsOf;
+      btn.disabled = !!st.refreshing; btn.textContent = st.refreshing ? "Refreshing…" : "Refresh data";
+      if (!retried && !st.refreshing) retryFailed(st);
       if (st.refreshing) {
         was = true;
         var since = st.refreshStartedAt ? " (started " + hhmm(st.refreshStartedAt) + ")" : "";
@@ -652,7 +764,7 @@
                      : "Fetching data for the first time\u2026" + since + " This takes several minutes; the page will fill in by itself.");
         return;
       }
-      if (was) { if (window.saveUiState) window.saveUiState(); location.reload(); return; }
+      if (was) { if (window.saveUiState) window.saveUiState(); try { sessionStorage.setItem("rfqAutoReload", "1"); } catch (e) {} location.reload(); return; }
       var pr = problems(st), notes = pr.failed.concat(pr.skipped);
       // Old data, e.g. the PC was off for days and no refresh has succeeded since. dataAsOf = the oldest source's last good fetch.
       var ageH = st.dataAsOf ? (Date.now() - Date.parse(st.dataAsOf)) / 3600000 : 0, old = ageH > STALE_HOURS;

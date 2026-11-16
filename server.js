@@ -354,8 +354,16 @@ const server = http.createServer((req, res) => {
           }
         }
         if (refresh.running) return send(res, 409, { error: "a refresh is already running", startedAt: refresh.startedAt });
-        runRefresh("api request"); // not awaited: a refresh takes minutes; poll /api/status
-        return send(res, 202, { started: true });
+        // ?failed=1: retry only the sources that failed last time (what the page does on load), not everything.
+        let only;
+        if (url.searchParams.get("failed") === "1") {
+          const ids = failures(true);
+          if (!ids.length) return send(res, 200, { started: false, reason: "nothing failed" });
+          only = new Set(ids);
+        }
+        if (followTimer) { clearTimeout(followTimer); followTimer = null; followUps = 0; } // this run replaces the scheduled follow-up
+        runRefresh(only ? "page opened, retrying failed sources" : "api request", only ? { only } : {}); // not awaited: a refresh takes minutes; poll /api/status
+        return send(res, 202, { started: true, only: only ? [...only] : null });
       }
       return send(res, 404, { error: "unknown endpoint" });
     }

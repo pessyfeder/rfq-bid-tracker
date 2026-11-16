@@ -74,20 +74,41 @@ const API = "https://data.cityofnewyork.us/resource/dg92-zbpx.json";
 const AWARD_YEARS = 3;   // how far back "similar past awards" look
 const MIN_SIMILAR = 3;   // need at least this many same-agency, same-category awards to show a range
 
+// Node's fetch only says "fetch failed"; the real reason (ECONNRESET, ETIMEDOUT, a TLS error, DNS...) is in e.cause.
+function describeError(e) {
+  if (e && e.name === "TimeoutError") return "timed out";
+  const parts = [];
+  for (let c = e, depth = 0; c && depth < 4; c = c.cause, depth++) {
+    const bit = [c.code, c.message].filter(Boolean).join(" ");
+    if (bit && !parts.includes(bit)) parts.push(bit);
+  }
+  return parts.join(": ") || String(e);
+}
+
+const MAX_ATTEMPTS = 6;     // the API drops connections now and then; a brief outage should not fail the whole refresh
+const RETRY_STATUSES = [408, 425, 429, 500, 502, 503, 504];
 async function socrata(params) {
   const u = new URL(API);
   u.search = new URLSearchParams(params);
-  // Retry transient server errors (502/503/504, 429) and network failures with backoff.
-  for (let attempt = 1; ; attempt++) {
-    let res;
-    try { res = await fetch(u, { signal: AbortSignal.timeout(60000) }); }
-    catch (e) { if (attempt >= 4) throw e; } // network failure: retry
-    if (res) {
-      if (res.ok) return res.json();
-      if (![429, 502, 503, 504].includes(res.status) || attempt >= 4) throw new Error("NYC Open Data returned HTTP " + res.status);
+  // Retry transient server errors, network failures and dropped downloads, with growing, jittered waits
+  // (about 2s, 4s, 8s, 16s, 32s: roughly a minute in all).
+  let lastErr;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    let retry = true;
+    try {
+      const res = await fetch(u, { signal: AbortSignal.timeout(90000) });
+      if (res.ok) return await res.json(); // reading the body can fail too (connection dropped mid-download)
+      lastErr = new Error("NYC Open Data returned HTTP " + res.status);
+      retry = RETRY_STATUSES.includes(res.status);
+    } catch (e) {
+      lastErr = new Error(describeError(e), { cause: e });
     }
-    await new Promise((r) => setTimeout(r, 1000 * 2 ** attempt));
+    if (!retry || attempt >= MAX_ATTEMPTS) break;
+    const wait = Math.round(1000 * 2 ** attempt * (0.75 + Math.random() * 0.5));
+    console.warn(`NYC: attempt ${attempt}/${MAX_ATTEMPTS} failed (${lastErr.message}); retrying in ${Math.round(wait / 1000)}s`);
+    await new Promise((r) => setTimeout(r, wait));
   }
+  throw new Error(`${lastErr.message} (gave up after ${MAX_ATTEMPTS} attempts)`);
 }
 
 // Fetch every matching row by paging with $limit/$offset. A single huge $limit can be silently capped
