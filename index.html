@@ -693,10 +693,11 @@
   }
   function titleHtml(r, open) {
     var t = sentence(r.title) || "";
+    // Say "meeting" in the title itself instead of using a separate chip.
+    if (isPreSol(r) && !/meeting/i.test(t)) t = /conferences?/i.test(t) ? t.replace(/conference/i, "meeting").replace(/conferences/i, "meetings") : t + " (meeting)";
     var long = t.length > TITLE_MAX;
     var shown = long && !open ? t.slice(0, TITLE_MAX - 3).trim() + "..." : t;
     return '<div class="req-title">' + esc(shown) + "</div>" +
-      (isPreSol(r) ? '<div><span class="elig chip meeting" title="A conference to review the draft solicitation with vendors, not the bid itself. The actual solicitation is usually posted later.">Pre-solicitation meeting</span></div>' : "") +
       (long ? '<button class="toggle title-toggle" data-id="' + esc(r.id) + '" aria-expanded="' + open + '">' + (open ? "Show less" : "Show more") + "</button>" : "");
   }
   // Pulls the few useful facts out of the description as short labeled bullets. Left out: anything the other columns already
