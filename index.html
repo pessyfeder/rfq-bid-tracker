@@ -68,7 +68,7 @@
   th, td { padding: 8px 8px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--line); overflow-wrap: break-word; }
   table { table-layout: fixed; }
   th:nth-child(1) { width: 15%; } th:nth-child(2) { width: 11%; } th:nth-child(3) { width: 9%; }
-  th:nth-child(4) { width: 7%; }  th:nth-child(5) { width: 8%; }  th:nth-child(6) { width: 5%; }
+  th:nth-child(4) { width: 7%; }  th:nth-child(5) { width: 9%; min-width: 100px; }  th:nth-child(6) { width: 4%; }
   th:nth-child(7) { width: 5%; }  th:nth-child(8) { width: 8%; }  th:nth-child(9) { width: 12%; }
   /* Est. value is column 9; Details (10) takes the rest */
   th { overflow-wrap: normal; }
@@ -883,7 +883,7 @@
         "<td>" + esc(r.category).replace(/\//g, "/<wbr>") + "</td>" +
         eligCell(r) +
         "<td>" + fmtDate(r.posted) + "</td>" +
-        "<td>" + (r.noDue ? (/eMarketplace/.test(r.dueTime || "") ? esc(r.dueTime) : "No real due date") : fmtDate(r.due) + '<div class="agency">' + esc(r.dueTime) + "</div>") + "</td>" +
+        "<td>" + (r.noDue ? (/eMarketplace/.test(r.dueTime || "") ? esc(r.dueTime) : "No real due date") : '<span style="white-space:nowrap">' + fmtDate(r.due) + '</span><div class="agency">' + esc(r.dueTime) + "</div>") + "</td>" +
         leftCell(r) +
         '<td><span class="badge ' + esc(r.level) + '">' + esc(r.level) + "</span></td>" +
         '<td><a href="' + esc(safeUrl(r.rfqUrl)) + '" target="_blank" rel="noopener" title="Source posting">Open RFQ</a>' +
