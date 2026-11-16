@@ -703,7 +703,8 @@
     if (plain && isPreSol(r) && !/meeting/i.test(head)) head += " (meeting)";
     var long = (orig ? t : head).length > TITLE_MAX;
     var shown = long && !open ? (orig ? t : head).slice(0, TITLE_MAX - 3).trim() + "..." : (orig ? t : head);
-    return '<div class="req-title">' + esc(head) + "</div>" +
+    // When there is no separate "Listed as" line, the headline itself is the long text, so it is what gets cut.
+    return '<div class="req-title">' + esc(orig ? head : shown) + "</div>" +
       (orig ? '<div class="req-orig" title="The agency&rsquo;s own wording">Listed as: ' + esc(shown) + "</div>" : "") +
       (long ? '<button class="toggle title-toggle" data-id="' + esc(r.id) + '" aria-expanded="' + open + '">' + (open ? "Show less" : "Show more") + "</button>" : "");
   }
