@@ -268,6 +268,7 @@ async function enrich(r, o, text, AI_KEY) {
 
   writeJson(CACHE_FILE, cache);
   const rfqs = open.map((n) => n.rfq);
+  if (process.env.ANTHROPIC_API_KEY) { await require("./ai-extract").recase(rfqs, process.env.ANTHROPIC_API_KEY); require("./ai-extract").reportUsage("SAM.gov sentence case"); }
   const waiting = open.filter((n) => !n.descDone && n.descUrl).length;
   const meta = { source: "SAM.gov", fetchedAt: new Date().toISOString(), count: rfqs.length, descriptionsWaiting: waiting, requestsUsedToday: quota.used, dailyBudget: BUDGET, searchComplete: !cache.resume };
   // Write to a temp file then rename, so readers never see a truncated live-sam.js.
