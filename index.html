@@ -56,7 +56,9 @@
   .elig.chip { background: #e8eefc; color: #1f3a8a; margin: 0 4px 4px 0; }
   .elig.unclear { background: #fff3cd; color: #7a5b00; }
   .elig-note { margin-top: 4px; font-size: 12px; color: var(--muted); }
-  .val-range { font-size: 12px; color: var(--muted); }
+  td.num:nth-child(10) { white-space: nowrap; font-size: clamp(10px, 1.05vw, 13px); }
+  td.num:nth-child(10) .val-note, td.num:nth-child(10) .val-ex { white-space: normal; }
+  .val-range { font-size: clamp(10px, 0.95vw, 12px); color: var(--muted); white-space: nowrap; }
   .val-note { margin-top: 4px; font-size: 11px; line-height: 1.35; color: var(--muted); font-weight: 400; text-align: left; overflow-wrap: anywhere; }
   .val-ex { margin-top: 4px; font-size: 11px; line-height: 1.35; text-align: left; overflow-wrap: anywhere; }
   .val-ex summary { cursor: pointer; color: var(--muted); }
