@@ -421,12 +421,25 @@
     if (f.flag) R[f.flag] = true;
   }
   FILTERS.forEach(resetFilter);
-  var counts = {}; // key -> { value: number of open requests }
+  var counts = {}, allVals = {}; // key -> { value: number of requests counted (open only while Hide closed is ticked) }
   FILTERS.forEach(function (f) {
     if (f.type !== "list") return;
-    var c = counts[f.key] = {};
-    rows.forEach(function (r) { if (!(r.daysLeft < 0)) f.get(r).forEach(function (v) { c[v] = (c[v] || 0) + 1; }); });
+    allVals[f.key] = {};
+    rows.forEach(function (r) { f.get(r).forEach(function (v) { allVals[f.key][v] = 1; }); });
   });
+  function recount() {
+    var hide = $("hideClosed").checked;
+    FILTERS.forEach(function (f) {
+      if (f.type !== "list") return;
+      var c = counts[f.key] = {};
+      Object.keys(allVals[f.key]).forEach(function (v) { c[v] = 0; });
+      rows.forEach(function (r) { if (!(hide && r.daysLeft < 0)) f.get(r).forEach(function (v) { c[v]++; }); });
+    });
+    Array.prototype.forEach.call(document.querySelectorAll(".fpanel .frow[data-fk] .n"), function (n) {
+      var l = n.parentNode; n.textContent = counts[l.dataset.fk][l.dataset.fv];
+    });
+  }
+  recount();
   function pnum(s) { // "50000", "$50,000", "50k", "1.5m"
     var m = String(s == null ? "" : s).replace(/[$,\s]/g, "").match(/^(\d*\.?\d+)([kmb])?$/i);
     return m ? parseFloat(m[1]) * ({ k: 1e3, m: 1e6, b: 1e9 }[(m[2] || "").toLowerCase()] || 1) : null;
@@ -438,9 +451,9 @@
     return !!(f.type === "date" ? (o.a || o.b) : (pnum(o.a) != null || pnum(o.b) != null)) || (f.flag && !R[f.flag]);
   }
   function listValues(f) {
-    var vals = Object.keys(counts[f.key]);
+    var vals = Object.keys(allVals[f.key]);
     var nm = f.name || function (v) { return v; };
-    return f.order ? f.order.filter(function (v) { return counts[f.key][v]; }) : vals.sort(function (x, y) { return nm(x).localeCompare(nm(y)); });
+    return f.order ? f.order.filter(function (v) { return allVals[f.key][v]; }) : vals.sort(function (x, y) { return nm(x).localeCompare(nm(y)); });
   }
 
   var fwraps = {}; // key -> { btn, panel }
@@ -454,7 +467,7 @@
       var nm = f.name || function (v) { return v; };
       h += '<label class="frow all"><input type="checkbox" data-all> Select all</label><div class="flist">' +
         listValues(f).map(function (v) {
-          return '<label class="frow"><input type="checkbox" data-v="' + esc(v) + '"> ' + esc(nm(v)) + '<span class="n">' + counts[f.key][v] + "</span></label>";
+          return '<label class="frow" data-fk="' + f.key + '" data-fv="' + esc(v) + '"><input type="checkbox" data-v="' + esc(v) + '"> ' + esc(nm(v)) + '<span class="n">' + counts[f.key][v] + "</span></label>";
         }).join("") + "</div>";
     } else {
       var kind = f.type === "date" ? "date" : "text", ph = f.type === "num" ? (f.hint ? 'placeholder="' + esc(f.hint) + '"' : 'inputmode="numeric"') : "";
@@ -865,7 +878,7 @@
   $("moreBtn").addEventListener("click", function () { limit += PAGE; render(); });
   $("allBtn").addEventListener("click", function () { limit = Infinity; render(); });
   ["hideClosed", "hideFlagged"].forEach(function (id) {
-    function onFilter() { limit = PAGE; render(); }
+    function onFilter() { limit = PAGE; recount(); render(); }
     var timer;
     $(id).addEventListener("input", function () { clearTimeout(timer); timer = setTimeout(onFilter, 0); }); // coalesce events from one keystroke
     $(id).addEventListener("change", function () { clearTimeout(timer); onFilter(); });
@@ -892,6 +905,7 @@
       UI_FIELDS.forEach(function (id) { if (saved[id] != null) $(id).value = saved[id]; });
       $("hideClosed").checked = saved.hideClosed !== false;
       $("hideFlagged").checked = saved.hideFlagged !== false;
+      recount();
       if (saved.sort && saved.sort.key) sort = saved.sort;
       if (saved.H) FILTERS.forEach(function (x) { if (x.type === "list" && saved.H[x.key]) H[x.key] = saved.H[x.key]; });
       if (saved.R) FILTERS.forEach(function (x) { if (x.type !== "list" && saved.R[x.key]) R[x.key] = saved.R[x.key]; R.noDueOk = saved.R.noDueOk !== false; R.unknownOk = saved.R.unknownOk !== false; });
