@@ -97,6 +97,8 @@
   .elig { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 12px; font-weight: 600; white-space: nowrap; }
   .elig.yes { background: #e3f4ea; color: var(--ok); }
   .elig.chip { background: #e8eefc; color: #1f3a8a; margin: 0 4px 4px 0; }
+  .elig.chip.hard { background: #fdecea; color: var(--bad); }
+  .elig.chip.cost { background: #fff3cd; color: #7a5b00; }
   .elig.unclear { background: #fff3cd; color: #7a5b00; }
   .elig-note { margin-top: 4px; font-size: 12px; color: var(--muted); }
   td.num:nth-child(9) { white-space: nowrap; font-size: clamp(10px, 1.05vw, 13px); }
@@ -591,21 +593,15 @@
   // sev "hard" = a gate (can we even qualify / staff it); "cost" = adds cost or effort; "info" = good to know.
   // Bid factors come precomputed from the server (r.facts); facts.js computes them here when the page is opened without it.
   function keyFacts(r) { return r.facts || (window.computeFacts ? window.computeFacts(r) : []); }
-  // Details notes that can decide whether a firm may bid. They are read from the same text as the Bid factors
-  // (requirements, restriction, scope, key points) and listed in the Eligibility column instead of under Details.
-  function isEligFact(label) {
-    return ["TSA-checked workers", "Security clearance", "Background checks / fingerprinting", "License / certification",
-      "Bid / performance bond", "Insurance minimums", "Mandatory site visit / pre-bid"].indexOf(label) >= 0;
-  }
-  // Conditions on who may bid that the Bid factors do not cover. Checked against the title, scope, key points and Details notes.
+  // Conditions on who may bid. Checked against the title, scope, key points and Details notes. Bid factors (including
+  // proposal guarantee and local preference) stay in Details; they are not listed here.
+  // sev "hard" = a gate (red); "cost" = effort to meet it (amber). Items taken straight from the notice's requirements are "hard".
   function eligRules() { return [
     // Same wording as the TxDOT fetcher's own item, so the two merge into one chip instead of showing twice.
-    { label: "Prequalification required (unless waived)", re: /\bpre-?qualif(ied|ication)\b[^.]{0,30}\bunless waived\b/i },
-    { label: "Prequalification required", re: /\bpre-?qualif(ied|ication)\b(?![^.]{0,30}\b(unless waived|not required)\b)|\bmust be pre-?qualified\b/i },
-    { label: "Proposal / bid guarantee", re: /\b(proposal|bid) (guarantee|security|deposit)\b/i },
-    { label: "Small / minority / veteran-owned set-aside", re: /\b(small business|SBE|DBE|MBE|WBE|M\/WBE|minority|women|veteran|service-disabled)[- ]?(owned|enterprise|set-?aside|only)?\b[^.]{0,40}\b(set-?aside|only|required|participation goal)\b/i },
-    { label: "Vendor registration required", re: /\b(must|shall|required to) (be )?(registered|register|enrolled)\b|\bregistration (is )?required\b/i },
-    { label: "Local / in-state preference", re: /\b(local|in-state|resident) (vendor|bidder|business|preference)\b/i }
+    { label: "Prequalification required (unless waived)", sev: "cost", re: /\bpre-?qualif(ied|ication)\b[^.]{0,30}\bunless waived\b/i },
+    { label: "Prequalification required", sev: "hard", re: /\bpre-?qualif(ied|ication)\b(?![^.]{0,30}\b(unless waived|not required)\b)|\bmust be pre-?qualified\b/i },
+    { label: "Small / minority / veteran-owned set-aside", sev: "hard", re: /\b(small business|SBE|DBE|MBE|WBE|M\/WBE|minority|women|veteran|service-disabled)[- ]?(owned|enterprise|set-?aside|only)?\b[^.]{0,40}\b(set-?aside|only|required|participation goal)\b/i },
+    { label: "Vendor registration required", sev: "cost", re: /\b(must|shall|required to) (be )?(registered|register|enrolled)\b|\bregistration (is )?required\b/i }
   ]; }
   function detailElig(r) {
     var out = [];
@@ -613,25 +609,24 @@
     var src = [r.title, r.scope].concat((r.shall || []).map(function (s) { return s.text; }), x0.requirements || []);
     eligRules().forEach(function (rule) {
       for (var i = 0; i < src.length; i++) {
-        if (src[i] && rule.re.test(src[i])) { out.push({ label: rule.label, why: String(src[i]).slice(0, 200), kw: !r.aiRead && !r.requires }); return; }
+        if (src[i] && rule.re.test(src[i])) { out.push({ label: rule.label, sev: rule.sev, why: String(src[i]).slice(0, 200), kw: !r.aiRead && !r.requires }); return; }
       }
     });
-    keyFacts(r).forEach(function (k) { if (isEligFact(k.label)) out.push({ label: k.label, why: String(k.why).slice(0, 200), kw: !!k.kw }); });
     var x = r.details || {};
     if (x.restriction && (r.requires || []).map(function (q) { return String(q).toLowerCase(); }).indexOf(String(x.restriction).toLowerCase()) < 0 &&
-        !/ only$/i.test(x.restriction)) out.push({ label: x.restriction, why: "Restriction in the notice" });
+        !/ only$/i.test(x.restriction)) out.push({ label: x.restriction, sev: "hard", why: "Restriction in the notice" });
     return out;
   }
   // Everything that may decide eligibility: what the notice says an offeror must hold, plus the items found in Details.
   // Same null / [] meaning as r.requires, except that items found in Details count even when the restriction was not read.
   function eligList(r) {
     var base = r.requires == null ? [] : r.requires, seen = {}, out = [];
-    base.forEach(function (q) { seen[String(q).toLowerCase()] = 1; out.push({ label: String(q), why: "" }); });
+    base.forEach(function (q) { seen[String(q).toLowerCase()] = 1; out.push({ label: String(q), sev: "hard", why: "" }); });
     detailElig(r).forEach(function (d) { var k = d.label.toLowerCase(); if (!seen[k]) { seen[k] = 1; out.push(d); } });
     return out;
   }
   function factsHtml(r) {
-    var f = keyFacts(r).filter(function (k) { return !isEligFact(k.label); });
+    var f = keyFacts(r);
     if (!f.length) return "";
     return '<div class="facts"><div class="facts-h">Bid factors' + (r.aiRead ? " &middot; AI read, please verify" : (f[0] && f[0].kw ? " &middot; keyword match on title/scope only" : "")) + "</div>" +
       f.map(function (k) {
@@ -676,7 +671,7 @@
     var items = eligList(r);
     var found = items.length - (r.requires ? r.requires.length : 0); // items taken from the Details notes
     if (found > 0) {
-      return "<td>" + items.map(function (d) { return '<span class="elig chip"' + (d.why ? ' title="' + esc(d.why) + '"' : "") + ">" + esc(d.label) + "</span>"; }).join(" ") +
+      return "<td>" + items.map(function (d) { return '<span class="elig chip ' + (d.sev || "hard") + '"' + (d.why ? ' title="' + esc(d.why) + '"' : "") + ">" + esc(d.label) + "</span>"; }).join(" ") +
         ai + "</td>";
     }
     if (r.requires == null) {
@@ -689,7 +684,7 @@
       if (!r.aiRead) return '<td><span class="elig unclear">Not read</span><div class="elig-note">' + esc((r.details && r.details.readNote) || "Restriction not read from the RFQ; check the document.") + "</div></td>";
       return '<td><span class="elig yes">No requirements found</span>' + ai + "</td>";
     }
-    return "<td>" + r.requires.map(function (q) { return '<span class="elig chip">' + esc(q) + "</span>"; }).join(" ") + ai + "</td>";
+    return "<td>" + r.requires.map(function (q) { return '<span class="elig chip hard">' + esc(q) + "</span>"; }).join(" ") + ai + "</td>";
   }
 
   // Est. value cell. Always says where the number came from.
