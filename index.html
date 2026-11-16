@@ -141,6 +141,7 @@
   <span class="sub" id="count"></span>
   <span class="refresh-ctl">
     <button type="button" id="refreshBtn">Refresh data</button>
+    <select id="refreshMode" title="What the Refresh button fetches"><option value="all">Refresh all</option><option value="failed">Refresh failed</option></select>
     <span class="refresh-hint">Data refreshes automatically on start-up. Press this button to refresh manually</span>
   </span>
 </div>
@@ -736,10 +737,14 @@
     fetch("/api/refresh?failed=1", { method: "POST" }).then(function () { poll(); }, function () {});
   }
   var btn = document.getElementById("refreshBtn");
+  var modeSel = document.getElementById("refreshMode");
+  try { var m = localStorage.getItem("rfqRefreshMode"); if (m === "all" || m === "failed") modeSel.value = m; } catch (e) {}
+  modeSel.addEventListener("change", function () { try { localStorage.setItem("rfqRefreshMode", modeSel.value); } catch (e) {} });
   btn.addEventListener("click", function () {
     btn.disabled = true; btn.textContent = "Starting…";
-    fetch("/api/refresh", { method: "POST" }).then(function (r) {
+    fetch("/api/refresh" + (modeSel.value === "failed" ? "?failed=1" : ""), { method: "POST" }).then(function (r) {
       if (!r.ok && r.status !== 409) throw r.status; // 409 = one is already running: just show its progress
+      if (r.status === 200) { btn.disabled = false; btn.textContent = "Refresh data"; show("Nothing failed last time, so there is nothing to retry.", ""); return; }
       retried = true; poll();
     }).catch(function (e) {
       btn.disabled = false; btn.textContent = "Refresh data";
@@ -750,7 +755,7 @@
   function poll() {
     fetch("/api/status", { cache: "no-store" }).then(function (r) { if (!r.ok) throw r.status; return r.json(); }).then(function (st) {
       misses = 0; lastAsOf = st.dataAsOf || lastAsOf;
-      btn.disabled = !!st.refreshing; btn.textContent = st.refreshing ? "Refreshing…" : "Refresh data";
+      btn.disabled = modeSel.disabled = !!st.refreshing; btn.textContent = st.refreshing ? "Refreshing…" : "Refresh data";
       if (!retried && !st.refreshing) retryFailed(st);
       if (st.refreshing) {
         was = true;
