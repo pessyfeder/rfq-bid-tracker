@@ -1071,7 +1071,7 @@
           since += " " + det + ".";
         }
         var onlyIds = st.refreshOnly && st.refreshOnly.length ? st.refreshOnly : null, prNow = problems(st);
-        var head = onlyIds ? "Retrying " + onlyIds.map(function (id) { return labelOf(st, id); }).join(", ") + " (failed in last run)\u2026"
+        var head = onlyIds ? "Retrying " + onlyIds.map(function (id) { var c = st.refreshStates && st.refreshStates[id]; return c && c.length ? c.map(function (k) { return (STATE_NAMES[k] || k) + " (" + k + ")"; }).join(", ") : labelOf(st, id); }).join(", ") + " (failed in last run)\u2026"
                            : hasData ? "Refreshing\u2026" : "Fetching data for the first time\u2026";
         show(head + since + (onlyIds || hasData ? " Showing the previous data until it finishes." : " This takes several minutes; the page will fill in by itself."),
              onlyIds ? "warn" : "", onlyIds ? prNow.failed : []); // while retrying, keep showing what failed and why

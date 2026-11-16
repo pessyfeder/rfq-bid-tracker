@@ -114,7 +114,7 @@ function runFetcher(src, args = []) {
 async function runRefresh(reason, opts = {}) {
   if (refresh.running) return false;
   refresh.running = true; refresh.startedAt = new Date().toISOString();
-  refresh.reason = reason; refresh.only = opts.only ? [...opts.only] : null; gaveUp = null;
+  refresh.reason = reason; refresh.only = opts.only ? [...opts.only] : null; refresh.states = opts.states || null; gaveUp = null;
   rotateLog();
   log(`refresh start (${reason})`);
   try {
@@ -135,7 +135,7 @@ async function runRefresh(reason, opts = {}) {
   } catch (e) {
     log("refresh error: " + (e.stack || e.message));
   } finally {
-    refresh.running = false; refresh.startedAt = null; refresh.progress = null; refresh.reason = null; refresh.only = null;
+    refresh.running = false; refresh.startedAt = null; refresh.progress = null; refresh.reason = null; refresh.only = null; refresh.states = null;
   }
   scheduleFollowUp();
   return true;
@@ -241,7 +241,7 @@ function statusBody() {
   return {
     schemaVersion: feed.SCHEMA_VERSION, now: new Date().toISOString(),
     refreshing: refresh.running || !!wakeTimer, stale: !refresh.running && !wakeTimer && due(), refreshStartedAt: refresh.startedAt, refreshProgress: refresh.running ? refresh.progress : null,
-    refreshReason: refresh.running ? refresh.reason : null, refreshOnly: refresh.running ? refresh.only : null, // why it is running, and which sources when it is only a retry
+    refreshReason: refresh.running ? refresh.reason : null, refreshOnly: refresh.running ? refresh.only : null, refreshStates: refresh.running ? refresh.states : null, // why it is running, and which sources when it is only a retry
     retry: followInfo, gaveUp, // scheduled follow-up: { at, attempt, max, sources }; gaveUp = follow-ups used up, next try tomorrow morning
     nextDueBy: dueAt().toISOString(),
     generatedAt: state.generatedAt || null, dataAsOf: feed.dataAsOf(state), latestSeq: state.seq, // generatedAt = feed rebuilt (also on every start); dataAsOf = oldest source's last good fetch
