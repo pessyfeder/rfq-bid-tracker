@@ -26,7 +26,7 @@ function toRfq(n, a) {
   if (isDate(n.posted) && Date.now() - new Date(n.posted).getTime() > 365 * 86400000) warnings.push("Posted over a year ago");
   return {
     id: `${a.code}-${n.id}`,
-    requires: null, // restrictions not read -> "Unclear"
+    requires: Array.isArray(n.requires) && n.requires.length ? n.requires.map(clean).filter(Boolean) : null, // from the adapter's own structured fields; else not read -> "Unclear"
     scope: clean(n.description),
     shall: [],
     title: clean(n.title) || "(untitled)",

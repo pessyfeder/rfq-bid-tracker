@@ -82,7 +82,6 @@ module.exports = {
       const bits = [
         clean(pi.project_description) || clean(pi.short_description),
         r.let_type, r.district_division ? r.district_division + " District" : "",
-        r.bidder_prequalification_waiver === true ? "Prequalification waived" : r.bidder_prequalification_waiver === false ? "Prequalification required unless waived" : "",
         r.mandatory_pre_bidders === true ? "Mandatory pre-bid conference" : "",
         clean(pi.type_of_work) ? "Type of work: " + clean(pi.type_of_work) : "",
         limits,
@@ -102,6 +101,7 @@ module.exports = {
         posted: pub ? pub[0] : null,
         due: when.due, dueTime: when.dueTime,
         url: PAGE_URL,
+        requires: r.bidder_prequalification_waiver === false ? ["Prequalification required (unless waived)"] : null,
         description: bits.map((b) => b.replace(/\.+$/, "")).join(". ") + ".",
         value: est > 0 ? est : lowBid > 0 ? lowBid : null,
         valueLabel: est > 0 ? "Engineer's estimate, from TxDOT's open data" : "TxDOT project estimate, from TxDOT's open data",
