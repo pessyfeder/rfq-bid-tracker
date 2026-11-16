@@ -61,7 +61,7 @@ function rotateLog() { // keep the log from growing forever
 // ---- state -------------------------------------------------------------------------------------
 let state = feed.loadState(STATE_FILE);
 state.runs = state.runs || {};            // per-source: last attempt / success / error
-const refresh = { running: false, startedAt: null, child: null, progress: null };
+const refresh = { running: false, startedAt: null, child: null, progress: null, reason: null, only: null };
 // progress (for the page's banner): which source is running (step of steps) and, for the states fetch, how many states are done.
 // The states fetcher prints "@progress <done> <total> <CODE>" before each state.
 
@@ -77,11 +77,19 @@ function killTree(child) { // a fetcher can start its own child processes; on Wi
     else child.kill();
   } catch (e) { try { child.kill(); } catch (_) {} }
 }
-function runFetcher(src) {
+// Fetchers also trust the operating system's certificate store (where a company/ISP web filter or antivirus installs the root
+// it signs HTTPS with). Without it Node reports UNABLE_TO_VERIFY_LEAF_SIGNATURE on every request behind such a filter.
+// Only added when this Node version knows the flag, since an unknown flag in NODE_OPTIONS would stop the fetcher starting.
+function sysCaEnv() {
+  const env = { ...process.env };
+  if (process.allowedNodeEnvironmentFlags.has("--use-system-ca") && !/--use-system-ca/.test(env.NODE_OPTIONS || "")) env.NODE_OPTIONS = ((env.NODE_OPTIONS || "") + " --use-system-ca").trim();
+  return env;
+}
+function runFetcher(src, args = []) {
   return new Promise((resolve) => {
     const missing = src.needsEnv.filter((k) => !process.env[k]);
     if (missing.length) return resolve({ ok: false, skipped: true, error: `${missing.join(", ")} not set` });
-    const child = spawn(process.execPath, [src.script], { cwd: ROOT, env: process.env, windowsHide: true });
+    const child = spawn(process.execPath, [src.script, ...args], { cwd: ROOT, env: sysCaEnv(), windowsHide: true });
     refresh.child = child;
     let out = "", partial = "";
     const keep = (b) => {
@@ -106,6 +114,7 @@ function runFetcher(src) {
 async function runRefresh(reason, opts = {}) {
   if (refresh.running) return false;
   refresh.running = true; refresh.startedAt = new Date().toISOString();
+  refresh.reason = reason; refresh.only = opts.only ? [...opts.only] : null; gaveUp = null;
   rotateLog();
   log(`refresh start (${reason})`);
   try {
@@ -114,7 +123,7 @@ async function runRefresh(reason, opts = {}) {
       refresh.progress = { step: i + 1, steps: steps.length, label: src.label, done: null, total: null, current: null };
       const run = state.runs[src.id] = state.runs[src.id] || {};
       run.lastAttempt = new Date().toISOString();
-      const r = await runFetcher(src);
+      const r = await runFetcher(src, (opts.states && opts.states[src.id]) || []);
       if (r.ok) { run.lastSuccess = run.lastAttempt; run.error = null; run.skipped = false; log(`${src.id}: ok`); }
       else { run.error = r.error; run.skipped = !!r.skipped; log(`${src.id}: ${r.skipped ? "skipped" : "FAILED"} - ${r.error}`); }
       // A failed fetch leaves the previous live file untouched, so the old data stays in the feed.
@@ -126,7 +135,7 @@ async function runRefresh(reason, opts = {}) {
   } catch (e) {
     log("refresh error: " + (e.stack || e.message));
   } finally {
-    refresh.running = false; refresh.startedAt = null; refresh.progress = null;
+    refresh.running = false; refresh.startedAt = null; refresh.progress = null; refresh.reason = null; refresh.only = null;
   }
   scheduleFollowUp();
   return true;
@@ -139,6 +148,8 @@ async function runRefresh(reason, opts = {}) {
 const RETRY_AFTER_MIN = Number(process.env.RETRY_AFTER_MIN || 20);
 const RETRY_MAX = Number(process.env.RETRY_MAX || 3);
 let failedAfter = [], followUps = 0, followTimer = null;
+let followInfo = null;   // what the scheduled follow-up will retry and when, for the page banner: { at, attempt, sources }
+let gaveUp = null;       // set when the follow-ups ran out: { sources, at } (cleared by the next clean run or refresh)
 function failures(bySource) { // sources that failed (not merely skipped) and individual states whose last fetch failed
   const out = [];
   for (const src of feed.SOURCES.filter((s) => s.script)) {
@@ -148,13 +159,24 @@ function failures(bySource) { // sources that failed (not merely skipped) and in
   }
   return bySource ? [...new Set(out)] : out;
 }
+// Per source: the individual state codes to re-run. Omitted when the whole script failed (then it re-runs everything).
+function failedStateCodes() {
+  const out = {};
+  for (const src of feed.SOURCES.filter((s) => s.script)) {
+    if ((state.runs[src.id] || {}).error) continue;
+    const codes = Object.entries((state.sources[src.id] || {}).states || {}).filter(([, r]) => r && r.ok === false && !/Waiting for/.test(r.error || "")).map(([c]) => c);
+    if (codes.length) out[src.id] = codes;
+  }
+  return out;
+}
 function scheduleFollowUp() {
   if (followTimer) return;
-  if (!failedAfter.length) { followUps = 0; return; }
-  if (followUps >= RETRY_MAX) { log(`still failing after ${followUps} follow-up refreshes (${failedAfter.join(", ")}); next try tomorrow morning`); followUps = 0; failedAfter = []; return; }
+  if (!failedAfter.length) { followUps = 0; followInfo = null; gaveUp = null; return; }
+  if (followUps >= RETRY_MAX) { log(`still failing after ${followUps} follow-up refreshes (${failedAfter.join(", ")}); next try tomorrow morning`); gaveUp = { sources: failures(true), attempts: followUps }; followInfo = null; followUps = 0; failedAfter = []; return; }
   followUps++;
   log(`still failing: ${failedAfter.join(", ")}; follow-up refresh ${followUps}/${RETRY_MAX} in ${RETRY_AFTER_MIN} min`);
-  followTimer = setTimeout(() => { followTimer = null; runRefresh(`follow-up ${followUps}/${RETRY_MAX} after failures`, { only: new Set(failures(true)) }); }, RETRY_AFTER_MIN * 60000); // retry only the sources that failed
+  followInfo = { at: new Date(Date.now() + RETRY_AFTER_MIN * 60000).toISOString(), attempt: followUps, max: RETRY_MAX, sources: failures(true) };
+  followTimer = setTimeout(() => { followTimer = null; followInfo = null; runRefresh(`follow-up ${followUps}/${RETRY_MAX} after failures`, { only: new Set(failures(true)), states: failedStateCodes() }); }, RETRY_AFTER_MIN * 60000); // retry only the sources that failed
 }
 
 // Schedule: one refresh per daily cycle, and cycles start at CFG.morningHour (5:00 local by default). A refresh is due when the
@@ -218,7 +240,10 @@ const send = (res, code, body, type = "application/json") => {
 function statusBody() {
   return {
     schemaVersion: feed.SCHEMA_VERSION, now: new Date().toISOString(),
-    refreshing: refresh.running || !!wakeTimer, stale: !refresh.running && !wakeTimer && due(), refreshStartedAt: refresh.startedAt, refreshProgress: refresh.running ? refresh.progress : null, nextDueBy: dueAt().toISOString(),
+    refreshing: refresh.running || !!wakeTimer, stale: !refresh.running && !wakeTimer && due(), refreshStartedAt: refresh.startedAt, refreshProgress: refresh.running ? refresh.progress : null,
+    refreshReason: refresh.running ? refresh.reason : null, refreshOnly: refresh.running ? refresh.only : null, // why it is running, and which sources when it is only a retry
+    retry: followInfo, gaveUp, // scheduled follow-up: { at, attempt, max, sources }; gaveUp = follow-ups used up, next try tomorrow morning
+    nextDueBy: dueAt().toISOString(),
     generatedAt: state.generatedAt || null, dataAsOf: feed.dataAsOf(state), latestSeq: state.seq, // generatedAt = feed rebuilt (also on every start); dataAsOf = oldest source's last good fetch
     activeRecords: Object.values(state.records).filter((r) => r.active).length,
     sources: feed.SOURCES.map((s) => ({
@@ -361,8 +386,17 @@ const server = http.createServer((req, res) => {
           if (!ids.length) return send(res, 200, { started: false, reason: "nothing failed" });
           only = new Set(ids);
         }
+        // ?portal=sam | nyc | states | state:XX: refresh just that portal (Federal, local, all states, or one state).
+        let states;
+        const portal = url.searchParams.get("portal");
+        if (portal) {
+          const m = /^state:([A-Za-z]{2})$/.exec(portal);
+          if (m) { only = new Set(["states"]); states = { states: [m[1].toUpperCase()] }; }
+          else if (feed.SOURCES.some((s) => s.script && s.id === portal)) only = new Set([portal]);
+          else return send(res, 400, { error: "unknown portal" });
+        }
         if (followTimer) { clearTimeout(followTimer); followTimer = null; followUps = 0; } // this run replaces the scheduled follow-up
-        runRefresh(only ? "page opened, retrying failed sources" : "api request", only ? { only } : {}); // not awaited: a refresh takes minutes; poll /api/status
+        runRefresh(portal ? "api request, portal " + portal : only ? "page opened, retrying failed sources" : "api request", only ? { only, states } : {}); // not awaited: a refresh takes minutes; poll /api/status
         return send(res, 202, { started: true, only: only ? [...only] : null });
       }
       return send(res, 404, { error: "unknown endpoint" });

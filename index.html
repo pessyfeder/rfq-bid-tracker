@@ -171,8 +171,14 @@
     <span class="seg" id="refreshMode" title="What the Refresh button fetches">
       <button type="button" data-v="all" class="on">Refresh all</button><button type="button" data-v="failed">Refresh failed</button>
     </span>
+    <select id="refreshPortal" title="Which portal the Refresh button fetches (only used with Refresh all)" style="font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--muted)">
+      <option value="">All portals</option>
+      <option value="sam">Federal (SAM.gov)</option>
+      <option value="nyc">Local (NYC City Record)</option>
+      <option value="states">All state portals</option>
+    </select>
     <button type="button" id="refreshBtn">Refresh data</button>
-    <span class="refresh-hint">Data refreshes automatically on start-up. Press this button to refresh manually</span>
+    <span class="refresh-hint">Data refreshes automatically once a day (after 5:00 AM). Sources that fail are retried on their own, and again when you open this page. Press this button to refresh manually</span>
   </span>
 </div>
 <div class="fchips" id="fchips" hidden></div>
@@ -940,13 +946,51 @@
     bar.hidden = false;
   }
   // What the last refresh left behind. Skipped = needs a key or login that is not set up; failed = it tried and errored.
+  // Plain-language reason for a raw error string. Unknown errors fall back to the raw text (minus unrelated notes).
+  function why(err) {
+    var e = String(err || "");
+    var raw = e.split(" | ").filter(function (p) { return !/^(ANTHROPIC_API_KEY not set|SAM\.gov budget)/.test(p); }).join(" | ").replace(/\s+/g, " ").trim();
+    if (/UNABLE_TO_VERIFY|CERT_|SELF_SIGNED|certificate/i.test(e)) return "its security certificate could not be verified (usually a web filter, proxy or antivirus intercepting HTTPS)";
+    if (/Unexpected token '<'|<!DOCTYPE|is not valid JSON/i.test(e)) return "the site sent back a web page instead of data (a web filter or proxy block page, or the site is down)";
+    if (/ENOTFOUND|EAI_AGAIN/.test(e)) return "the website's address could not be found (internet or DNS problem)";
+    if (/ETIMEDOUT|timeout|timed out|aborted|killed/i.test(e)) return "it took too long to respond";
+    if (/ECONNRESET|ECONNREFUSED|EPIPE|socket hang up/i.test(e)) return "the connection was refused or dropped";
+    if (/\b429\b/.test(e)) return "the site is limiting requests (HTTP 429)";
+    if (/\b40[13]\b/.test(e)) return "the site refused access (HTTP " + /\b(40[13])\b/.exec(e)[1] + ")";
+    if (/\b5\d\d\b/.test(e)) return "the site had a server error (HTTP " + /\b(5\d\d)\b/.exec(e)[1] + ")";
+    return raw ? raw.slice(0, 160) : "unknown error";
+  }
+  function labelOf(st, id) { var s = (st.sources || []).filter(function (x) { return x.id === id; })[0]; return s ? s.label : id; }
+  // problems: what failed and why. Each failed source is one line; for the states fetch, failed states are grouped by reason.
   function problems(st) {
-    var failed = [], skipped = [];
+    var failed = [], skipped = [], ids = [];
     (st.sources || []).filter(function (x) { return x.schedulable; }).forEach(function (x) {
-      if (x.skipped) skipped.push(x.label + " is not set up yet (" + (x.error || "missing setting") + "), so its requests are not included.");
-      else if (x.error) failed.push(x.label + " failed: " + String(x.error).slice(0, 160) + (x.fetchedAt ? ". Showing older data from " + dayhm(x.fetchedAt) + "." : ". No data from it yet."));
+      var older = x.fetchedAt ? " Showing older data from " + dayhm(x.fetchedAt) + "." : " No data from it yet.";
+      if (x.skipped) { skipped.push(x.label + " is not set up yet (" + (x.error || "missing setting") + "), so its requests are not included."); return; }
+      var badStates = (x.states || []).filter(function (s) { return s.stale; });
+      if (x.error && badStates.length) { // the states fetch: list the states, grouped by reason
+        ids.push(x.id);
+        var groups = {};
+        badStates.forEach(function (s) { var r = why(s.error); (groups[r] = groups[r] || []).push(s.code); });
+        Object.keys(groups).forEach(function (r) {
+          failed.push(x.label + ": " + groups[r].length + " of " + x.states.length + " states failed (" + groups[r].join(", ") + ") because " + r + "." + older);
+        });
+      } else if (x.error) {
+        ids.push(x.id);
+        failed.push(x.label + " failed because " + why(x.error) + "." + older);
+      }
     });
-    return { failed: failed, skipped: skipped };
+    return { failed: failed, skipped: skipped, ids: ids };
+  }
+  // What the service will do about failures: the scheduled retry (what, when, which attempt) or that it has given up for today.
+  function retryNotes(st) {
+    var r = st.retry, out = [];
+    if (r && r.sources && r.sources.length) {
+      out.push("Retrying only " + r.sources.map(function (id) { return labelOf(st, id); }).join(", ") + " automatically at " + hhmm(r.at) + " (retry " + r.attempt + " of " + r.max + "). Opening this page or pressing Refresh data retries them sooner.");
+    } else if (st.gaveUp) {
+      out.push("Stopped retrying " + st.gaveUp.sources.map(function (id) { return labelOf(st, id); }).join(", ") + " after " + st.gaveUp.attempts + " retries. The next automatic try is " + dayhm(st.nextDueBy) + ". Press Refresh data to try now.");
+    }
+    return out;
   }
   // Opening or reloading the page retries sources whose last fetch failed, once per page load. Not for the reload
   // this page does itself when a refresh ends (that would loop for as long as a source keeps failing).
@@ -965,14 +1009,23 @@
     modeSel.value = v;
     for (var i = 0; i < modeBtns.length; i++) modeBtns[i].classList.toggle("on", modeBtns[i].dataset.v === v);
   }
+  var portalSel = document.getElementById("refreshPortal");
   try { var m = localStorage.getItem("rfqRefreshMode"); if (m === "all" || m === "failed") setMode(m); } catch (e) {}
+  // Individual states are added from the service status (the states it knows about).
+  fetch("/api/status", { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (st) {
+    var src = (st.sources || []).filter(function (s) { return s.id === "states"; })[0];
+    ((src && src.states) || []).forEach(function (s) {
+      var o = document.createElement("option"); o.value = "state:" + s.code; o.textContent = "State: " + s.code; portalSel.appendChild(o);
+    });
+  }).catch(function () {});
   for (var bi = 0; bi < modeBtns.length; bi++) modeBtns[bi].addEventListener("click", function () {
     setMode(this.dataset.v);
     try { localStorage.setItem("rfqRefreshMode", modeSel.value); } catch (e) {}
   });
   btn.addEventListener("click", function () {
     btn.disabled = true; btn.textContent = "Starting…";
-    fetch("/api/refresh" + (modeSel.value === "failed" ? "?failed=1" : ""), { method: "POST" }).then(function (r) {
+    var portal = portalSel.value;
+    fetch("/api/refresh" + (modeSel.value === "failed" ? "?failed=1" : portal ? "?portal=" + encodeURIComponent(portal) : ""), { method: "POST" }).then(function (r) {
       if (!r.ok && r.status !== 409) throw r.status; // 409 = one is already running: just show its progress
       if (r.status === 200) { btn.disabled = false; btn.textContent = "Refresh data"; show("Nothing failed last time, so there is nothing to retry.", ""); return; }
       retried = true; poll();
@@ -985,7 +1038,7 @@
   function poll() {
     fetch("/api/status", { cache: "no-store" }).then(function (r) { if (!r.ok) throw r.status; return r.json(); }).then(function (st) {
       misses = 0; lastAsOf = st.dataAsOf || lastAsOf;
-      btn.disabled = modeSel.disabled = !!st.refreshing; btn.textContent = st.refreshing ? "Refreshing…" : "Refresh data";
+      btn.disabled = modeSel.disabled = portalSel.disabled = !!st.refreshing; btn.textContent = st.refreshing ? "Refreshing…" : "Refresh data";
       if (!retried && !st.refreshing) retryFailed(st);
       if (st.refreshing) {
         was = true;
@@ -996,18 +1049,21 @@
           if (pg.total) det += ", " + pg.done + " of " + pg.total + " states done" + (pg.current ? " (now " + pg.current + ")" : "");
           since += " " + det + ".";
         }
-        show(hasData ? "Refreshing\u2026" + since + " Showing the previous data until it finishes."
-                     : "Fetching data for the first time\u2026" + since + " This takes several minutes; the page will fill in by itself.");
+        var onlyIds = st.refreshOnly && st.refreshOnly.length ? st.refreshOnly : null, prNow = problems(st);
+        var head = onlyIds ? "Retrying " + onlyIds.map(function (id) { return labelOf(st, id); }).join(", ") + " (failed in last run)\u2026"
+                           : hasData ? "Refreshing\u2026" : "Fetching data for the first time\u2026";
+        show(head + since + (onlyIds || hasData ? " Showing the previous data until it finishes." : " This takes several minutes; the page will fill in by itself."),
+             onlyIds ? "warn" : "", onlyIds ? prNow.failed : []); // while retrying, keep showing what failed and why
         return;
       }
       if (was) { if (window.saveUiState) window.saveUiState(); try { sessionStorage.setItem("rfqAutoReload", "1"); } catch (e) {} location.reload(); return; }
-      var pr = problems(st), notes = pr.failed.concat(pr.skipped);
+      var pr = problems(st), notes = pr.failed.concat(retryNotes(st), pr.skipped);
       // Old data, e.g. the PC was off for days and no refresh has succeeded since. dataAsOf = the oldest source's last good fetch.
       var ageH = st.dataAsOf ? (Date.now() - Date.parse(st.dataAsOf)) / 3600000 : 0, old = ageH > STALE_HOURS;
       if (old) notes.unshift("The newest complete data is from " + dayhm(st.dataAsOf) + " (" + (ageH >= 48 ? Math.round(ageH / 24) + " days" : Math.round(ageH) + " hours") + " old). Check the dates before relying on it.");
       if (!hasData && !st.activeRecords) {
         var neverRan = !(st.sources || []).some(function (x) { return x.lastAttempt; });
-        show(neverRan ? "No data yet. The first fetch starts in a moment." : "No data yet.", pr.failed.length ? "warn" : "", notes.concat(pr.failed.length ? ["The service will retry automatically."] : []));
+        show(neverRan ? "No data yet. The first fetch starts in a moment." : "No data yet.", pr.failed.length ? "warn" : "", notes);
       } else if (notes.length) {
         show(old ? "The data is out of date." : pr.failed.length ? "The last refresh had problems. Some data may be out of date." : "Some sources are not included.", old || pr.failed.length ? "warn" : "", notes);
       } else if (st.stale) {
