@@ -390,10 +390,17 @@ const server = http.createServer((req, res) => {
         let states;
         const portal = url.searchParams.get("portal");
         if (portal) {
-          const m = /^state:([A-Za-z]{2})$/.exec(portal);
-          if (m) { only = new Set(["states"]); states = { states: [m[1].toUpperCase()] }; }
-          else if (feed.SOURCES.some((s) => s.script && s.id === portal)) only = new Set([portal]);
-          else return send(res, 400, { error: "unknown portal" });
+          // Comma-separated list, e.g. sam,nyc,state:NY,state:CA. "states" = every state; state:XX = just that state.
+          only = new Set(); const codes = []; let allStates = false;
+          for (const part of portal.split(",")) {
+            const m = /^state:([A-Za-z]{2})$/.exec(part);
+            if (m) codes.push(m[1].toUpperCase());
+            else if (part === "states") allStates = true;
+            else if (feed.SOURCES.some((s) => s.script && s.id === part)) only.add(part);
+            else return send(res, 400, { error: "unknown portal" });
+          }
+          if (allStates || codes.length) only.add("states");
+          if (!allStates && codes.length) states = { states: codes };
         }
         if (followTimer) { clearTimeout(followTimer); followTimer = null; followUps = 0; } // this run replaces the scheduled follow-up
         runRefresh(portal ? "api request, portal " + portal : only ? "page opened, retrying failed sources" : "api request", only ? { only, states } : {}); // not awaited: a refresh takes minutes; poll /api/status

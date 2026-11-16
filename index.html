@@ -52,7 +52,13 @@
   .refresh-ctl button { font: inherit; padding: 6px 14px; border: 1px solid var(--accent); border-radius: 6px; background: var(--accent); color: #fff; cursor: pointer; white-space: nowrap; }
   .refresh-ctl button:disabled { opacity: .55; cursor: default; }
   .refresh-ctl .seg { display: inline-flex; }
-  .refresh-ctl .seg button { background: #fff; color: var(--muted); border-color: var(--line); border-radius: 0; padding: 6px 12px; }
+  .refresh-ctl { position: relative; }
+  .refresh-ctl button { font-size: 12px; padding: 3px 10px; }
+  .specific-pop { position: absolute; top: 100%; left: 0; margin-top: 4px; z-index: 20; background: #fff; border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 6px 20px rgba(0,0,0,.12); padding: 6px 10px; min-width: 210px; max-height: 320px; overflow: auto; font-size: 13px; }
+  .specific-pop[hidden] { display: none; }
+  .specific-pop label { display: flex; gap: 6px; align-items: center; padding: 2px 0; cursor: pointer; }
+  .sp-states { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0 8px; border-top: 1px solid var(--line); margin-top: 4px; padding-top: 4px; }
+  .refresh-ctl .seg button { background: #fff; color: var(--muted); border-color: var(--line); border-radius: 0; padding: 3px 10px; }
   .refresh-ctl .seg button:first-child { border-radius: 6px 0 0 6px; }
   .refresh-ctl .seg button:last-child { border-radius: 0 6px 6px 0; margin-left: -1px; }
   .refresh-ctl .seg button.on { background: #e8eef8; color: var(--accent); border-color: var(--accent); position: relative; font-weight: 600; }
@@ -169,15 +175,15 @@
   <span class="sub" id="count"></span>
   <span class="refresh-ctl">
     <span class="seg" id="refreshMode" title="What the Refresh button fetches">
-      <button type="button" data-v="all" class="on">Refresh all</button><button type="button" data-v="failed">Refresh failed</button>
+      <button type="button" data-v="all" class="on">All</button><button type="button" data-v="failed">Failed</button><button type="button" data-v="specific" id="specificBtn">Specific &#9662;</button>
     </span>
-    <select id="refreshPortal" title="Which portal the Refresh button fetches (only used with Refresh all)" style="font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--muted)">
-      <option value="">All portals</option>
-      <option value="sam">Federal (SAM.gov)</option>
-      <option value="nyc">Local (NYC City Record)</option>
-      <option value="states">All state portals</option>
-    </select>
-    <button type="button" id="refreshBtn">Refresh data</button>
+    <div class="specific-pop" id="specificPop" hidden>
+      <label class="frow"><input type="checkbox" value="sam"> Federal (SAM.gov)</label>
+      <label class="frow"><input type="checkbox" value="nyc"> Local (NYC City Record)</label>
+      <label class="frow"><input type="checkbox" value="states"> All state portals</label>
+      <div class="sp-states" id="specificStates"></div>
+    </div>
+    <button type="button" id="refreshBtn">Refresh</button>
     <span class="refresh-hint">Data refreshes automatically once a day (after 5:00 AM). Sources that fail are retried on their own, and again when you open this page. Press this button to refresh manually</span>
   </span>
 </div>
@@ -986,9 +992,9 @@
   function retryNotes(st) {
     var r = st.retry, out = [];
     if (r && r.sources && r.sources.length) {
-      out.push("Retrying only " + r.sources.map(function (id) { return labelOf(st, id); }).join(", ") + " automatically at " + hhmm(r.at) + " (retry " + r.attempt + " of " + r.max + "). Opening this page or pressing Refresh data retries them sooner.");
+      out.push("Retrying only " + r.sources.map(function (id) { return labelOf(st, id); }).join(", ") + " automatically at " + hhmm(r.at) + " (retry " + r.attempt + " of " + r.max + "). Opening this page or pressing Refresh retries them sooner.");
     } else if (st.gaveUp) {
-      out.push("Stopped retrying " + st.gaveUp.sources.map(function (id) { return labelOf(st, id); }).join(", ") + " after " + st.gaveUp.attempts + " retries. The next automatic try is " + dayhm(st.nextDueBy) + ". Press Refresh data to try now.");
+      out.push("Stopped retrying " + st.gaveUp.sources.map(function (id) { return labelOf(st, id); }).join(", ") + " after " + st.gaveUp.attempts + " retries. The next automatic try is " + dayhm(st.nextDueBy) + ". Press Refresh to try now.");
     }
     return out;
   }
@@ -1009,28 +1015,43 @@
     modeSel.value = v;
     for (var i = 0; i < modeBtns.length; i++) modeBtns[i].classList.toggle("on", modeBtns[i].dataset.v === v);
   }
-  var portalSel = document.getElementById("refreshPortal");
+  var pop = document.getElementById("specificPop"), stBox = document.getElementById("specificStates");
+  var portalSel = {
+    get value() { // comma-separated ids of the ticked boxes ("" = none)
+      return Array.prototype.map.call(pop.querySelectorAll("input:checked"), function (c) { return c.value; }).join(",");
+    },
+    set disabled(d) { var all = pop.querySelectorAll("input"); for (var i = 0; i < all.length; i++) all[i].disabled = d; }
+  };
   try { var m = localStorage.getItem("rfqRefreshMode"); if (m === "all" || m === "failed") setMode(m); } catch (e) {}
   // Individual states are added from the service status (the states it knows about).
   fetch("/api/status", { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (st) {
     var src = (st.sources || []).filter(function (s) { return s.id === "states"; })[0];
     ((src && src.states) || []).forEach(function (s) {
-      var o = document.createElement("option"); o.value = "state:" + s.code; o.textContent = "State: " + s.code; portalSel.appendChild(o);
+      var l = document.createElement("label"); l.innerHTML = '<input type="checkbox" value="state:' + s.code + '"> ' + s.code; stBox.appendChild(l);
     });
   }).catch(function () {});
+  function specificLabel() {
+    var n = pop.querySelectorAll("input:checked").length;
+    document.getElementById("specificBtn").innerHTML = (n ? "Specific (" + n + ")" : "Specific") + " &#9662;";
+  }
+  pop.addEventListener("change", function () { setMode("specific"); specificLabel(); });
+  document.addEventListener("click", function (e) { if (!pop.hidden && !pop.contains(e.target) && e.target.id !== "specificBtn") pop.hidden = true; });
   for (var bi = 0; bi < modeBtns.length; bi++) modeBtns[bi].addEventListener("click", function () {
     setMode(this.dataset.v);
-    try { localStorage.setItem("rfqRefreshMode", modeSel.value); } catch (e) {}
+    pop.hidden = this.dataset.v !== "specific" ? true : !pop.hidden;
+    try { if (modeSel.value !== "specific") localStorage.setItem("rfqRefreshMode", modeSel.value); } catch (e) {}
   });
   btn.addEventListener("click", function () {
-    btn.disabled = true; btn.textContent = "Starting…";
     var portal = portalSel.value;
-    fetch("/api/refresh" + (modeSel.value === "failed" ? "?failed=1" : portal ? "?portal=" + encodeURIComponent(portal) : ""), { method: "POST" }).then(function (r) {
+    if (modeSel.value === "specific" && !portal) { pop.hidden = false; show("Tick at least one portal under Specific, or choose All.", ""); return; }
+    pop.hidden = true;
+    btn.disabled = true; btn.textContent = "Starting…";
+    fetch("/api/refresh" + (modeSel.value === "failed" ? "?failed=1" : modeSel.value === "specific" ? "?portal=" + encodeURIComponent(portal) : ""), { method: "POST" }).then(function (r) {
       if (!r.ok && r.status !== 409) throw r.status; // 409 = one is already running: just show its progress
-      if (r.status === 200) { btn.disabled = false; btn.textContent = "Refresh data"; show("Nothing failed last time, so there is nothing to retry.", ""); return; }
+      if (r.status === 200) { btn.disabled = false; btn.textContent = "Refresh"; show("Nothing failed last time, so there is nothing to retry.", ""); return; }
       retried = true; poll();
     }).catch(function (e) {
-      btn.disabled = false; btn.textContent = "Refresh data";
+      btn.disabled = false; btn.textContent = "Refresh";
       show(e === 403 || e === 401 ? "The service refused the refresh request (it only accepts it from this machine, or needs REFRESH_TOKEN)."
                                   : "Could not start a refresh. Is the RFQ service running?", "offline");
     });
@@ -1038,7 +1059,7 @@
   function poll() {
     fetch("/api/status", { cache: "no-store" }).then(function (r) { if (!r.ok) throw r.status; return r.json(); }).then(function (st) {
       misses = 0; lastAsOf = st.dataAsOf || lastAsOf;
-      btn.disabled = modeSel.disabled = portalSel.disabled = !!st.refreshing; btn.textContent = st.refreshing ? "Refreshing…" : "Refresh data";
+      btn.disabled = modeSel.disabled = portalSel.disabled = !!st.refreshing; btn.textContent = st.refreshing ? "Refreshing…" : "Refresh";
       if (!retried && !st.refreshing) retryFailed(st);
       if (st.refreshing) {
         was = true;
