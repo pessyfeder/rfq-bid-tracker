@@ -162,7 +162,6 @@
 <div class="failbar" id="failBanner" role="alert" hidden></div>
 
 <div class="toolbar">
-  <input type="search" id="q" placeholder="Search: filter by specification">
   <span class="sub">Filter by</span>
   <span class="filters" id="filters"></span>
   <label title="Placeholder deadlines (more than 3 years out) and notices posted over a year ago"><input type="checkbox" id="hideFlagged" checked> Hide flagged</label>
@@ -663,7 +662,7 @@
 
   // Read the filter controls and parse the search text once per render (not once per row).
   function makeFilter() {
-    var q = $("q").value.trim().toLowerCase();
+    var q = "";
     return { lists: FILTERS.filter(function (x) { return x.type === "list" && hiddenN(x); }),
       days: [pnum(R.days.a), pnum(R.days.b)], value: [pnum(R.value.a), pnum(R.value.b)],
       hideFlagged: $("hideFlagged").checked, pq: q ? parseQuery(q) : null };
@@ -864,14 +863,14 @@
   });
   $("moreBtn").addEventListener("click", function () { limit += PAGE; render(); });
   $("allBtn").addEventListener("click", function () { limit = Infinity; render(); });
-  ["q", "hideFlagged"].forEach(function (id) {
+  ["hideFlagged"].forEach(function (id) {
     function onFilter() { limit = PAGE; render(); }
     var timer;
     $(id).addEventListener("input", function () { clearTimeout(timer); timer = setTimeout(onFilter, 0); }); // coalesce events from one keystroke
     $(id).addEventListener("change", function () { clearTimeout(timer); onFilter(); });
   });
   // Keep the user's view across the reload that follows a refresh: filters, sort, open rows and scroll position.
-  var UI_KEY = "rfqUiState", UI_FIELDS = ["q"];
+  var UI_KEY = "rfqUiState", UI_FIELDS = [];
   function loadShall(row) { // same fetch as the Show-all-requirements button, for rows that were open before the reload
     fetch("/shall/" + encodeURIComponent(row.id)).then(function (x) { if (!x.ok) throw 0; return x.json(); })
       .then(function (j) { row.shall = j.shall || []; }, function () { row.shall = [{ text: "Could not load the requirements. Open the full RFQ document instead." }]; })
