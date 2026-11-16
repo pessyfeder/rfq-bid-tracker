@@ -61,7 +61,7 @@
   table { border-collapse: collapse; width: 100%; table-layout: auto; }
   th, td { padding: 8px 8px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--line); overflow-wrap: break-word; }
   table { table-layout: fixed; }
-  th:nth-child(1) { width: 7%; }  th:nth-child(2) { width: 14%; } th:nth-child(3) { width: 9%; }
+  th:nth-child(1) { width: 15%; } th:nth-child(2) { width: 11%; } th:nth-child(3) { width: 9%; }
   th:nth-child(4) { width: 7%; }  th:nth-child(5) { width: 6%; }  th:nth-child(6) { width: 7%; }
   th:nth-child(7) { width: 5%; }  th:nth-child(8) { width: 8%; }  th:nth-child(9) { width: 12%; }
   /* Est. value is column 9; Details (10) takes the rest */
@@ -587,6 +587,15 @@
 
   var SCOPE_MAX = 220;
   var scopeOpen = {}; // request id -> true when full description is shown
+  var TITLE_MAX = 110;
+  var titleOpen = {}; // request id -> true when the full request title is shown
+  function titleHtml(r, open) {
+    var t = sentence(r.title) || "";
+    var long = t.length > TITLE_MAX;
+    var shown = long && !open ? t.slice(0, TITLE_MAX - 3).trim() + "..." : t;
+    return '<div class="req-title">' + esc(shown) + "</div>" +
+      (long ? '<button class="toggle title-toggle" data-id="' + esc(r.id) + '" aria-expanded="' + open + '">' + (open ? "Show less" : "Show more") + "</button>" : "");
+  }
   function scopeHtml(r, open) {
     if (!r.scope) return '<div class="scope"><span class="na">' + esc(r.details && r.details.readWhy ? "Not read: " + r.details.readWhy + ". The source data has no description." : "No data") + "</span></div>";
     var long = r.scope.length > SCOPE_MAX;
@@ -794,7 +803,7 @@
         (r.shall || []).map(function (s) { return "<li>" + esc(s.text) + (s.ref ? ' <span class="ref">[' + esc(s.ref) + "]</span>" : "") + "</li>"; }).join("") +
         '</ul><a href="' + esc(safeUrl(r.rfqUrl)) + '" target="_blank" rel="noopener">Open the full RFQ document</a></td></tr>' : "";
       return '<tr>' +
-        '<td><div class="req-title">' + esc(sentence(r.title)) + '</div><div class="agency">' + esc(sentence(r.agency)) + "</div></td>" +
+        '<td>' + titleHtml(r, !!titleOpen[r.id]) + '<div class="agency">' + esc(sentence(r.agency)) + "</div></td>" +
         "<td>" + esc(r.category).replace(/\//g, "/<wbr>") + "</td>" +
         eligCell(r) +
         "<td>" + fmtDate(r.posted) + "</td>" +
@@ -811,7 +820,7 @@
     }
     var frag = document.createDocumentFragment();
     shown.forEach(function (r) {
-      var sig = (expanded[r.id] ? "1" : "0") + (scopeOpen[r.id] ? "1" : "0") + (r.shall ? "1" : "0");
+      var sig = (expanded[r.id] ? "1" : "0") + (scopeOpen[r.id] ? "1" : "0") + (titleOpen[r.id] ? "1" : "0") + (r.shall ? "1" : "0");
       if (!r._els || r._els.sig !== sig) { // built once per row (and again when its Show/Hide state or its loaded requirements list changes)
         var t = document.createElement("tbody");
         t.innerHTML = rowHtml(r);
@@ -833,7 +842,7 @@
 
   $("body").addEventListener("click", function (e) {
     var b = e.target.closest(".toggle"); if (!b) return;
-    var map = b.classList.contains("scope-toggle") ? scopeOpen : expanded;
+    var map = b.classList.contains("scope-toggle") ? scopeOpen : b.classList.contains("title-toggle") ? titleOpen : expanded;
     var id = b.dataset.id;
     map[id] = !map[id];
     var row = rows.find(function (r) { return r.id === id; });
