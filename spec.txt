@@ -25,8 +25,11 @@ Status dropdown was removed; bid tracking lives in the separate bidding app.)
                     set-aside, vendor registration, restriction). Colors: red = gate (notice
                     requirements, restriction, prequalification, set-aside); amber = effort
                     (vendor registration, anything the notice says can be waived, e.g.
-                    "Prequalification required (unless waived)"). Bonds, insurance, pre-bid,
-                    proposal guarantee and local preference stay under Bid factors only.
+                    "Prequalification required (unless waived)"). Gate-type bid
+                    factors (licence, clearance, background check, minimum experience, bid
+                    bond / guarantee, bonding capacity) also appear here; keyword-only matches
+                    are "Possible: ..." chips. Performance bonds, insurance, pre-bid and local
+                    preference stay under Bid factors only.
                     The app does NOT judge eligibility: there is no company profile
                     and no yes / no result (DECIDED, see 2a). Sortable. AI-read rows
                     say "AI-extracted, please verify."
@@ -87,7 +90,14 @@ Bid factors (box at the top of Details)
            site visit / pre-bid, 24/7 or after-hours, proposal / bid guarantee
    blue  = info: local / in-state preference, past performance / references, multi-year term
  Bonds, pre-bid meetings and background checks are chips, not dedicated fields (decided).
- All bid factors stay in Details; the Eligibility column adds its own gate items on top.
+ SPLIT (decided): Eligibility = things that disqualify a bid if he lacks them (gates); Bid factors
+ in Details = cost / effort / attractiveness. Gate factors (TSA-checked workers, security
+ clearance, background checks, license / certification, minimum experience, bid bond / bid
+ guarantee, bonding-capacity minimum) are flagged gate in facts.js and listed in the
+ Eligibility column, not in the Bid factors box. When only keyword-matched (no read of the
+ documents) they show as a softer dashed "Possible: ..." chip. Cost / info factors stay in
+ Details: performance / payment bonds, insurance, prevailing wage, mandatory site visit /
+ pre-bid (a date-bound event, so Details), 24/7, local preference, past performance, term.
 
 Toolbar and behavior
  - "Filter by" column filters (one panel per column, with value lists, ranges and dates);

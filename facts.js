@@ -2,16 +2,20 @@
 // factors from its full text so the page does not need the long "shall" lists up front.
 (function (root) {
   var FACT_RULES = [
-    { label: "TSA-checked workers",        sev: "hard", re: /\bTSA\b|transportation security administration|\bTWIC\b/i },
-    { label: "Security clearance",         sev: "hard", re: /security clearance|secret clearance|top secret|\bpublic trust\b|\bNACI\b|\bCAC\b/i },
-    { label: "Background checks / fingerprinting", sev: "hard", re: /background (check|investigation|screening)|fingerprint|criminal history|\bE-?Verify\b|\bbadg(e|ing)\b/i },
-    { label: "License / certification",    sev: "hard", re: /\blicens(e|ed|ure)\b|certified by|certification required|\bOSHA[- ]?(10|30)\b|master (plumber|electrician)|\bEPA\b.*certif/i },
-    { label: "Bid / performance bond",     sev: "cost", re: /(bid|performance|payment|surety)\s+(bond|security)|\bsurety\b|bonding/i },
+    // gate: true = decides who may bid; shown in the Eligibility column (a softer "possible" chip when only keyword-matched).
+    // Everything else is a Bid factor in Details (cost / effort / attractiveness).
+    { label: "TSA-checked workers",        sev: "hard", gate: true, re: /\bTSA\b|transportation security administration|\bTWIC\b/i },
+    { label: "Security clearance",         sev: "hard", gate: true, re: /security clearance|secret clearance|top secret|\bpublic trust\b|\bNACI\b|\bCAC\b/i },
+    { label: "Background checks / fingerprinting", sev: "hard", gate: true, re: /background (check|investigation|screening)|fingerprint|criminal history|\bE-?Verify\b|\bbadg(e|ing)\b/i },
+    { label: "License / certification",    sev: "hard", gate: true, re: /\blicens(e|ed|ure)\b|certified by|certification required|\bOSHA[- ]?(10|30)\b|master (plumber|electrician)|\bEPA\b.*certif/i },
+    { label: "Minimum experience required", sev: "hard", gate: true, re: /(minimum|at least)\s+(of\s+)?(\w+\s+)?\(?\d*\)?\s*years?[^.]{0,40}experience|must have[^.]{0,40}\byears\b/i },
+    { label: "Bid bond / bid guarantee",   sev: "hard", gate: true, re: /\bbid (bond|guarantee|security|deposit)\b|\bproposal (guarantee|security|deposit)\b/i },
+    { label: "Bonding capacity minimum",   sev: "hard", gate: true, re: /bonding (capacity|capability)[^.]{0,40}(minimum|at least|\$)|\$[\d,.]+\s*(million)?[^.]{0,30}bonding (capacity|capability)/i },
+    { label: "Performance / payment bond", sev: "cost", re: /(performance|payment|surety)\s+(bond|security)|\bsurety\b|bonding/i },
     { label: "Insurance minimums",         sev: "cost", re: /\binsurance\b|general liability|workers.? comp/i },
     { label: "Prevailing / living wage",   sev: "cost", re: /prevailing wage|living wage|service contract (labor )?standards|\bSCA\b|davis[- ]bacon|wage determination|union|collective bargaining/i },
     { label: "Mandatory site visit / pre-bid", sev: "cost", re: /(mandatory|required)[^.]{0,60}(pre-?bid|site (visit|walk)|walk-?through|conference)|pre-?bid[^.]{0,40}mandatory/i },
     { label: "24/7 or after-hours",        sev: "cost", re: /24\s*\/\s*7|24[- ]hour|after[- ]hours|overnight|night shift|on-?call|emergency response/i },
-    { label: "Proposal / bid guarantee",   sev: "cost", re: /\b(proposal|bid) (guarantee|security|deposit)\b/i },
     { label: "Local / in-state preference", sev: "info", re: /\b(local|in-state|resident) (vendor|bidder|business|preference)\b/i },
     { label: "Past performance / references", sev: "info", re: /past performance|references|\bCPARS\b|years of experience|similar (projects|contracts)/i },
     { label: "Multi-year / renewal term",  sev: "info", re: /option (year|period)|base (year|period)|\b\d+[- ]year (contract|term)|renewal/i }
@@ -30,7 +34,7 @@
     var out = [];
     FACT_RULES.forEach(function (rule) {
       for (var i = 0; i < src.length; i++) {
-        if (rule.re.test(src[i])) { var f = { label: rule.label, sev: rule.sev, why: src[i] }; if (kw) f.kw = true; out.push(f); return; }
+        if (rule.re.test(src[i])) { var f = { label: rule.label, sev: rule.sev, why: src[i] }; if (rule.gate) f.gate = true; if (kw) f.kw = true; out.push(f); return; }
       }
     });
     return out;

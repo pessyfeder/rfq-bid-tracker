@@ -99,6 +99,7 @@
   .elig.chip { background: #e8eefc; color: #1f3a8a; margin: 0 4px 4px 0; }
   .elig.chip.hard { background: #fdecea; color: var(--bad); }
   .elig.chip.cost { background: #fff3cd; color: #7a5b00; }
+  .elig.chip.possible { background: #f4f5f7; color: #555; border: 1px dashed #b8bcc4; font-weight: 400; }
   .elig.unclear { background: #fff3cd; color: #7a5b00; }
   .elig-note { margin-top: 4px; font-size: 12px; color: var(--muted); }
   td.num:nth-child(9) { white-space: nowrap; font-size: clamp(10px, 1.05vw, 13px); }
@@ -625,10 +626,16 @@
     var base = r.requires == null ? [] : r.requires, seen = {}, out = [];
     base.forEach(function (q) { seen[String(q).toLowerCase()] = 1; out.push({ label: String(q), sev: reqSev(q), why: "" }); });
     detailElig(r).forEach(function (d) { var k = d.label.toLowerCase(); if (!seen[k]) { seen[k] = 1; out.push(d); } });
+    // Gate-type bid factors (licence, clearance, background check, bid bond, minimum experience...) also decide who may bid.
+    keyFacts(r).forEach(function (f) {
+      var k = f.label.toLowerCase();
+      if (f.gate && !seen[k]) { seen[k] = 1; out.push({ label: f.label, sev: f.sev, why: f.why, kw: !!f.kw }); }
+    });
     return out;
   }
   function factsHtml(r) {
-    var f = keyFacts(r);
+    var f = keyFacts(r).filter(function (k) { return !k.gate; }); // gates are listed in Eligibility
+
     if (!f.length) return "";
     return '<div class="facts"><div class="facts-h">Bid factors' + (r.aiRead ? " &middot; AI read, please verify" : (f[0] && f[0].kw ? " &middot; keyword match on title/scope only" : "")) + "</div>" +
       f.map(function (k) {
@@ -673,7 +680,7 @@
     var items = eligList(r);
     var found = items.length - (r.requires ? r.requires.length : 0); // items taken from the Details notes
     if (found > 0) {
-      return "<td>" + items.map(function (d) { return '<span class="elig chip ' + (d.sev || "hard") + '"' + (d.why ? ' title="' + esc(d.why) + '"' : "") + ">" + esc(d.label) + "</span>"; }).join(" ") +
+      return "<td>" + items.map(function (d) { return '<span class="elig chip ' + (d.sev || "hard") + (d.kw ? " possible" : "") + '"' + (d.why ? ' title="' + esc((d.kw ? "Possible, keyword match: " : "") + d.why) + '"' : "") + ">" + (d.kw ? "Possible: " : "") + esc(d.label) + "</span>"; }).join(" ") +
         ai + "</td>";
     }
     if (r.requires == null) {
