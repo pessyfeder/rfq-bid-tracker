@@ -110,7 +110,7 @@ Toolbar and behavior
  - Count line: "n of N requests", source(s) and when the data was last updated.
  - The long "shall" list is not loaded with the page: it is fetched per notice from the
    service (/shall/<id>) when "Show all requirements" is opened.
- - Paging: requests are drawn 100 at a time, with "Show N more" and "Show all" buttons, so filtering
+ - Paging: requests are drawn 100 at a time, with a "Show N more" button (no "Show all"), so filtering
    and resizing stay fast. The count line still reports the full match count. Changing a filter or
    the sort goes back to the first 100.
  - Filters, sort, open rows and scroll position are kept across the automatic reload after a refresh.
@@ -348,3 +348,24 @@ backups), ai-cache.json, ai-usage.log, sam-cache.json, sam-quota.json, *-run.log
  - Waiting on Israel: billing owner, and the hosting and multi-user decisions (items
    m-o). Regions/categories (all USA, all), sources and eligibility (no company
    profile, see 2a) are settled.
+
+
+6. FUTURE FIXES
+---------------
+ a. Virtualize the table. Today render() in index.html builds every shown row as real DOM, so
+    drawing thousands of rows at once froze the page for a few seconds: building each row's
+    HTML, parsing it into nodes, and above all the browser's table layout, which measures every
+    column against every row. Paging (100 at a time, no "Show all") caps that cost.
+    The real fix: render only the rows in view and swap them as the user scrolls, so all
+    matching rows are reachable without the freeze. It is a bigger change because rows have
+    varying heights (scope Show more / Show less, the expandable "shall" row, wrapped titles)
+    and the narrow-screen card layout. A cheaper partial help is table-layout: fixed with set
+    column widths (skips measuring every row), which does not remove the HTML / DOM building cost.
+    Not built; paging is enough for now.
+ b. Fixed table layout. Use table-layout: fixed with set column widths on the main table. The
+    browser then sizes columns from the header row alone and skips measuring every row's
+    content, which usually cuts the layout cost a lot. It does not remove the cost of building
+    the HTML and DOM nodes for each row, so it speeds up a big render but does not by itself
+    make loading thousands of rows instant. To check when built: column widths must still
+    suit long titles, chips and the Details cell (wrapping, not clipping), and the narrow-screen
+    card layout (900px or less) must be unaffected. Not built.

@@ -190,7 +190,7 @@ async function readNotice(url, r) {
   // Directly linkable attachments (not the Periscope javascript ones), named by type, for the "Documents" column.
   const docs = attachmentLinks(html, url).filter((l) => /\.(pdf|docx?|xlsx?|zip)(\?|$)/i.test(l.url) || /(download|attachment)/i.test(l.url))
     .slice(0, 12).map((l) => ({ type: docType(l.label, l.url), name: l.label.slice(0, 120), url: l.url }));
-  for (const l of sharedLinks(text)) if (docs.length < 14 && !docs.some((d) => d.url === l.url)) docs.push({ type: "Project Documents", name: l.url, url: l.url });
+  for (const l of sharedLinks(text)) if (docs.length < 14 && !docs.some((d) => d.url === l.url)) docs.push({ type: "Project Document", name: l.url, url: l.url });
   return { text: got.docs.join("\n\n") + "\n\n" + text, pdfs: got.pdfs, docs };
 }
 

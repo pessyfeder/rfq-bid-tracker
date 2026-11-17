@@ -85,8 +85,8 @@
   th.nosort { cursor: default; }
   th .arrow { margin-left: 4px; color: var(--accent); }
   tr:last-child td { border-bottom: 0; }
-  .more { padding: 14px; text-align: center; border-top: 1px solid var(--line); }
-  .more button { font: inherit; padding: 6px 14px; margin: 0 4px; border: 1px solid var(--line); border-radius: 6px; background: var(--card); cursor: pointer; }
+  tr.spacer td { padding: 0; border: 0; }
+  tr.spacer[hidden] { display: none; }
   td.num, th.num { text-align: left; font-variant-numeric: tabular-nums; }
   .req-title { font-weight: 600; font-size: 15px; }
   .agency { color: var(--muted); font-size: 12px; }
@@ -119,7 +119,6 @@
   .elig.chip.possible { background: #f4f5f7; color: #555; border: 1px dashed #b8bcc4; font-weight: 400; }
   .elig.chip.meeting { background: #e0f2f1; color: #00695c; margin-top: 4px; }
   .elig.unclear { background: #efe6f8; color: #5a2d82; } /* "Not checked": purple, distinct from every eligibility and details chip */
-  .doc-kind { font-size: 11px; color: var(--muted); white-space: nowrap; }
   .elig-note { margin-top: 4px; font-size: 12px; color: var(--muted); }
   td.num:nth-child(9) { white-space: nowrap; font-size: clamp(10px, 1.05vw, 13px); }
   td.num:nth-child(9) .val-note, td.num:nth-child(9) .val-ex { white-space: normal; }
@@ -234,7 +233,6 @@
     <tbody id="body"></tbody>
   </table>
   <div class="empty" id="empty" hidden>No requests match your filters.</div>
-  <div class="more" id="more" hidden><button id="moreBtn" type="button"></button></div>
 </div>
 
 <script src="data.js"></script>
@@ -450,7 +448,6 @@
   // The server sends rows without their long "shall" lists (r.shallCount says how many); a list is fetched when its row is opened.
   function shallN(r) { return r.shallCount != null ? r.shallCount : (r.shall || []).length; }
   var expanded = {}; // request id -> true when its "shall" list is open
-  var PAGE = 100, limit = PAGE; // rows drawn so far; reset to one page whenever the filters or sort change
 
   var $ = function (id) { return document.getElementById(id); };
 
@@ -744,7 +741,7 @@
   function closePanels(except) {
     FILTERS.forEach(function (f) { if (f.key !== except && !f.into) fwraps[f.key].panel.hidden = true; });
   }
-  function applyFilters() { syncFilters(); limit = PAGE; render(); }
+  function applyFilters() { syncFilters(); render(); }
 
   $("filters").addEventListener("click", function (e) {
     var f, btn = e.target.closest(".fbtn");
@@ -1014,7 +1011,7 @@
     // Only a headline that is the agency's own text (no AI rewrite) can be long enough to need Show more.
     var long = false; // headlines are never cut off
     var shown = long && !open ? head.slice(0, TITLE_MAX - 3).trim() + "..." : head;
-    return '<div class="req-title"' + (orig ? ' title="' + esc("Listed by the agency as: " + t) + '"' : "") + ">" + esc(shown) + "</div>" +
+    return '<div class="req-title"' + (orig ? ' title="' + esc("Agency's wording: " + t) + '"' : "") + ">" + esc(shown) + "</div>" +
       (long ? '<button class="toggle title-toggle" data-id="' + esc(r.id) + '" aria-expanded="' + open + '">' + (open ? "Show less" : "Show more") + "</button>" : "");
   }
   // Pulls the few useful facts out of the description as short labeled bullets. Left out: anything the other columns already
@@ -1097,7 +1094,7 @@
     function add(type, url, name, isPosting) {
       seen[type] = (seen[type] || 0) + 1;
       var label = seen[type] > 1 ? type + " " + seen[type] : type;
-      out.push('<div><a href="' + esc(safeUrl(url)) + '" target="_blank" rel="noopener" title="' + esc(name || "Source posting") + '">' + esc(label) + '</a> <span class="doc-kind">' + (isPosting ? "posting link" : "attached") + "</span></div>");
+      out.push('<div><a href="' + esc(safeUrl(url)) + '" target="_blank" rel="noopener" title="' + esc(name || "Source posting") + '">' + esc(label) + "</a></div>");
     }
     var listed = (r.docs || []).filter(function (d) { return d && d.url && d.url !== r.rfqUrl; });
     // Some notices (Texas) only give the document location as a link inside the description text.
@@ -1105,7 +1102,7 @@
     String(r.scope || "").replace(/https:\/\/[^\s<>"')]+/gi, function (u) {
       u = u.replace(/[.,;:]+$/, "");
       if (u !== r.rfqUrl && !inText.some(function (x) { return x.url === u; }) && !listed.some(function (d) { return d.url === u; }))
-        inText.push({ url: u, type: /(^|\.)box\.com\//i.test(u.replace(/^https:\/\//i, "")) ? "Project Documents" : "Linked Document", name: u });
+        inText.push({ url: u, type: /(^|\.)box\.com\//i.test(u.replace(/^https:\/\//i, "")) ? "Project Document" : "Linked Document", name: u });
     });
     var found = listed.concat(inText);
     // Attachments found on the posting keep the posting link first; links that only appear in the text replace it.
@@ -1272,6 +1269,71 @@
     return parts.join(" ").toLowerCase();
   }
 
+  // Virtual list: rows have different heights (open "shall" lists, long titles), so each row's height is measured once it
+  // has been drawn and estimated (average of the measured ones) until then. Rows outside the viewport (plus one screen
+  // either side) are replaced by two spacer rows, so the page only ever holds a few dozen rows however many match.
+  var view = [], hts = {}, hSum = 0, hN = 0, drawn = { a: -1, b: -1 }, rowEls = null, painting = false;
+  function paint(force) {
+    if (!rowEls || painting) return;
+    painting = true;
+    try {
+      var n = view.length, tb = $("body"), i;
+      var est = hN ? hSum / hN : 170;
+      var off = new Array(n + 1); off[0] = 0;
+      for (i = 0; i < n; i++) off[i + 1] = off[i] + (hts[view[i].id] || est);
+      var top = tb.getBoundingClientRect().top, vh = window.innerHeight || 800;
+      var y0 = -top - vh, y1 = -top + 2 * vh, a = 0, b = n;
+      while (a < n - 1 && off[a + 1] <= y0) a++;
+      b = a; while (b < n && off[b] < y1) b++;
+      b = Math.min(n, Math.max(b, a + 8));
+      if (!force && a === drawn.a && b === drawn.b) return;
+      // remember where the first visible row sits, to put it back after rows above it change height
+      var anchorId = null, anchorTop = 0;
+      for (i = drawn.a; i >= 0 && i < drawn.b && i < view.length; i++) {
+        var el = view[i]._els && view[i]._els.nodes[0];
+        if (el && el.isConnected) { var t = el.getBoundingClientRect(); if (t.bottom > 0) { anchorId = view[i].id; anchorTop = t.top; break; } }
+      }
+      var mk = function () { var tr = document.createElement("tr"), td = document.createElement("td"); tr.className = "spacer"; tr.setAttribute("aria-hidden", "true"); td.colSpan = COLUMNS.length; tr.appendChild(td); return tr; };
+      var sTop = mk(), sBot = mk(), frag = document.createDocumentFragment();
+      frag.appendChild(sTop);
+      for (i = a; i < b; i++) rowEls(view[i]).forEach(function (nd) { frag.appendChild(nd); });
+      frag.appendChild(sBot);
+      tb.replaceChildren(frag);
+      // measure what was drawn, then size the spacers from the real heights
+      for (i = a; i < b; i++) {
+        var h = 0; view[i]._els.nodes.forEach(function (nd) { h += nd.offsetHeight; });
+        var id = view[i].id;
+        if (hts[id]) hSum -= hts[id]; else hN++;
+        hts[id] = h; hSum += h;
+      }
+      est = hN ? hSum / hN : 170;
+      var above = 0, below = 0;
+      for (i = 0; i < a; i++) above += hts[view[i].id] || est;
+      for (i = b; i < n; i++) below += hts[view[i].id] || est;
+      sTop.firstChild.style.height = above + "px"; sBot.firstChild.style.height = below + "px";
+      sTop.hidden = !above; sBot.hidden = !below;
+      drawn = { a: a, b: b };
+      setTimeout(queuePaint, 0); // the real heights may have moved the window; a no-op when the same rows are still the right ones
+      if (anchorId != null) {
+        var r2 = view.slice(a, b).filter(function (r) { return r.id === anchorId; })[0];
+        if (r2) { var d = r2._els.nodes[0].getBoundingClientRect().top - anchorTop; if (Math.abs(d) > 1) window.scrollBy(0, d); }
+      }
+    } finally { painting = false; }
+  }
+  var paintQueued = false;
+  function queuePaint() { // next frame, or soon after if the tab is in the background and frames are paused
+    if (paintQueued) return; paintQueued = true;
+    var go = function () { if (!paintQueued) return; paintQueued = false; paint(false); };
+    requestAnimationFrame(go); setTimeout(go, 100);
+  }
+  window.addEventListener("scroll", queuePaint, { passive: true });
+  var rzTimer, lastW = window.innerWidth;
+  window.addEventListener("resize", function () { // new width, new line breaks: measured heights are stale
+    if (window.innerWidth === lastW) { queuePaint(); return; }
+    lastW = window.innerWidth; clearTimeout(rzTimer);
+    rzTimer = setTimeout(function () { hts = {}; hSum = 0; hN = 0; paint(true); }, 150);
+  });
+
     function render() {
     renderHead();
     var f = makeFilter();
@@ -1287,11 +1349,7 @@
       return (x - y) * sort.dir;
     });
     var total = list.length;
-    // Only the first `limit` rows go into the page: thousands of table rows make every filter and resize slow.
-    var shown = list.slice(0, limit);
-    var left = total - shown.length;
-    $("more").hidden = left <= 0;
-    $("moreBtn").textContent = "Show " + Math.min(PAGE, left) + " more (" + left + " not yet shown)";
+    view = list; // every matching row is reachable by scrolling; paint() puts only the rows near the viewport in the page
     function rowHtml(r) {
       var open = expanded[r.id];
       var shallRow = open ? '<tr class="shall-row"><td colspan="' + COLUMNS.length + '"><h4>Exact wording from the notice ("shall")</h4><ul>' +
@@ -1314,17 +1372,16 @@
           (shallN(r) ? '<button class="toggle" data-id="' + esc(r.id) + '" aria-expanded="' + !!open + '">' + (open ? "Hide" : "Show") + " all requirements (" + shallN(r) + ")</button>" : "") +
           "</td></tr>" + shallRow;
     }
-    var frag = document.createDocumentFragment();
-    shown.forEach(function (r) {
+    rowEls = function (r) {
       var sig = (expanded[r.id] ? "1" : "0") + (scopeOpen[r.id] ? "1" : "0") + (titleOpen[r.id] ? "1" : "0") + (r.shall ? "1" : "0");
       if (!r._els || r._els.sig !== sig) { // built once per row (and again when its Show/Hide state or its loaded requirements list changes)
         var t = document.createElement("tbody");
         t.innerHTML = rowHtml(r);
         r._els = { sig: sig, nodes: Array.prototype.slice.call(t.children) };
       }
-      r._els.nodes.forEach(function (n) { frag.appendChild(n); });
-    });
-    $("body").replaceChildren(frag);
+      return r._els.nodes;
+    };
+    paint(true);
     $("empty").hidden = total > 0;
     $("empty").textContent = rows.length ? "No requests match your filters." : "No data";
     var m = window.RFQS_META;
@@ -1332,7 +1389,7 @@
     rows.forEach(function (r) {
       if (r.daysLeft >= 0 && isOld(r)) old++;
     });
-    $("count").textContent = (left > 0 ? "showing " + shown.length + " of " + total : total + " shown") + (f.hideOld ? " (" + old + " hidden as old)" : "") + " " +
+    $("count").textContent = total + " shown" + (f.hideOld ? " (" + old + " hidden as old)" : "") + " " +
       (m ? "live from " + m.source + ", updated " + new Date(m.fetchedAt).toLocaleString("en-US") : "No data");
   }
 
@@ -1355,12 +1412,10 @@
     var th = e.target.closest("th"); if (!th || th.classList.contains("nosort")) return;
     var key = th.dataset.key;
     sort = sort.key === key ? { key: key, dir: -sort.dir } : { key: key, dir: key === "valueSort" ? -1 : 1 };
-    limit = PAGE;
     render();
   });
-  $("moreBtn").addEventListener("click", function () { limit += PAGE; render(); });
   ["hideClosed", "hideOld"].forEach(function (id) {
-    function onFilter() { limit = PAGE; recount(); render(); }
+    function onFilter() { recount(); render(); }
     var timer;
     $(id).addEventListener("input", function () { clearTimeout(timer); timer = setTimeout(onFilter, 0); }); // coalesce events from one keystroke
     $(id).addEventListener("change", function () { clearTimeout(timer); onFilter(); });
