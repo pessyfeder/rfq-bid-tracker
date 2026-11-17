@@ -242,8 +242,11 @@ async function enrich(r, o, text, AI_KEY) {
         const res = await samGet(n.descUrl + (n.descUrl.includes("?") ? "&" : "?") + "api_key=" + encodeURIComponent(KEY));
         const dj = res.ok ? await res.json().catch(() => null) : null;
         if (dj && typeof dj.description === "string") {
-          if (await enrich(n.rfq, n.raw, dj.description, AI_KEY)) aiOk++;
-          n.descDone = true; described++;
+          const aiRead = await enrich(n.rfq, n.raw, dj.description, AI_KEY);
+          if (aiRead) aiOk++;
+          // Done only if the AI read worked or no key is set; otherwise retry next run (up to 3 tries).
+          if (aiRead || !AI_KEY || ++n.tries >= 3) n.descDone = true;
+          described++;
         } else if (++n.tries >= 3) n.descDone = true; // give up on a notice whose description never loads
       } catch (e) {
         if (e instanceof QuotaHit) throw e;
