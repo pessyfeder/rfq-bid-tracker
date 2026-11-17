@@ -235,7 +235,7 @@ function readPrevious() {
   }
   if (!okNow.size) { console.error("No state fetched successfully; leaving live-states.js unchanged."); process.exit(1); }
 
-  if (process.env.ANTHROPIC_API_KEY) { await require("./ai-extract").recase(rfqs, process.env.ANTHROPIC_API_KEY); await require("./ai-extract").plainTitle(rfqs, process.env.ANTHROPIC_API_KEY); require("./ai-extract").reportUsage("State plain titles"); }
+  if (process.env.ANTHROPIC_API_KEY) { await require("./ai-extract").recase(rfqs, process.env.ANTHROPIC_API_KEY); await require("./ai-extract").categorize(rfqs, process.env.ANTHROPIC_API_KEY); await require("./ai-extract").plainTitle(rfqs, process.env.ANTHROPIC_API_KEY); require("./ai-extract").reportUsage("State plain titles"); }
   const meta = { source: "State procurement portals", fetchedAt: new Date().toISOString(), count: rfqs.length, states: results };
   // live-states.js is generated and git-ignored, so keep a dated copy of the last good one before replacing it (newest 10 kept).
   try {

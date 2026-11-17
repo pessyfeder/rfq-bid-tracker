@@ -2,7 +2,9 @@
 // One request per category (about 40); a bid listed under several categories is de-duplicated by the runner.
 const { http, sleep, clean, toEastern } = require("./common");
 
-const BASE = "https://wwwcfprd.doa.louisiana.gov/osp/lapac/";
+const unspsc = require("./unspsc");
+
+const BASE ="https://wwwcfprd.doa.louisiana.gov/osp/lapac/";
 
 function parseCategory(html) {
   const cat = clean((/<h3[^>]*>([\s\S]*?)<\/h3>/.exec(html) || [])[1]);
@@ -47,7 +49,7 @@ module.exports = {
           out.push({
             id: r.id, title: r.desc.length > 200 ? r.desc.slice(0, 197) + "..." : r.desc || "(untitled)",
             agency: "Louisiana" + (r.dept ? " (" + r.dept + ")" : " agency"),
-            category: cat || "No data", posted: r.posted,
+            category: unspsc.category(t) || cat || "No data", posted: r.posted,
             due: r.when.due, dueTime: r.when.dueTime, url: r.pdf, description: r.desc, region: "Louisiana"
           });
         }

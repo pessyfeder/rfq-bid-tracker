@@ -1,6 +1,7 @@
 // Missouri: MissouriBUYS, powered by MOVERS (Oracle Fusion). The public "Solicitation Abstracts" page needs no login;
 // it reads the guest REST resource supplierNegotiationAbstracts, which is what this adapter calls (read-only, open bids only).
 const { http, clean, instantToEastern } = require("./common");
+const { classify } = require("./classify");
 
 const HOST = "https://ewqg.fa.us8.oraclecloud.com";
 const BU = "300000005255687"; // State of Missouri procurement business unit (the id in the public listing URL)
@@ -32,7 +33,8 @@ module.exports = {
           id: clean(r.Negotiation).replace(/,\d+$/, ""),
           title: clean(r.NegotiationTitle),
           agency: clean(r.ProcurementBUName).replace(/^\d+-/, "") || "Missouri agency",
-          category: clean(r.NegotiationType) || "No data",
+          // NegotiationType is the bid type (RFP/IFB/...), not a subject, so guess the category from the title and synopsis
+          category: classify(clean(r.NegotiationTitle), clean(r.Synopsis)),
           posted: r.PostingDate || null,
           due, dueTime,
           url: PAGE,

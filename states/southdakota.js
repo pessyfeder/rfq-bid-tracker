@@ -2,6 +2,7 @@
 // The board is public (no login; the state links it from sd.gov/bhra) and is a single-page app over a JSON API,
 // which is what this adapter reads: the open ("current") events list.
 const { http, clean } = require("./common");
+const { classify } = require("./classify");
 
 const ID = "3444a404-3818-494f-84c5-2a850acd7779";
 const HOST = "https://postingboard.esmsolutions.com";
@@ -42,7 +43,7 @@ module.exports = {
         id: clean(e.id),
         title: clean(e.eventName),
         agency: "South Dakota Office of Procurement Management",
-        category: clean(e.id).match(/^\d+(IFB|RFP|RFQ)/i)?.[1].toUpperCase() || "No data",
+        category: classify(clean(e.eventName)), // the id only says the bid type (IFB/RFP/RFQ), so guess the subject from the title
         posted: (e.publishedDate || "").slice(0, 10) || null,
         ...when,
         url: `${HOST}/${ID}/eventDetail/${e.eventId}`,
