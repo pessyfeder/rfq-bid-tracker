@@ -34,9 +34,9 @@ Status dropdown was removed; bid tracking lives in the separate bidding app.)
                     and no yes / no result (DECIDED, see 2a). Sortable. AI-read rows
                     say "AI-extracted, please verify."
  4  Posted          Date the request was posted.
- 5  End date        Bid due date plus due time and time zone. Due dates more than 3 years
+ 5  Due date        Bid due date plus due time and time zone. Due dates more than 3 years
                     out are treated as placeholders: shown as "No real due date".
- 6  Days left       Days from today to the end date. "Closed" if past, a dash if no real
+ 6  Days left       Days from today to the due date. "Closed" if past, a dash if no real
                     due date. Colored: 7 or fewer = red, 14 or fewer = orange, else green.
  7  Level           Federal / State / Local badge.
  8  RFQ doc         "Open RFQ" link to the solicitation (NYC City Record page or SAM.gov
@@ -116,7 +116,7 @@ Toolbar and behavior
  - Fetch-health banner above the table: red when a state's last fetch failed (older notices are
    still shown, with the date of the last good fetch), amber when partial, and a notice if
    live-states.js did not load. Hidden when every state fetched fine.
- - "Hide closed" (on by default): hides bids whose end date has passed; untick to show them.
+ - "Hide closed" (on by default): hides bids whose due date has passed; untick to show them.
  - "Hide flagged" (on by default): hides notices with a warning, i.e. a placeholder
    deadline (2099 or later, or more than 3 years out) or posted over a year ago.
  - Count line: "n of N requests", source(s) and when the data was last updated.

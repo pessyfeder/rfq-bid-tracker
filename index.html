@@ -177,10 +177,10 @@
     tbody tr:not(.shall-row) td:nth-child(2)::before { content: "Category"; }
     tbody tr:not(.shall-row) td:nth-child(3)::before { content: "Eligibility"; }
     tbody tr:not(.shall-row) td:nth-child(4)::before { content: "Posted"; }
-    tbody tr:not(.shall-row) td:nth-child(5)::before { content: "End date"; }
+    tbody tr:not(.shall-row) td:nth-child(5)::before { content: "Due date"; }
     tbody tr:not(.shall-row) td:nth-child(6)::before { content: "Days left"; }
     tbody tr:not(.shall-row) td:nth-child(7)::before { content: "Level"; }
-    tbody tr:not(.shall-row) td:nth-child(8)::before { content: "View Documents"; }
+    tbody tr:not(.shall-row) td:nth-child(8)::before { content: "Documents"; }
     tbody tr:not(.shall-row) td:nth-child(9)::before { content: "Est. value"; }
     tbody tr:not(.shall-row) td:nth-child(10)::before { content: "Details"; }
     tbody tr:not(.shall-row) td:last-child { border-bottom: 0; }
@@ -320,10 +320,10 @@
     { key: "category", label: "Category" },
     { key: "eligRank", label: "Eligibility" },
     { key: "posted",   label: "Posted" },
-    { key: "dueSort",  label: "End date" },
+    { key: "dueSort",  label: "Due date" },
     { key: "daysLeft", label: "Days left", num: true },
     { key: "level",    label: "Level" },
-    { key: "rfqUrl",   label: "View Documents", nosort: true },
+    { key: "rfqUrl",   label: "Documents", nosort: true },
     { key: "valueSort", label: "Est. value", num: true },
     { key: "details",  label: "Details", nosort: true }
   ];
@@ -581,8 +581,8 @@
     { key: "category", label: "Category",     type: "list", get: function (r) { return [catLabel(r)]; }, group: catGroup },
     { key: "elig",     label: "Eligibility",  type: "list", get: eligValues, group: eligGroup, note: "Shows requests that list at least one checked requirement." },
     { key: "posted",  label: "Posted",       type: "date" },
-    { key: "due",      label: "End date",     type: "date", flag: "noDueOk", flagLabel: "Include requests with no real due date" },
-    { key: "days",     label: "Days left",    type: "num", note: "Requests with no due date follow the End date setting.",
+    { key: "due",      label: "Due date",     type: "date", flag: "noDueOk", flagLabel: "Include requests with no real due date" },
+    { key: "days",     label: "Days left",    type: "num", note: "Requests with no due date follow the Due date setting.",
       presets: [["Next 7 days", "", "7"], ["Next 14 days", "", "14"], ["Next 30 days", "", "30"]] },
     { key: "level",    label: "Level", type: "list", get: function (r) { return [r.level]; }, order: ["Federal", "State", "Local"] },
     { key: "st",       label: "State",        type: "list", get: function (r) { return [r.st]; }, name: stName }, // its own dropdown, next to Level
@@ -1083,7 +1083,7 @@
   }
 
   // Eligibility cell followed by the Bid factors box (kept in its own wrapper).
-  // "View Documents": the posting itself, then each attachment found, named by type (RFQ, Specifications, Project Document...).
+  // "Documents": the posting itself, then each attachment found, named by type (RFQ, Specifications, Project Document...).
   function docLinks(r) {
     var seen = {}, out = [];
     function add(type, url, name, isPosting) {

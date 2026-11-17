@@ -50,7 +50,7 @@ function attachmentLinks(html, base) {
 }
 
 // Links to a shared folder on a file-sharing host (Box, Dropbox, Google Drive, OneDrive, SharePoint), whether a real link or plain
-// text on the page. They are listed in "View Documents" but never downloaded (they need a browser).
+// text on the page. They are listed in "Documents" but never downloaded (they need a browser).
 const SHARE_HOST = /^https:\/\/([\w-]+\.)*(box\.com|dropbox\.com|drive\.google\.com|docs\.google\.com|onedrive\.live\.com|1drv\.ms|sharepoint\.com)\//i;
 function sharedLinks(html) {
   const out = [];
@@ -61,7 +61,7 @@ function sharedLinks(html) {
   return out;
 }
 
-// Names a document by what it is, from its link text and file name. Shown in the "View Documents" column.
+// Names a document by what it is, from its link text and file name. Shown in the "Documents" column.
 function docType(label, url) {
   let file = ""; try { file = decodeURIComponent(new URL(url).pathname.split("/").pop() || ""); } catch { /* keep empty */ }
   const t = label + " " + file;
@@ -187,7 +187,7 @@ async function readNotice(url, r) {
     try { absorb(await it.get(), it.label, got); } catch { /* an unreadable attachment is not fatal */ }
   }
   // attachment text first: the model reads a limited amount, and the page itself is mostly navigation
-  // Directly linkable attachments (not the Periscope javascript ones), named by type, for the "View Documents" column.
+  // Directly linkable attachments (not the Periscope javascript ones), named by type, for the "Documents" column.
   const docs = attachmentLinks(html, url).filter((l) => /\.(pdf|docx?|xlsx?|zip)(\?|$)/i.test(l.url) || /(download|attachment)/i.test(l.url))
     .slice(0, 12).map((l) => ({ type: docType(l.label, l.url), name: l.label.slice(0, 120), url: l.url }));
   for (const l of sharedLinks(text)) if (docs.length < 14 && !docs.some((d) => d.url === l.url)) docs.push({ type: "Project Documents", name: l.url, url: l.url });
