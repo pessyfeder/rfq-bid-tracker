@@ -207,8 +207,8 @@
 <div class="toolbar">
   <span class="sub">Filter by</span>
   <span class="filters" id="filters"></span>
-  <label title="A solicitation counts as closed when its due date has already passed (Days left is negative). Notices with no real due date (blank, or a placeholder more than 3 years out) are never treated as closed; those are covered by Hide flagged."><input type="checkbox" id="hideClosed" checked> Hide closed</label>
-  <label title="Placeholder deadlines (more than 3 years out) and notices posted over a year ago"><input type="checkbox" id="hideFlagged" checked> Hide flagged</label>
+  <label title="A solicitation counts as closed when its due date has already passed (Days left is negative). Notices with no usable due date (blank, or a placeholder more than 3 years out) are never treated as closed; those are covered by Hide placeholder dates &amp; old notices."><input type="checkbox" id="hideClosed" checked> Hide closed</label>
+  <label title="Hides notices with a placeholder due date (blank, or more than 3 years out) and notices posted over a year ago."><input type="checkbox" id="hideFlagged" checked> Hide placeholder dates &amp; old notices</label>
   <span class="sub" id="count"></span>
   <span class="refresh-ctl">
     <span class="seg" id="refreshMode" title="What the Refresh button fetches">
@@ -424,7 +424,7 @@
   function safeUrl(u) { return /^https:\/\//i.test(String(u)) ? String(u) : "#"; }
 
   // Agencies enter placeholder due dates (2040, 2099, 9999...) for open-ended notices.
-  // A due date more than 3 years out is treated as "no real due date".
+  // A due date more than 3 years out is treated as "no usable due date".
   var noDueCutoff = new Date(); noDueCutoff.setFullYear(noDueCutoff.getFullYear() + 3);
   var noDueStr = noDueCutoff.toISOString().slice(0, 10);
   function hasNoRealDue(r) { return !r.due || r.due > noDueStr; }
@@ -583,7 +583,7 @@
     { key: "category", label: "Category",     type: "list", get: function (r) { return [catLabel(r)]; }, group: catGroup },
     { key: "elig",     label: "Who can bid", type: "list", get: eligValues, group: eligGroup, note: "Shows requests that list at least one checked requirement." },
     { key: "posted",  label: "Posted",       type: "date" },
-    { key: "due",      label: "Due date",     type: "date", flag: "noDueOk", flagLabel: "Include requests with no real due date" },
+    { key: "due",      label: "Due date",     type: "date", flag: "noDueOk", flagLabel: "Include requests with no usable due date" },
     { key: "days",     label: "Days left",    type: "num", note: "Requests with no due date follow the Due date setting.",
       presets: [["Next 7 days", "0", "7"], ["Next 14 days", "0", "14"], ["Next 30 days", "0", "30"]] },
     { key: "level",    label: "Level", type: "list", get: function (r) { return [r.level]; }, order: ["Federal", "State", "Local"] },
@@ -1301,7 +1301,7 @@
         "<td>" + esc(catLabel(r)).replace(/\//g, "/<wbr>") + "</td>" +
         eligCell(r) +
         "<td>" + fmtDate(r.posted) + "</td>" +
-        "<td>" + (r.noDue ? (/eMarketplace/.test(r.dueTime || "") ? esc(r.dueTime) : "No real due date") : '<span style="white-space:nowrap">' + fmtDate(r.due).replace(/, (\d{4})$/, ",</span><br><span>$1") + '</span><div class="agency">' + esc(r.dueTime) + "</div>") + "</td>" +
+        "<td>" + (r.noDue ? (/eMarketplace/.test(r.dueTime || "") ? esc(r.dueTime) : "No usable due date") : '<span style="white-space:nowrap">' + fmtDate(r.due).replace(/, (\d{4})$/, ",</span><br><span>$1") + '</span><div class="agency">' + esc(r.dueTime) + "</div>") + "</td>" +
         leftCell(r) +
         '<td><span class="badge ' + esc(r.level) + '">' + esc(r.level) + "</span></td>" +
         '<td>' + dl.html +
@@ -1330,7 +1330,7 @@
     rows.forEach(function (r) {
       if (r.daysLeft >= 0 && ((r.details.warnings || []).length || r.noDue)) flagged++;
     });
-    $("count").textContent = total + " shown" + (f.hideFlagged ? " (" + flagged + " flagged)" : "") + " " +
+    $("count").textContent = total + " shown" + (f.hideFlagged ? " (" + flagged + " hidden as placeholder/old)" : "") + " " +
       (m ? "live from " + m.source + ", updated " + new Date(m.fetchedAt).toLocaleString("en-US") : "No data");
   }
 
