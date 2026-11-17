@@ -554,7 +554,7 @@
   }
 
   // ---- Per-column filters ----
-  // List filters (state, category, eligibility, level) store what is HIDDEN, so "Select all" = nothing hidden and
+  // List filters (state, category, eligibility, level) store what is HIDDEN, so "Show all" = nothing hidden and
   // values that first appear after a refresh show up by default. A request is hidden when any of its values is hidden.
   function eligValues(r) {
     var items = eligList(r);
@@ -669,7 +669,7 @@
         }).join("");
         f.groups = gs;
       } else body = vals.map(vrow).join("");
-      h += '<label class="frow all"><input type="checkbox" data-all> Select all</label><div class="flist">' + body + "</div>";
+      h += '<label class="frow all"><input type="checkbox" data-all> Show all</label><div class="flist">' + body + "</div>";
     } else if (f.type === "text") {
       h += '<div class="frange" style="flex-direction:column;align-items:stretch;gap:6px">' +
         '<label>Bullet<select data-p="b"><option value="">Any bullet</option></select></label>' +
@@ -715,7 +715,8 @@
       var nb = n + (sub ? hiddenN(sub) : 0);
       if (sub) fwraps[sub.key].panel.hidden = !!H[f.key].State; // unchecking "State" removes the State list
       x.btn.classList.toggle("on", on || !!(sub && isActive(sub)));
-      x.btn.innerHTML = esc(f.label) + (nb ? " (" + nb + " hidden)" : "") + ' <span class="caret">&#9662;</span>';
+      function shownOf(g) { var t = listValues(g).length; return (t - hiddenN(g)) + " of " + t + " shown"; }
+      x.btn.innerHTML = esc(f.label) + (nb ? " (" + (n ? shownOf(f) : "") + (sub && hiddenN(sub) ? (n ? "; " : "") + esc(sub.label) + " " + shownOf(sub) : "") + ")" : "") + ' <span class="caret">&#9662;</span>';
       if (f.type === "list") {
         // Only this panel's own controls: a nested sub-panel (State inside Level) has its own [data-all]/[data-v].
         var all = x.panel.querySelector(":scope > .frow.all [data-all]"), tot = listValues(f).length;
@@ -727,7 +728,7 @@
         });
         var nm = f.name || function (v) { return v; };
         if (n && n <= 3) Object.keys(H[f.key]).forEach(function (v) { chips.push('<button type="button" class="fchip" data-unhide="' + f.key + '" data-v="' + esc(v) + '">Hide ' + esc(nm(v)) + " &#10005;</button>"); });
-        else if (n) chips.push('<button type="button" class="fchip" data-reset="' + f.key + '">' + esc(f.label) + ": " + n + " hidden &#10005;</button>");
+        else if (n) chips.push('<button type="button" class="fchip" data-reset="' + f.key + '">' + esc(f.label) + ": " + (listValues(f).length - n) + " of " + listValues(f).length + " shown &#10005;</button>");
       } else {
         Array.prototype.forEach.call(x.panel.querySelectorAll("[data-p]"), function (inp) { if (inp !== document.activeElement && inp.value !== R[f.key][inp.dataset.p]) inp.value = R[f.key][inp.dataset.p]; });
         var fl = x.panel.querySelector("[data-flag]"); if (fl) fl.checked = R[f.flag];
