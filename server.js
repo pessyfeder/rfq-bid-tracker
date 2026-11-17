@@ -181,7 +181,10 @@ function stateCodes() {
 function failedStateCodes() {
   const out = {};
   for (const src of feed.SOURCES.filter((s) => s.script)) {
-    if ((state.runs[src.id] || {}).error) continue;
+    const run = state.runs[src.id] || {}, st = state.sources[src.id] || {};
+    // A script that failed as a whole has no per-state list to go by, unless it saved checkpoints during this attempt
+    // (fetch-states.js does after every state): then only the states it did not finish need re-running.
+    if (run.error && !(st.fetchedAt && run.lastAttempt && st.fetchedAt >= run.lastAttempt)) continue;
     const codes = Object.entries((state.sources[src.id] || {}).states || {}).filter(([, r]) => r && r.ok === false && !/Waiting for/.test(r.error || "")).map(([c]) => c);
     if (codes.length) out[src.id] = codes;
   }
