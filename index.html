@@ -786,6 +786,11 @@
   function roadName(t) {
     t = String(t).trim().replace(/\s+/g, " ");
     t = t.replace(/\b(FM|RM|SH|US|IH|SL|SS|BU|BS|BI|PR|CR|RE|FS|SP|LP)\s*0*(\d+[A-Z]?)\b/g, function (_, k, n) { return ROAD_NAMES[k] + " " + n; });
+    // Compass shorthand: "E. of SH 198" -> "east of ...", "W City Limits" -> "West City Limits"; "CL" = county line.
+    var DIR = { N: "north", S: "south", E: "east", W: "west", NE: "northeast", NW: "northwest", SE: "southeast", SW: "southwest" };
+    t = t.replace(/\b(NE|NW|SE|SW|N|S|E|W)\b\.?(?=\s+of\b)/g, function (_, d) { return DIR[d]; });
+    t = t.replace(/\b(NE|NW|SE|SW|N|S|E|W)\b\.?(?=\s+City\b)/g, function (_, d) { return DIR[d].charAt(0).toUpperCase() + DIR[d].slice(1); });
+    t = t.replace(/\b(\w+) CL\b/g, "$1 County Line");
     return t.replace(/^(AT|NEAR|AND)\b/, function (w) { return w.charAt(0) + w.slice(1).toLowerCase(); });
   }
   function keyPoints(r) {
