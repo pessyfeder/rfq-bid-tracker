@@ -67,7 +67,7 @@ Status dropdown was removed; bid tracking lives in the separate bidding app.)
                     d) "Not published" when none of the above exists.
                     DEFAULT SORT: descending by this value; unknown values last.
 10  Details         ONE merged column, same order in every cell. Top to bottom:
-                    1) status chips (Amended, warnings), only when present
+                    1) "Notice alerts" chips (Amended, warnings; NOT a bid status, see section 2c), only when present
                     2) labeled rows, left out when empty: "Region" (small muted label;
                        kept because Level shows only Federal / State / Local),
                        "Terms" (plain requirement chips, e.g. selection method,
