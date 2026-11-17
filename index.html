@@ -69,8 +69,8 @@
   table { border-collapse: collapse; width: 100%; table-layout: auto; }
   th, td { padding: 8px 8px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--line); overflow-wrap: break-word; }
   table { table-layout: fixed; }
-  th:nth-child(1) { width: 13%; } th:nth-child(2) { width: 10%; } th:nth-child(3) { width: 12%; }
-  th:nth-child(4) { width: 7%; }  th:nth-child(5) { width: 9%; min-width: 100px; }  th:nth-child(6) { width: 5%; min-width: 56px; }
+  th:nth-child(1) { width: 16%; } th:nth-child(2) { width: 10%; } th:nth-child(3) { width: 12%; }
+  th:nth-child(4) { width: 7%; }  th:nth-child(5) { width: 6%; min-width: 64px; }  th:nth-child(6) { width: 5%; min-width: 56px; }
   th:nth-child(7) { width: 6%; min-width: 84px; }  th:nth-child(8) { width: 8%; }  th:nth-child(9) { width: 11%; }
   /* Est. value is column 9; Details (10) takes the rest */
   th { overflow-wrap: normal; }
@@ -820,8 +820,8 @@
     var lead = r.aiRead && r.scope.length <= 300 ? '<ul class="dlist"><li>' + glossHtml(sentence(decodeText(r.scope))) + "</li></ul>" : "";
     var pts = lead ? [] : keyPoints(r);
     return lead + (pts.length ? '<ul class="dlist">' + pts.map(function (p) { return "<li>" + (p[0] ? "<b>" + esc(p[0]) + ":</b> " : "") + esc(sentence(p[1])) + "</li>"; }).join("") + "</ul>" : "") +
-      (open ? '<ul class="dlist"><li class="scope">' + esc(sentence(decodeText(r.scope))) + "</li></ul>" : "") +
-      '<button class="toggle scope-toggle" data-id="' + esc(r.id) + '" aria-expanded="' + open + '">' + (open ? "Hide full description" : "Full description") + "</button> ";
+      (open && !lead ? '<ul class="dlist"><li class="scope">' + esc(sentence(decodeText(r.scope))) + "</li></ul>" : "") +
+      (lead ? "" : '<button class="toggle scope-toggle" data-id="' + esc(r.id) + '" aria-expanded="' + open + '">' + (open ? "Hide full description" : "Full description") + "</button> ");
   }
 
   // Eligibility cell followed by the Bid factors box (kept in its own wrapper).
@@ -1039,7 +1039,7 @@
         "<td>" + esc(catLabel(r)).replace(/\//g, "/<wbr>") + "</td>" +
         eligCell(r) +
         "<td>" + fmtDate(r.posted) + "</td>" +
-        "<td>" + (r.noDue ? (/eMarketplace/.test(r.dueTime || "") ? esc(r.dueTime) : "No real due date") : '<span style="white-space:nowrap">' + fmtDate(r.due) + '</span><div class="agency">' + esc(r.dueTime) + "</div>") + "</td>" +
+        "<td>" + (r.noDue ? (/eMarketplace/.test(r.dueTime || "") ? esc(r.dueTime) : "No real due date") : '<span style="white-space:nowrap">' + fmtDate(r.due).replace(/, (\d{4})$/, ",</span><br><span>$1") + '</span><div class="agency">' + esc(r.dueTime) + "</div>") + "</td>" +
         leftCell(r) +
         '<td><span class="badge ' + esc(r.level) + '">' + esc(r.level) + "</span></td>" +
         '<td><a href="' + esc(safeUrl(r.rfqUrl)) + '" target="_blank" rel="noopener" title="Source posting">' + (isPreSol(r) ? "Open notice" : "Open RFQ") + "</a>" +
