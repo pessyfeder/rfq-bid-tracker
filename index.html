@@ -842,7 +842,7 @@
     var inElig = (r.requires || []).map(function (q) { return q.toLowerCase(); });
     h += detailRow("Terms", x.requirements.filter(function (q) { return inElig.indexOf(String(q).toLowerCase()) < 0 && !(x.restriction && q === x.restriction); })
       .map(function (q) { return '<span class="chip">' + esc(q) + "</span>"; }).join(""));
-    h += detailRow("Contact information", contactHtml(x.contact));
+    h += detailRow("Contact information", contactHtml(x.contact) || '<span style="color:var(--muted)">Not stated</span>');
     return h ? '<ul class="dlist">' + h + "</ul>" : "";
   }
   // Name, email (mail link) and phone of whoever the notice names as the buyer. Empty when the source gives none.
