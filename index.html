@@ -152,6 +152,12 @@
   .failbar li { margin-bottom: 2px; }
   .failbar.ok { background: #e9f6ec; color: #1e6b34; border-color: #1e6b34; }
   .failbar .statelive { margin-bottom: 8px; padding: 6px 10px; border-radius: 6px; background: #e8f0fb; color: var(--accent); border: 1px solid #c5d6ee; }
+  .failbar { position: relative; }
+  .failbar .closex { display: none; position: absolute; top: 6px; right: 8px; border: 0; background: none; color: #1e6b34; font-size: 20px; line-height: 1; cursor: pointer; padding: 2px 6px; }
+  .failbar.ok .closex { display: block; }
+  .failbar .othersrc { margin-bottom: 8px; }
+  .failbar .othersrc summary { cursor: pointer; font-weight: 700; }
+  .failbar .othersrc.ok summary { color: #1e6b34; }
   .failbar .stateok { margin-top: 10px; color: #1e6b34; }
   .failbar .stateok summary { cursor: pointer; font-weight: 600; }
   .failbar .stateok ul { color: var(--ink); }
@@ -283,7 +289,7 @@
     if (r.ok !== false) okItems.push((NAMES[code] || code) + " (" + code + ")" + (r.count != null ? ": " + r.count + " notices" : "") + (r.fetchedAt ? ", updated " + when(r.fetchedAt) : ""));
   });
   var live = document.createElement("div"); live.id = "stateLive"; live.className = "statelive"; live.hidden = true;
-  window.STATE_BANNER = { box: box, live: live, NAMES: NAMES };
+  window.STATE_BANNER = { box: box, live: live, NAMES: NAMES, stateItems: items.length, stateFailed: failed };
   if (items.length) {
     var title = document.createElement("summary");
     title.textContent = failed ? "⚠ Data problem: " + failed + " state source" + (failed === 1 ? "" : "s") + " failed to update" : "⚠ Some state data is incomplete";
@@ -1483,6 +1489,55 @@
     }
     return out;
   }
+  // Local (NYC) and federal (SAM.gov) sources, shown in the same banner as the states: red = failed, amber = not set up,
+  // green = updated. Built from /api/status on every poll, since these two have no per-state data in the page.
+  var OTHERS = [{ id: "nyc", kind: "local" }, { id: "sam", kind: "federal" }];
+  function renderOthers(st, sb, pgl) {
+    var bad = [], okL = [], failedN = 0, skippedN = 0, running = null;
+    OTHERS.forEach(function (o) {
+      var x = (st.sources || []).filter(function (s) { return s.id === o.id; })[0];
+      if (!x) return;
+      var name = x.label + " (" + o.kind + ")", now = pgl && pgl.label === x.label;
+      var older = x.fetchedAt ? " Showing older data from " + dayhm(x.fetchedAt) + "." : " No data from it yet.";
+      if (now) running = name;
+      if (x.skipped) { skippedN++; bad.push({ t: name + ": NOT SET UP (" + (x.error || "missing setting") + "), so its requests are not included.", now: now }); }
+      else if (x.error) { failedN++; bad.push({ t: name + ": FETCH FAILED - " + why(x.error) + "." + older, now: now }); }
+      else okL.push({ t: name + ": " + x.records + " open notices" + (x.fetchedAt ? ", updated " + dayhm(x.fetchedAt) : ", not fetched yet"), now: now });
+    });
+    var el = document.getElementById("otherSrc");
+    if (!el) { el = document.createElement("details"); el.id = "otherSrc"; el.className = "othersrc"; sb.box.insertBefore(el, sb.live.nextSibling); }
+    var all = bad.concat(okL);
+    var head = bad.length ? "⚠ Local/federal data problem: " + bad.length + " source" + (bad.length === 1 ? "" : "s") + (failedN ? " failed to update" : " not set up")
+                          : "✓ Local & federal sources updated successfully";
+    if (running) head += " — ⟳ updating now: " + running;
+    var sig = head + "|" + all.map(function (a) { return (a.now ? "*" : "") + a.t; }).join("|");
+    if (el.dataset.sig !== sig) {
+      el.dataset.sig = sig;
+      var open = el.open;
+      el.textContent = "";
+      var sm = document.createElement("summary"); sm.textContent = head; el.appendChild(sm);
+      var ul = document.createElement("ul");
+      all.forEach(function (a) { var li = document.createElement("li"); li.textContent = (a.now ? "⟳ Updating now — " : "") + a.t; ul.appendChild(li); });
+      el.appendChild(ul);
+      el.open = bad.length ? true : open;
+    }
+    el.classList.toggle("ok", !bad.length);
+    // Overall colour: red if anything failed, amber if only warnings, green only when everything (states too) is fine.
+    var anyFail = sb.stateFailed || failedN, anyWarn = sb.stateItems || bad.length;
+    sb.box.classList.toggle("ok", !anyWarn);
+    sb.box.classList.toggle("warn", !!anyWarn && !anyFail);
+    if (!sb.box.querySelector(".closex")) {
+      var x = document.createElement("button"); x.className = "closex"; x.type = "button"; x.title = "Dismiss"; x.setAttribute("aria-label", "Dismiss"); x.textContent = "×";
+      x.addEventListener("click", function () { sb.dismissed = true; sb.box.hidden = true; try { sessionStorage.setItem("rfqBannerDismissed", "1"); } catch (e) {} });
+      sb.box.appendChild(x);
+      try { if (sessionStorage.getItem("rfqBannerDismissed")) sb.dismissed = true; } catch (e) {}
+    }
+    // A dismissed green banner stays hidden; any problem brings it back (and re-arms the dismissal for the next green one).
+    if (anyWarn) { sb.dismissed = false; try { sessionStorage.removeItem("rfqBannerDismissed"); } catch (e) {} }
+    sb.box.hidden = !!sb.dismissed;
+    var t =document.title.replace(/^⚠ /, "");
+    document.title = anyWarn ? "⚠ " + t : t;
+  }
   // Opening or reloading the page retries sources whose last fetch failed, once per page load. Not for the reload
   // this page does itself when a refresh ends (that would loop for as long as a source keeps failing).
   var retried = false;
@@ -1559,6 +1614,7 @@
           }
           if (sb.title.textContent !== tx) sb.title.textContent = tx;
         }
+        renderOthers(st, sb, st.refreshing ? st.refreshProgress : null);
         // Mark the failed row of the state being fetched/retried right now.
         var rows = sb.box.querySelectorAll("li[data-state]");
         for (var ri = 0; ri < rows.length; ri++) {
