@@ -130,6 +130,7 @@
   .val-ex ul { margin: 4px 0 0; padding-left: 14px; }
   .elig { white-space: normal; }
   .facts { margin: 2px 0 6px; padding: 6px 8px; border-left: 3px solid var(--warn); background: #fffaf0; border-radius: 0 4px 4px 0; }
+  .facts.plain { padding: 0; border-left: 0; background: none; }
   .facts-h { font-size: 10px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin-bottom: 3px; }
   .fact { display: inline-block; margin: 0 4px 4px 0; padding: 1px 7px; border-radius: 4px; font-size: 12px; font-weight: 600; cursor: help; }
   .fact.hard { background: #fdecea; color: var(--bad); }
@@ -195,8 +196,6 @@
 <header>
   <h1>RFQ Bid Tracker</h1>
   <span class="sub">Discover Group &middot; Brooklyn, NY</span>
-  <span class="sub"><b>Not checked</b> = we did not read the documents. <b>None stated</b> = we read them and they say nothing on it. <b>Not found</b> = we looked for requirements and found none.</span>
-  <span class="sub">Who can bid, what you must provide, summaries, exact wording and stated amounts marked &ldquo;AI read, please verify&rdquo; were extracted by AI from the notice; check them against the source.</span>
 </header>
 
 <div class="refreshbar" id="refreshBar" role="status" hidden></div>
@@ -856,8 +855,7 @@
       return (shown[k] = 1);
     }).map(function (q) { return { label: String(q), sev: "info", why: "Requirement noted in the notice" }; }));
     if (!f.length) return "";
-    var note = r.aiRead ? "AI read, please verify" : (f[0] && f[0].kw ? "Keyword match on title/scope only" : "");
-    return '<div class="facts">' + (note ? '<div class="facts-h">' + note + "</div>" : "") +
+    return '<div class="facts plain">' +
       f.map(function (k) {
         return '<span class="fact ' + k.sev + '" title="' + esc(k.why) + '">' + (k.sev === "hard" ? "&#9873; " : "") + esc(k.label) + "</span>";
       }).join("") + "</div>";
@@ -1291,7 +1289,7 @@
     $("moreBtn").textContent = "Show " + Math.min(PAGE, left) + " more (" + left + " not shown)";
     function rowHtml(r) {
       var open = expanded[r.id];
-      var shallRow = open ? '<tr class="shall-row"><td colspan="' + COLUMNS.length + '"><h4>Exact wording from the notice ("shall")' + (r.aiRead ? " &middot; AI read, please verify" : "") + '</h4><ul>' +
+      var shallRow = open ? '<tr class="shall-row"><td colspan="' + COLUMNS.length + '"><h4>Exact wording from the notice ("shall")</h4><ul>' +
         (r.shall || []).map(function (s) { return "<li>" + esc(s.text) + (s.ref ? ' <span class="ref">[' + esc(s.ref) + "]</span>" : "") + "</li>"; }).join("") +
         '</ul>' + (r.aiRead ? '<div class="elig-note">AI read, please verify against the full RFQ document.</div>' : "") + '<a href="' + esc(safeUrl(r.rfqUrl)) + '" target="_blank" rel="noopener">Open the full RFQ document</a></td></tr>' : "";
       var dl = docLinks(r);
