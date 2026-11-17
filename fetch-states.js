@@ -104,7 +104,7 @@ async function addDocumentReads(list, prevById, adapter, ctl) {
     const amended = p && p.aiRead && p.aiSig && p.aiSig !== r.aiSig;
     if (amended) { newSig.set(r, r.aiSig); r.aiSig = p.aiSig; } // keep the old fingerprint until the re-read succeeds, so a failed one is retried next run
     const stale = (p && p.requires == null && (p.docsV || 0) < DOCS_VERSION && REREAD_STATES.has(adapter.code)) || amended;
-    if (p && p.aiRead) { r.requires = p.requires; r.scope = p.scope; r.shall = p.shall; if (p.naics) r.naics = p.naics; if (p.docDue) r.docDue = p.docDue; r.aiRead = true; if (p.docsV) r.docsV = p.docsV; if (p.details && p.details.contact && !r.details.contact) r.details.contact = p.details.contact; } // a failed re-read keeps this
+    if (p && p.aiRead) { r.requires = p.requires; r.scope = p.scope; r.shall = p.shall; if (p.naics) r.naics = p.naics; if (p.docDue) r.docDue = p.docDue; if (p.docs) r.docs = p.docs; r.aiRead = true; if (p.docsV) r.docsV = p.docsV; if (p.details && p.details.contact && !r.details.contact) r.details.contact = p.details.contact; } // a failed re-read keeps this
     if (p && p.aiRead && !stale) reused++;
     else if (stale) todo.push(r);
     else if (process.env.STATE_REREAD_ONLY && !(p && p.aiRead)) continue; // re-read only notices that were already read once
@@ -127,6 +127,7 @@ async function addDocumentReads(list, prevById, adapter, ctl) {
         // An amended notice's old restriction no longer applies, so an unclear new read must not keep it.
         if (res.requires !== null || newSig.has(r)) r.requires = res.requires;
         if (newSig.has(r)) r.aiSig = newSig.get(r);
+        if (doc.docs && doc.docs.length) r.docs = doc.docs;
         if (res.scope) r.scope = res.scope;
         if (res.shall.length) r.shall = res.shall;
         { const n = naicsIn(doc.text); if (n) r.naics = n; } // regex on the page/Word text, not the model (PDF text is not scanned)

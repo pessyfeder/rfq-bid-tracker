@@ -49,6 +49,21 @@ function attachmentLinks(html, base) {
   return out;
 }
 
+// Names a document by what it is, from its link text and file name. Shown in the "View Documents" column.
+function docType(label, url) {
+  let file = ""; try { file = decodeURIComponent(new URL(url).pathname.split("/").pop() || ""); } catch { /* keep empty */ }
+  const t = label + " " + file;
+  if (/addend|amendment/i.test(t)) return "Addendum";
+  if (/rfq|request for quot/i.test(t)) return "RFQ";
+  if (/rfp|request for proposal/i.test(t)) return "RFP";
+  if (/itb|ifb|invitation (to|for) bid/i.test(t)) return "Bid Invitation";
+  if (/specification|scope of work|sow/i.test(t)) return "Specifications";
+  if (/terms (and|&) conditions|standard terms/i.test(t)) return "Terms & Conditions";
+  if (/price|pricing|cost|bid form|quote form/i.test(t)) return "Pricing Form";
+  if (/drawing|plan|plans/i.test(t)) return "Drawings";
+  return "Project Document";
+}
+
 // Periscope portals (NV, NJ, OR, IL, MA) list attachments as javascript:downloadFile('id') and fetch them by posting the
 // page's own hidden form back with mode=download. -> [{ label, get() }]
 function periscopeFiles(html, url, cookies) {
@@ -160,7 +175,10 @@ async function readNotice(url, r) {
     try { absorb(await it.get(), it.label, got); } catch { /* an unreadable attachment is not fatal */ }
   }
   // attachment text first: the model reads a limited amount, and the page itself is mostly navigation
-  return { text: got.docs.join("\n\n") + "\n\n" + text, pdfs: got.pdfs };
+  // Directly linkable attachments (not the Periscope javascript ones), named by type, for the "View Documents" column.
+  const docs = attachmentLinks(html, url).filter((l) => /\.(pdf|docx?|xlsx?|zip)(\?|$)/i.test(l.url) || /(download|attachment)/i.test(l.url))
+    .slice(0, 12).map((l) => ({ type: docType(l.label, l.url), name: l.label.slice(0, 120), url: l.url }));
+  return { text: got.docs.join("\n\n") + "\n\n" + text, pdfs: got.pdfs, docs };
 }
 
 module.exports = { readNotice, attachmentLinks };

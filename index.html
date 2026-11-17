@@ -173,7 +173,7 @@
     tbody tr:not(.shall-row) td:nth-child(5)::before { content: "End date"; }
     tbody tr:not(.shall-row) td:nth-child(6)::before { content: "Days left"; }
     tbody tr:not(.shall-row) td:nth-child(7)::before { content: "Municipality"; }
-    tbody tr:not(.shall-row) td:nth-child(8)::before { content: "RFQ doc"; }
+    tbody tr:not(.shall-row) td:nth-child(8)::before { content: "View Documents"; }
     tbody tr:not(.shall-row) td:nth-child(9)::before { content: "Est. value"; }
     tbody tr:not(.shall-row) td:nth-child(10)::before { content: "Details"; }
     tbody tr:not(.shall-row) td:last-child { border-bottom: 0; }
@@ -315,7 +315,7 @@
     { key: "dueSort",  label: "End date" },
     { key: "daysLeft", label: "Days left", num: true },
     { key: "level",    label: "Municipality" },
-    { key: "rfqUrl",   label: "RFQ doc", nosort: true },
+    { key: "rfqUrl",   label: "View Documents", nosort: true },
     { key: "valueSort", label: "Est. value", num: true },
     { key: "details",  label: "Details", nosort: true }
   ];
@@ -1024,6 +1024,18 @@
   }
 
   // Eligibility cell followed by the Bid factors box (kept in its own wrapper).
+  // "View Documents": the posting itself, then each attachment found, named by type (RFQ, Specifications, Project Document...).
+  function docLinks(r) {
+    var seen = {}, out = [];
+    function add(type, url, name) {
+      seen[type] = (seen[type] || 0) + 1;
+      var label = seen[type] > 1 ? type + " " + seen[type] : type;
+      out.push('<div><a href="' + esc(safeUrl(url)) + '" target="_blank" rel="noopener" title="' + esc(name || "Source posting") + '">' + esc(label) + "</a></div>");
+    }
+    add(isPreSol(r) ? "Notice" : "RFQ", r.rfqUrl, "Source posting");
+    (r.docs || []).forEach(function (d) { if (d && d.url && d.url !== r.rfqUrl) add(d.type || "Project Document", d.url, d.name); });
+    return out.join("");
+  }
   function eligCell(r) {
     var h = eligCellBase(r), f = factsHtml(r);
     return f ? h.replace(/<\/td>$/, f + "</td>") : h;
@@ -1241,7 +1253,7 @@
         "<td>" + (r.noDue ? (/eMarketplace/.test(r.dueTime || "") ? esc(r.dueTime) : "No real due date") : '<span style="white-space:nowrap">' + fmtDate(r.due).replace(/, (\d{4})$/, ",</span><br><span>$1") + '</span><div class="agency">' + esc(r.dueTime) + "</div>") + "</td>" +
         leftCell(r) +
         '<td><span class="badge ' + esc(r.level) + '">' + esc(r.level) + "</span></td>" +
-        '<td><a href="' + esc(safeUrl(r.rfqUrl)) + '" target="_blank" rel="noopener" title="Source posting">' + (isPreSol(r) ? "Open notice" : "Open RFQ") + "</a>" +
+        '<td>' + docLinks(r) +
           (r.aiRead ? "" : '<div><span class="elig unclear" title="The documents behind this posting were not read, so the details shown are only what the listing itself gives. Open the posting to see the rest.">No document access</span></div>') + "</td>" +
         valueCell(r) +
         "<td>" + detailsHtml(r) +
@@ -1471,13 +1483,7 @@
       var sb = window.STATE_BANNER;
       if (sb) {
         var pgl = st.refreshing ? st.refreshProgress : null;
-        if (pgl) {
-          var n2 = function (k) { return (STATE_NAMES[k] || k) + " (" + k + ")"; };
-          var txt = "Running now: " + (pgl.total && pgl.current ? n2(pgl.current) + " — " + pgl.done + " of " + pgl.total + " states started" : pgl.label) + " (step " + pgl.step + " of " + pgl.steps + ").";
-          if (pgl.updated && pgl.updated.length) txt += " Updated so far: " + pgl.updated.map(n2).join(", ") + ".";
-          if (pgl.failedNow && pgl.failedNow.length) txt += " Failed so far: " + pgl.failedNow.map(n2).join(", ") + ".";
-          sb.live.textContent = txt; sb.live.hidden = false; sb.box.hidden = false;
-        } else sb.live.hidden = true;
+        sb.live.hidden = true;
         // Mark the failed row of the state being fetched/retried right now.
         var rows = sb.box.querySelectorAll("li[data-state]");
         for (var ri = 0; ri < rows.length; ri++) {
