@@ -1273,10 +1273,15 @@
   // has been drawn and estimated (average of the measured ones) until then. Rows outside the viewport (plus one screen
   // either side) are replaced by two spacer rows, so the page only ever holds a few dozen rows however many match.
   var view = [], hts = {}, hSum = 0, hN = 0, drawn = { a: -1, b: -1 }, rowEls = null, painting = false;
-  function paint(force) {
+  function paint(force) { // drawing real heights can move the right window (estimates were off), so repeat until it settles
     if (!rowEls || painting) return;
     painting = true;
-    try {
+    var k = 0;
+    try { while (k < 12 && paintOnce(force && k === 0)) k++; } finally { painting = false; }
+    if (k >= 12) setTimeout(queuePaint, 50); // still moving: carry on shortly rather than loop here
+  }
+  function paintOnce(force) { // true when it drew
+    {
       var n = view.length, tb = $("body"), i;
       var est = hN ? hSum / hN : 170;
       var off = new Array(n + 1); off[0] = 0;
@@ -1286,7 +1291,7 @@
       while (a < n - 1 && off[a + 1] <= y0) a++;
       b = a; while (b < n && off[b] < y1) b++;
       b = Math.min(n, Math.max(b, a + 8));
-      if (!force && a === drawn.a && b === drawn.b) return;
+      if (!force && a === drawn.a && b === drawn.b) return false;
       // remember where the first visible row sits, to put it back after rows above it change height
       var anchorId = null, anchorTop = 0;
       for (i = drawn.a; i >= 0 && i < drawn.b && i < view.length; i++) {
@@ -1313,12 +1318,12 @@
       sTop.firstChild.style.height = above + "px"; sBot.firstChild.style.height = below + "px";
       sTop.hidden = !above; sBot.hidden = !below;
       drawn = { a: a, b: b };
-      setTimeout(queuePaint, 0); // the real heights may have moved the window; a no-op when the same rows are still the right ones
       if (anchorId != null) {
         var r2 = view.slice(a, b).filter(function (r) { return r.id === anchorId; })[0];
         if (r2) { var d = r2._els.nodes[0].getBoundingClientRect().top - anchorTop; if (Math.abs(d) > 1) window.scrollBy(0, d); }
       }
-    } finally { painting = false; }
+      return true;
+    }
   }
   var paintQueued = false;
   function queuePaint() { // next frame, or soon after if the tab is in the background and frames are paused
