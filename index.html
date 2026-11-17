@@ -574,6 +574,7 @@
     { key: "st",       label: "State",        type: "list", get: function (r) { return [r.st]; }, name: stName, into: "level" }, // lives inside the Municipality dropdown
     { key: "category", label: "Category",     type: "list", get: function (r) { return [catLabel(r)]; }, group: catGroup },
     { key: "elig",     label: "Eligibility",  type: "list", get: eligValues, group: eligGroup, note: "Shows requests that list at least one checked requirement." },
+    { key: "detail",   label: "Details",      type: "text", note: "Search the Details bullets. Pick a bullet to look only inside it, or to find requests that have it (or lack it)." },
     { key: "posted",   label: "Posted",       type: "date" },
     { key: "due",      label: "End date",     type: "date", flag: "noDueOk", flagLabel: "Include requests with no real due date" },
     { key: "days",     label: "Days left",    type: "num", note: "Requests with no due date follow the End date setting.",
@@ -586,7 +587,7 @@
   var R = { posted: {}, due: {}, days: {}, value: {}, noDueOk: true, unknownOk: true }; // key -> { a: from/min, b: to/max }
   function resetFilter(f) {
     if (f.type === "list") H[f.key] = {};
-    else R[f.key] = { a: "", b: "" };
+    else R[f.key] = { a: "", b: "", c: "" };
     if (f.flag) R[f.flag] = true;
   }
   FILTERS.forEach(resetFilter);
@@ -623,6 +624,7 @@
   function isActive(f) {
     if (f.type === "list") return hiddenN(f) > 0;
     var o = R[f.key];
+    if (f.type === "text") return !!(String(o.a).trim() || o.b && o.c);
     return !!(f.type === "date" ? (o.a || o.b) : (pnum(o.a) != null || pnum(o.b) != null)) || (f.flag && !R[f.flag]);
   }
   function listValues(f) {
@@ -660,6 +662,12 @@
         f.groups = gs;
       } else body = vals.map(vrow).join("");
       h += '<label class="frow all"><input type="checkbox" data-all> Select all</label><div class="flist">' + body + "</div>";
+    } else if (f.type === "text") {
+      h += '<div class="frange" style="flex-direction:column;align-items:stretch;gap:6px">' +
+        '<label>Bullet<select data-p="b"><option value="">Any bullet</option></select></label>' +
+        '<label>Has it?<select data-p="c"><option value="">Either way</option><option value="has">Stated</option><option value="missing">Not stated / missing</option></select></label>' +
+        '<label>Keywords<input type="text" data-p="a" placeholder="e.g. bond, site visit"></label></div>' +
+        '<button type="button" class="freset" data-reset>Reset</button>';
     } else {
       var kind = f.type === "date" ? "date" : "text", ph = f.type === "num" ? (f.hint ? 'placeholder="' + esc(f.hint) + '"' : 'inputmode="numeric"') : "";
       h += '<div class="frange"><label>' + (f.type === "date" ? "From" : "Min") + '<input type="' + kind + '" data-p="a" ' + ph + ">" +
@@ -679,6 +687,12 @@
 
   function fdesc(f) { // text for the chip of an active range filter
     var o = R[f.key], a = o.a, b = o.b, parts = [];
+    if (f.type === "text") {
+      var t = [];
+      if (b) t.push(b + (o.c === "has" ? " stated" : o.c === "missing" ? " not stated" : ""));
+      if (String(a).trim()) t.push((b ? "contains " : "") + "“" + String(a).trim() + "”");
+      return f.label + ": " + t.join(", ");
+    }
     function fmtv(v) { return f.type === "date" ? fmtDate(v) : f.key === "value" ? compact(pnum(v)) : String(pnum(v)); }
     var hasA = f.type === "date" ? !!a : pnum(a) != null, hasB = f.type === "date" ? !!b : pnum(b) != null;
     if (hasA && hasB) parts.push(fmtv(a) + " to " + fmtv(b)); else if (hasA) parts.push(f.type === "date" ? "from " + fmtv(a) : fmtv(a) + " or more"); else if (hasB) parts.push(f.type === "date" ? "to " + fmtv(b) : "up to " + fmtv(b));
@@ -844,6 +858,41 @@
     h += detailRow("Terms", x.requirements.filter(function (q) { return inElig.indexOf(String(q).toLowerCase()) < 0 && !(x.restriction && q === x.restriction); })
       .map(function (q) { return '<span class="chip">' + esc(q) + "</span>"; }).join(""));
     return h ? '<ul class="dlist">' + h + "</ul>" : "";
+  }
+  // The Details bullets as plain {label, text} pairs, for the Details filter. Same content as the cell shows.
+  function detailBullets(r) {
+    if (r._bul) return r._bul;
+    var out = [], x = r.details || {};
+    var st = (x.amended ? ["Amended"] : []).concat(x.warnings || []).join("; ");
+    if (st) out.push({ label: "Status", text: st });
+    if (x.region) out.push({ label: "Region", text: x.region });
+    var inElig = (r.requires || []).map(function (q) { return String(q).toLowerCase(); });
+    var terms = (x.requirements || []).filter(function (q) { return inElig.indexOf(String(q).toLowerCase()) < 0 && !(x.restriction && q === x.restriction); });
+    if (terms.length) out.push({ label: "Terms", text: terms.join("; ") });
+    if (r.scope) {
+      if (r.aiRead && r.scope.length <= 300) out.push({ label: "Summary", text: sentence(decodeText(r.scope)) });
+      else keyPoints(r).forEach(function (p) { out.push({ label: p[0] || "Notes", text: sentence(p[1]) }); });
+    }
+    var c = x.contact ? [x.contact.name, x.contact.email, x.contact.phone].filter(Boolean).join(" ") : "";
+    out.push({ label: "Contact information", text: c || "Not stated" });
+    return (r._bul = out);
+  }
+  function detailMatch(r, o) {
+    var bl = detailBullets(r), want = o.b, words = String(o.a).toLowerCase().split(/\s+/).filter(Boolean);
+    var pool = want ? bl.filter(function (b) { return b.label === want; }) : bl;
+    if (want && o.c) {
+      var has = pool.some(function (b) { return !/^not stated$/i.test(b.text); });
+      if ((o.c === "has") !== has) return false;
+    }
+    if (!words.length) return true;
+    var hay = pool.map(function (b) { return b.label + " " + b.text; }).join(" \n ").toLowerCase();
+    return words.every(function (w) { return hay.indexOf(w) >= 0; });
+  }
+  function fillDetailBullets() {
+    var sel = fwraps.detail.panel.querySelector("select[data-p=b]"), seen = {}, labs = ["Status", "Region", "Terms", "Summary", "Contact information"];
+    labs.forEach(function (l) { seen[l] = 1; });
+    rows.forEach(function (r) { detailBullets(r).forEach(function (b) { if (!seen[b.label]) { seen[b.label] = 1; labs.push(b.label); } }); });
+    sel.innerHTML = '<option value="">Any bullet</option>' + labs.map(function (l) { return '<option value="' + esc(l) + '">' + esc(l) + "</option>"; }).join("");
   }
   // Name, email (mail link) and phone of whoever the notice names as the buyer. Empty when the source gives none.
   function contactHtml(c) {
@@ -1120,6 +1169,7 @@
     var q = "";
     return { lists: FILTERS.filter(function (x) { return x.type === "list" && hiddenN(x); }),
       days: [pnum(R.days.a), pnum(R.days.b)], value: [pnum(R.value.a), pnum(R.value.b)],
+      detail: isActive(FILTERS.filter(function (x) { return x.key === "detail"; })[0]),
       hideClosed: $("hideClosed").checked, hideFlagged: $("hideFlagged").checked, pq: q ? parseQuery(q) : null };
   }
   function matches(r, f) {
@@ -1148,6 +1198,7 @@
       if (f.value[1] != null && lo > f.value[1]) return false;
     }
     if (f.hideFlagged && ((r.details.warnings || []).length || r.noDue)) return false;
+    if (f.detail && !detailMatch(r, R.detail)) return false;
     var pq = f.pq;
     if (pq) {
       if (pq.noDue && !r.noDue) return false;
@@ -1358,6 +1409,7 @@
       restoredScroll = saved.scrollY;
     }
   } catch (e) {}
+  try { fillDetailBullets(); } catch (e) {}
   syncFilters();
   render();
   if (restoredScroll) window.scrollTo(0, restoredScroll);
