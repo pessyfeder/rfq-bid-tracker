@@ -66,7 +66,7 @@ If `more` is `true`, the page was cut off by `limit`; call again with `after=<cu
 | `seq` | int | Change counter (above). |
 | `source` | `nyc` \| `sam` \| `states` | |
 | `level` | `Federal` \| `State` \| `Local` | |
-| `title`, `agency`, `category` | string | Category is City Record category, or `NAICS <code>` for SAM.gov. Plain text: never render as HTML. |
+| `title`, `plainTitle`, `agency`, `category` | string | Category is City Record category, or `NAICS <code>` for SAM.gov. `plainTitle` is an AI-written plain-English headline of what is requested (or null). Plain text: never render as HTML. |
 | `region` | string \| null | Place of performance / "New York City". |
 | `posted` | `YYYY-MM-DD` | |
 | `due` | `YYYY-MM-DD` | Eastern-time date. |

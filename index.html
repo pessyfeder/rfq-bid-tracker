@@ -756,14 +756,60 @@
     if (w) s = w[1].charAt(0).toUpperCase() + w[1].slice(1).toLowerCase() + " on " + s;
     return s + " (" + m[3] + ")";
   }
+  // Federal item / service listings arrive in catalogue shorthand. Examples handled here:
+  //   "41--COOLER,AIR,EVAPORATIVE"  -> "Evaporative air cooler (Refrigeration, air conditioning and air circulating equipment)"
+  //   "Z2DA--FY27 Multiple Award Task Order Contract, seed project no: 550-25-108, Renovate Bathrooms in B103"
+  //                                 -> "Renovate Bathrooms in B103"
+  // The 2-digit prefix is a Federal Supply Group; letter-led prefixes (Z2DA, J066, N044) are service codes and are dropped.
+  var FSG = { 10: "Weapons", 12: "Fire control equipment", 13: "Ammunition and explosives", 14: "Guided missiles", 15: "Aircraft and airframe parts", 16: "Aircraft components", 17: "Aircraft ground handling equipment", 19: "Ships and small craft", 20: "Ship and marine equipment", 22: "Railway equipment", 23: "Motor vehicles and trailers", 24: "Tractors", 25: "Vehicle components", 26: "Tires and tubes", 28: "Engines and turbines", 29: "Engine accessories", 30: "Mechanical power transmission equipment", 31: "Bearings", 32: "Woodworking machinery", 34: "Metalworking machinery", 35: "Service and trade equipment", 36: "Special industry machinery", 37: "Agricultural machinery", 38: "Construction and excavating equipment", 39: "Materials handling equipment", 40: "Rope, cable and chain", 41: "Refrigeration, air conditioning and air circulating equipment", 42: "Fire fighting, rescue and safety equipment", 43: "Pumps and compressors", 44: "Furnace, steam plant and drying equipment", 45: "Plumbing, heating and waste disposal equipment", 46: "Water purification and sewage treatment equipment", 47: "Pipe, tubing, hose and fittings", 48: "Valves", 49: "Maintenance and repair shop equipment", 51: "Hand tools", 52: "Measuring tools", 53: "Hardware and abrasives", 54: "Prefabricated structures and scaffolding", 55: "Lumber and plywood", 56: "Construction and building materials", 58: "Communication and detection equipment", 59: "Electrical and electronic components", 60: "Fiber optics", 61: "Electric wire and power distribution equipment", 62: "Lighting fixtures and lamps", 63: "Alarm and security systems", 65: "Medical, dental and veterinary supplies", 66: "Instruments and laboratory equipment", 67: "Photographic equipment", 68: "Chemicals", 69: "Training aids and devices", 70: "IT equipment and software", 71: "Furniture", 72: "Household and commercial furnishings", 73: "Food preparation and serving equipment", 74: "Office machines", 75: "Office supplies", 76: "Books and publications", 77: "Musical instruments and radios", 78: "Recreational and athletic equipment", 79: "Cleaning equipment and supplies", 80: "Paints, sealers and adhesives", 81: "Containers and packaging", 83: "Textiles, tents and flags", 84: "Clothing and individual equipment", 85: "Toiletries", 87: "Agricultural supplies", 88: "Live animals", 89: "Food and subsistence", 91: "Fuels and lubricants", 93: "Nonmetallic fabricated materials", 94: "Nonmetallic raw materials", 95: "Metal bars and sheets", 96: "Ores and minerals", 99: "Miscellaneous" };
+  var segVocab = null; // complete comma-segments seen in titles that were not cut off; tells a real last word from a chopped one
+  function fedItemTitle(raw) {
+    var s = String(raw || "").trim().replace(/^\s+/, ""), group = "", m;
+    if ((m = /^(\d{2})\d{0,2}--\s*(.+)$/.exec(s))) { group = FSG[+m[1]] || ""; s = m[2]; }
+    else if ((m = /^[A-Z]\d{0,3}[A-Z0-9]{0,2}--\s*(.+)$/.exec(s))) s = m[1];
+    else if (!/^[A-Z0-9 ,.\/&()'-]+$/.test(s) || s.indexOf(",") < 0) return stripBoilerplate(s, group);
+    // Noun-first catalogue name ("VALVE,CHECK"): short all-caps comma list -> "check valve"
+    var parts = s.split(/\s*,\s*/).filter(Boolean);
+    if (parts.length >= 2 && parts.length <= 4 && parts.every(function (p) { return p.length <= 24; }) && /^[A-Z0-9 ,.\/&()'-]+$/.test(s)) {
+      if (!segVocab) { segVocab = {}; (window.RFQS || []).forEach(function (r) { var t = String(r.title || ""); if (t.length !== 26) t.replace(/^[^-]*--/, "").split(/\s*,\s*/).forEach(function (p) { segVocab[p.toUpperCase()] = 1; }); }); }
+      var cut = String(raw).trim().length === 26; // SAM chops these listings at 26 characters
+      var last = parts[parts.length - 1];
+      if (cut && parts.length > 1 && !segVocab[last] && !/(IVE|AL|ED|ING|ER|OR|ION|IC|ARY|OUS|ENT|ANT|LE|Y|S)$/.test(last)) {
+        // chopped mid-word: complete it from a longer word seen elsewhere, otherwise leave it out
+        var full = Object.keys(segVocab).filter(function (w) { return w.length > last.length && w.indexOf(last) === 0 && w.indexOf(" ") < 0; })[0];
+        if (full) parts[parts.length - 1] = full; else parts.pop();
+      }
+      var spec = [];
+      parts = parts.filter(function (p) { var t = /^TY-?(\w+)$/.exec(p); if (t) { spec.push("type " + t[1]); return false; } return true; });
+      var noun = parts.shift().toLowerCase(), mods = parts.reverse().map(function (p) { return p.toLowerCase(); });
+      s = mods.concat(noun).join(" ");
+      s = s.charAt(0).toUpperCase() + s.slice(1) + (spec.length ? ", " + spec.join(", ") : "");
+      return s + (group && group.toLowerCase().indexOf(noun.replace(/s$/, "")) < 0 ? " (" + group + ")" : "");
+    }
+    return stripBoilerplate(s, group);
+  }
+  // Drops contract-vehicle filler and bare IDs from a comma-separated title, keeping the part that says what work is wanted.
+  function stripBoilerplate(s, group) {
+    var segs = s.split(/\s*,\s+/);
+    if (segs.length > 1) {
+      var keep = segs.filter(function (p) {
+        return !/^(FY\s?\d{2,4}\s+)?((multiple|single)[- ]award\s+)?(task order\s+)?(contract|IDIQ|MATOC|SATOC|BPA)\b[\w\s-]*$/i.test(p) && !/\b(project|proj|contract|solicitation|seed)\s*(no|number|#)\b[.:]?\s*[\w-]*$/i.test(p) && !/^[\d-]{6,}$/.test(p);
+      });
+      if (keep.length && keep.length < segs.length) s = keep.join(", ");
+    }
+    s = s.replace(/^FY\s?\d{2,4}\s+(?=[A-Z])/, "");
+    if (!/[a-z]/.test(s) && s.split(/\s+/).length <= 2) s = s.charAt(0) + s.slice(1).toLowerCase(); // "CIRCUIT BREAKER" -> "Circuit breaker"
+    return group ? s + " (" + group + ")" : s;
+  }
   function titleHtml(r, open) {
-    var t = sentence(r.title) || "";
+    var t = sentence(r.level === "Federal" ? fedItemTitle(r.title) : r.title) || "";
     var tx = txTitle(t, r.scope);
     if (tx) t = tx;
     // Say "meeting" in the title itself instead of using a separate chip.
     if (isPreSol(r) && !/meeting/i.test(t)) t = /conferences?/i.test(t) ? t.replace(/conference/i, "meeting").replace(/conferences/i, "meetings") : t + " (meeting)";
     // Headline = a plain-English line saying what is being requested (written by the AI step). The agency's own wording stays below it.
-    var plain = r.plainTitle ? sentence(r.plainTitle) : "";
+    // Catalogue item names are already rewritten by fedItemTitle(), so the AI headline is not used for them.
+    var plain = r.plainTitle && !(r.level === "Federal" && /^\s*(\d{2,4}--|[A-Z0-9 .\/&()'-]+(,[A-Z0-9 .\/&()'-]+){1,3}$)/.test(String(r.title || ""))) ? sentence(r.plainTitle) : "";
     var orig = plain && plain.toLowerCase().replace(/[^a-z0-9]/g, "") !== t.toLowerCase().replace(/[^a-z0-9]/g, "");
     var head = plain ? plain : t;
     if (plain && isPreSol(r) && !/meeting/i.test(head)) head += " (meeting)";

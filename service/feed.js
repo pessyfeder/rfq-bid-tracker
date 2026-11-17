@@ -79,6 +79,7 @@ function normalize(r, source) {
     source: source.id,
     level: r.level,                       // Federal | State | Local
     title: r.title,
+    plainTitle: r.plainTitle || null,   // plain-English headline of what is requested (AI-written); title is the agency's own wording
     agency: r.agency,
     category: r.category,
     region: (r.details && r.details.region) || null,
