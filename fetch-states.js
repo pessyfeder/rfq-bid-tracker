@@ -71,7 +71,7 @@ const MAX_READS = Number(process.env.STATE_MAX_READS) || 60;
 // Bump DOCS_VERSION when states/docs.js learns to reach more documents; rows read before that with no restriction found are read again.
 // Version 2: Periscope attachment downloads, Word (.docx) files, Indiana per-event zips.
 // Version 3: Mississippi attachments on srm.magic.ms.gov (earlier reads saw only the page header).
-const DOCS_VERSION = 3;
+const DOCS_VERSION = 4;
 const REREAD_STATES = new Set(["NV", "NJ", "OR", "IL", "MA", "SC", "IN", "MS"]);
 // A 6-digit NAICS code stated next to the word NAICS (or its full name) in the notice text; "" if none or if several differ.
 function naicsIn(text) {
@@ -103,7 +103,8 @@ async function addDocumentReads(list, prevById, adapter, ctl) {
     r.aiSig = crypto.createHash("sha1").update(JSON.stringify([r.title, r.due, r.dueTime, r.scope, r.value, r.rfqUrl])).digest("hex").slice(0, 16);
     const amended = p && p.aiRead && p.aiSig && p.aiSig !== r.aiSig;
     if (amended) { newSig.set(r, r.aiSig); r.aiSig = p.aiSig; } // keep the old fingerprint until the re-read succeeds, so a failed one is retried next run
-    const stale = (p && p.requires == null && (p.docsV || 0) < DOCS_VERSION && REREAD_STATES.has(adapter.code)) || amended;
+    // Version 4: shared-folder links (Box etc.) are now listed, so every read row without any saved document links is read once more.
+    const stale = (p && p.requires == null && (p.docsV || 0) < DOCS_VERSION && REREAD_STATES.has(adapter.code)) || (p && p.aiRead && (p.docsV || 0) < DOCS_VERSION && !(p.docs && p.docs.length)) || amended;
     if (p && p.aiRead) { r.requires = p.requires; r.scope = p.scope; r.shall = p.shall; if (p.naics) r.naics = p.naics; if (p.docDue) r.docDue = p.docDue; if (p.docs) r.docs = p.docs; r.aiRead = true; if (p.docsV) r.docsV = p.docsV; if (p.details && p.details.contact && !r.details.contact) r.details.contact = p.details.contact; } // a failed re-read keeps this
     if (p && p.aiRead && !stale) reused++;
     else if (stale) todo.push(r);

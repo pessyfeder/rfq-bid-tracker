@@ -120,6 +120,7 @@
   .elig.chip.possible { background: #f4f5f7; color: #555; border: 1px dashed #b8bcc4; font-weight: 400; }
   .elig.chip.meeting { background: #e0f2f1; color: #00695c; margin-top: 4px; }
   .elig.unclear { background: #efe6f8; color: #5a2d82; } /* "Not read" / "No document access": purple, distinct from every eligibility and details chip */
+  .doc-kind { font-size: 11px; color: var(--muted); white-space: nowrap; }
   .elig-note { margin-top: 4px; font-size: 12px; color: var(--muted); }
   td.num:nth-child(9) { white-space: nowrap; font-size: clamp(10px, 1.05vw, 13px); }
   td.num:nth-child(9) .val-note, td.num:nth-child(9) .val-ex { white-space: normal; }
@@ -842,7 +843,6 @@
     var inElig = (r.requires || []).map(function (q) { return q.toLowerCase(); });
     h += detailRow("Terms", x.requirements.filter(function (q) { return inElig.indexOf(String(q).toLowerCase()) < 0 && !(x.restriction && q === x.restriction); })
       .map(function (q) { return '<span class="chip">' + esc(q) + "</span>"; }).join(""));
-    h += detailRow("Contact information", contactHtml(x.contact) || '<span style="color:var(--muted)">Not stated</span>');
     return h ? '<ul class="dlist">' + h + "</ul>" : "";
   }
   // Name, email (mail link) and phone of whoever the notice names as the buyer. Empty when the source gives none.
@@ -1014,12 +1014,15 @@
     return esc(text).replace(GLOSS_RE, function (m, pre, k) { return pre + '<abbr class="gloss" title="' + esc(GLOSSARY[k]) + '">' + k + "</abbr>"; });
   }
   function scopeHtml(r, open) {
-    if (!r.scope) return '<div class="scope"><span class="na">' + esc(r.details && r.details.readWhy ? "Not read: " + r.details.readWhy + ". The source data has no description." : "No data") + "</span></div>";
+    // Contact information always closes the bullet list.
+    var contact = '<ul class="dlist">' + detailRow("Contact information", contactHtml(r.details && r.details.contact) || '<span style="color:var(--muted)">Not stated</span>') + "</ul>";
+    if (!r.scope) return '<div class="scope"><span class="na">' + esc(r.details && r.details.readWhy ? "Not read: " + r.details.readWhy + ". The source data has no description." : "No data") + "</span></div>" + contact;
     // An AI-read notice gets its plain-English one-liner (buyer, work, place) in full; other notices keep the extracted key points.
     var lead = r.aiRead && r.scope.length <= 300 ? '<ul class="dlist"><li>' + glossHtml(sentence(decodeText(r.scope))) + "</li></ul>" : "";
     var pts = lead ? [] : keyPoints(r);
     return lead + (pts.length ? '<ul class="dlist">' + pts.map(function (p) { return "<li>" + (p[0] ? "<b>" + esc(p[0]) + ":</b> " : "") + esc(sentence(p[1])) + "</li>"; }).join("") + "</ul>" : "") +
       (open && !lead ? '<ul class="dlist"><li class="scope">' + esc(sentence(decodeText(r.scope))) + "</li></ul>" : "") +
+      contact +
       (lead ? "" : '<button class="toggle scope-toggle" data-id="' + esc(r.id) + '" aria-expanded="' + open + '">' + (open ? "Hide full description" : "Full description") + "</button> ");
   }
 
@@ -1027,10 +1030,10 @@
   // "View Documents": the posting itself, then each attachment found, named by type (RFQ, Specifications, Project Document...).
   function docLinks(r) {
     var seen = {}, out = [];
-    function add(type, url, name) {
+    function add(type, url, name, isPosting) {
       seen[type] = (seen[type] || 0) + 1;
       var label = seen[type] > 1 ? type + " " + seen[type] : type;
-      out.push('<div><a href="' + esc(safeUrl(url)) + '" target="_blank" rel="noopener" title="' + esc(name || "Source posting") + '">' + esc(label) + "</a></div>");
+      out.push('<div><a href="' + esc(safeUrl(url)) + '" target="_blank" rel="noopener" title="' + esc(name || "Source posting") + '">' + esc(label) + '</a> <span class="doc-kind">' + (isPosting ? "posting link" : "attached") + "</span></div>");
     }
     var listed = (r.docs || []).filter(function (d) { return d && d.url && d.url !== r.rfqUrl; });
     // Some notices (Texas) only give the document location as a link inside the description text.
@@ -1042,7 +1045,7 @@
     });
     var found = listed.concat(inText);
     // Attachments found on the posting keep the posting link first; links that only appear in the text replace it.
-    if (listed.length || !found.length) add(isPreSol(r) ? "Notice" : "RFQ", r.rfqUrl, "Source posting");
+    if (listed.length || !found.length) add(isPreSol(r) ? "Notice" : "RFQ", r.rfqUrl, "Source posting", true);
     found.forEach(function (d) { add(d.type || "Project Document", d.url, d.name); });
     return { html: out.join(""), n: found.length };
   }
