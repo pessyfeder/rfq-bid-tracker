@@ -55,7 +55,8 @@ Status dropdown was removed; bid tracking lives in the separate bidding app.)
                     d) "Not published" when (a) and (b) both fail.
                     DEFAULT SORT: descending by this value; unknown values last.
 10  Details         ONE merged column, same order in every cell. Top to bottom:
-                    1) "Notice alerts" chips (Amended, warnings; NOT a bid status, see section 2c), only when present
+                    1) "Notice alerts" chips (Amended = amber; data warnings = grey dashed chip with a warning sign,
+                       so a warning never reads as an amendment; NOT a bid status, see section 2c), only when present
                     2) labeled rows, left out when empty: "Region" (small muted label;
                        kept because Level shows only Federal / State / Local),
                        "Terms" (plain requirement chips, e.g. selection method,
@@ -110,10 +111,18 @@ Toolbar and behavior
  - Count line: "n of N requests", source(s) and when the data was last updated.
  - The long "shall" list is not loaded with the page: it is fetched per notice from the
    service (/shall/<id>) when "Show all requirements" is opened.
- - Paging: requests are drawn 100 at a time, with a "Show N more" button (no "Show all"), so filtering
-   and resizing stay fast. The count line still reports the full match count. Changing a filter or
-   the sort goes back to the first 100.
+ - Virtual list (replaced paging; no "Show N more" / "Show all"): every matching row is reachable by
+   scrolling, but only the rows near the viewport (plus one screen either side) are in the page; two
+   spacer rows stand in for the rest. Row heights are measured as rows are drawn and estimated
+   (average of measured ones) until then; the draw repeats until the visible window settles after a big
+   scroll jump, and keeps the first visible row anchored when rows above change height. The count
+   line reports the full match count.
  - Filters, sort, open rows and scroll position are kept across the automatic reload after a refresh.
+ - Refresh hint next to the button: "Data refreshes automatically once a day (after 5:00 AM ET).
+   Click this button to refresh manually".
+ - The green "sources updated" banner shows only during a refresh and on the page load right after it
+   (flag rfqAutoReload in sessionStorage), not on a plain startup or reload; any problem still shows
+   the banner, and a dismissed green one stays hidden.
  - Banners: Refreshing (shows the step and how many states are done), first-install notice, a
    warning when the data is over 36 hours old (from dataAsOf), and an offline message that says how
    old the data is. The page explains when it is served by something other than the RFQ service.
@@ -352,16 +361,8 @@ backups), ai-cache.json, ai-usage.log, sam-cache.json, sam-quota.json, *-run.log
 
 6. FUTURE FIXES
 ---------------
- a. Virtualize the table. Today render() in index.html builds every shown row as real DOM, so
-    drawing thousands of rows at once froze the page for a few seconds: building each row's
-    HTML, parsing it into nodes, and above all the browser's table layout, which measures every
-    column against every row. Paging (100 at a time, no "Show all") caps that cost.
-    The real fix: render only the rows in view and swap them as the user scrolls, so all
-    matching rows are reachable without the freeze. It is a bigger change because rows have
-    varying heights (scope Show more / Show less, the expandable "shall" row, wrapped titles)
-    and the narrow-screen card layout. A cheaper partial help is table-layout: fixed with set
-    column widths (skips measuring every row), which does not remove the HTML / DOM building cost.
-    Not built; paging is enough for now.
+ a. Virtualize the table. DONE (see "Virtual list" under Toolbar and behavior). Rows are drawn from
+    measured heights with spacer rows; the narrow-screen card layout still applies.
  b. Fixed table layout. Use table-layout: fixed with set column widths on the main table. The
     browser then sizes columns from the header row alone and skips measuring every row's
     content, which usually cuts the layout cost a lot. It does not remove the cost of building
