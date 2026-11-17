@@ -1489,20 +1489,9 @@
       if (st.refreshing) {
         was = true;
         var since = st.refreshStartedAt ? " (started " + hhmm(st.refreshStartedAt) + ")" : "";
-        var pg = st.refreshProgress; // which source is running, and for the states fetch how many states are done
-        if (pg) {
-          var det = "Step " + pg.step + " of " + pg.steps + ": " + pg.label;
-          if (pg.total) det += ", " + pg.done + " of " + pg.total + " states done" + (pg.current ? " (now " + pg.current + ")" : "");
-          since += " " + det + ".";
-          var nm = function (k) { return (STATE_NAMES[k] || k) + " (" + k + ")"; };
-          if (pg.updated && pg.updated.length) since += " Updated: " + pg.updated.map(nm).join(", ") + ".";
-          if (pg.failedNow && pg.failedNow.length) since += " Failed so far (will retry): " + pg.failedNow.map(nm).join(", ") + ".";
-        }
-        var onlyIds = st.refreshOnly && st.refreshOnly.length ? st.refreshOnly : null, prNow = problems(st);
-        var head = onlyIds ? "Retrying " + onlyIds.map(function (id) { var c = st.refreshStates && st.refreshStates[id]; return c && c.length ? c.map(function (k) { return (STATE_NAMES[k] || k) + " (" + k + ")"; }).join(", ") : labelOf(st, id); }).join(", ") + " (failed in last run)\u2026"
-                           : hasData ? "Refreshing\u2026" : "Fetching data for the first time\u2026";
-        show(head + since + (onlyIds || hasData ? " Showing the previous data until it finishes." : " This takes several minutes; the page will fill in by itself."),
-             onlyIds ? "warn" : "", onlyIds ? prNow.failed : []); // while retrying, keep showing what failed and why
+        // The state banner shows live progress, so no separate top banner while a run is going.
+        if (!hasData) show("Fetching data for the first time… This takes several minutes; the page will fill in by itself.");
+        else bar.hidden = true;
         return;
       }
       if (was) { if (window.saveUiState) window.saveUiState(); try { sessionStorage.setItem("rfqAutoReload", "1"); } catch (e) {} location.reload(); return; }
