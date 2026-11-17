@@ -14,7 +14,7 @@ module.exports = {
       title: clean(r.contracttitle),
       agency: clean(r.agencycode) ? "Delaware " + clean(r.agencycode) : "Delaware agency",
       category: unspsc.category(r.unspsc) || "No data",
-      naics: unspsc.naics(r.unspsc), // lets fetch-states look up similar past awards for an estimate
+      naics: unspsc.naics(r.unspsc),
       posted: (r.opendate || "").slice(0, 10) || null,
       due: (r.deadlinedate || "").slice(0, 10),
       dueTime: null, // the dataset publishes dates only

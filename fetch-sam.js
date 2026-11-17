@@ -260,15 +260,12 @@ async function enrich(r, o, text, AI_KEY) {
     else { try { writeJson(CACHE_FILE, cache); } catch (_) { /* best effort */ } throw e; }
   }
 
-  // 3. Drop notices long past due, estimate values for the new ones (USAspending: separate API, no SAM quota).
+  // 3. Drop notices long past due, keep only open ones.
   const weekAgo = require("./et-today").etToday(new Date(Date.now() - 7 * 86400000));
   for (const [id, n] of Object.entries(notices)) if (n.rfq.due < weekAgo) delete notices[id];
   const open = Object.values(notices).filter((n) => n.rfq.due >= today);
-  const needEst = open.filter((n) => !n.estDone);
-  const estFailed = new Set();
-  await require("./sam-estimates").addEstimates(needEst.map((n) => n.rfq), estFailed);
-  // A failed USAspending lookup is not "done": leave estDone unset so the next run retries it.
-  needEst.forEach((n) => { if (!estFailed.has(n.rfq)) n.estDone = true; });
+  // Values are never inferred from other agencies' awards: drop any such estimate left in the cache from earlier runs.
+  for (const n of open) if (n.rfq.valueEst && n.rfq.valueEst.kind === "similar") delete n.rfq.valueEst;
   if (AI_KEY && described) { console.log(`AI read ${aiOk} of ${described} new descriptions.`); require("./ai-extract").reportUsage("SAM.gov refresh"); }
 
   writeJson(CACHE_FILE, cache);

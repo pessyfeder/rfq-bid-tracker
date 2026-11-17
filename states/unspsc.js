@@ -1,7 +1,5 @@
 // UNSPSC (the commodity codes some state portals publish) -> a readable category and a NAICS prefix.
-// The NAICS prefix is only used to look up similar past awards on USAspending (see sam-estimates.js);
-// USAspending accepts NAICS prefixes of 2, 4 or 6 digits. The crosswalk is deliberately coarse (segment level,
-// a few family overrides): a broad-but-honest estimate beats none, and the page labels it as a rough guide.
+// The NAICS prefix is a coarse (segment level, a few family overrides) rough category hint; it is not used to estimate values.
 
 const SEGMENTS = {
   10: "Live plant and animal material", 11: "Mineral, textile and plant/animal materials", 12: "Chemicals and gases",

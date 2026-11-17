@@ -58,7 +58,7 @@ module.exports = {
         title: r.title,
         agency: r.agency || (r.organization && r.organization.name) || "State of Florida",
         category: unspsc.category(ids) || r.type,
-        naics: unspsc.naics(ids), // lets fetch-states look up similar past awards for an estimate
+        naics: unspsc.naics(ids),
         posted: /^\d{4}-\d{2}-\d{2}$/.test(posted) ? posted : null,
         due: when.due, dueTime: when.dueTime,
         url: `${ORIGIN}/search/bids/detail/${r.advertisementId}`,

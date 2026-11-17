@@ -93,7 +93,6 @@ If `more` is `true`, the page was cut off by `limit`; call again with `after=<cu
 
 - `published`: the agency's own figure.
 - `stated`: an amount quoted in the notice text (`note` is the quote; AI-read, verify).
-- `similar_awards`: median of similar past awards, with `low`/`high` = 25th/75th percentile. An estimate only.
 - `none`: not published; `amount` is `null`.
 
 ## Notes for the filtering machine

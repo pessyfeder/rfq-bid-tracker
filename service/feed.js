@@ -63,9 +63,6 @@ function normalizeValue(r) {
   if (typeof r.value === "number" && r.value > 0) return { amount: r.value, basis: "published", low: null, high: null, note: null };
   const e = r.valueEst;
   if (e && e.kind === "stated" && e.amount > 0) return { amount: e.amount, basis: "stated", low: null, high: null, note: e.quote || null };
-  if (e && e.kind === "similar" && e.median > 0) {
-    return { amount: e.median, basis: "similar_awards", low: e.low ?? null, high: e.high ?? null, note: `${e.n} similar awards (${e.source || "city record"}), ${e.basis}` };
-  }
   return { amount: null, basis: "none", low: null, high: null, note: null };
 }
 

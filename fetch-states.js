@@ -38,31 +38,16 @@ function toRfq(n, a) {
     agency: clean(n.agency) || a.name + " agency",
     value: Number.isFinite(n.value) && n.value > 0 ? n.value : null, // only when the source publishes an amount
     valueLabel: n.valueLabel || undefined,
-    naics: n.naics || null, // internal: dropped before writing; only used to look up the estimate
+    naics: n.naics || null, // internal: dropped before writing
     rfqUrl: url,
     details: { region: clean(n.region) || a.name, requirements: [], restriction: null, amended: false, warnings,
       contact: (n.contact && require("./contacts").make(n.contact.name, n.contact.email, n.contact.phone)) || require("./contacts").fromText(n.description) }
   };
 }
 
-// Estimated value from similar past awards (USAspending), looked up by the NAICS prefix mapped from the notice's UNSPSC codes.
-// Same shape as the federal estimate; best effort, a failed lookup just leaves "Not published".
-async function addStateEstimates(list) {
-  const { awardsForNaics, estimate } = require("./sam-estimates");
-  const cache = new Map();
-  let n = 0;
-  for (const r of list) {
-    const code = r.naics; delete r.naics;
-    if (!code) continue;
-    if (!cache.has(code)) {
-      try { cache.set(code, await awardsForNaics(code)); } catch (e) { console.warn(`USAspending lookup failed for NAICS ${code}: ${e.message}`); cache.set(code, null); }
-    }
-    const awards = cache.get(code);
-    const est = awards && estimate(r, awards);
-    if (est) { r.valueEst = { ...est, naics: code }; n++; }
-  }
-  if (cache.size) console.log(`  value estimates for ${n} of ${list.length} (NAICS lookups: ${[...cache.keys()].join(", ")})`);
-}
+// Values are never inferred from other agencies' past awards; only the agency's figure or a stated amount is shown.
+// The internal naics hint is dropped before writing.
+function dropNaicsHint(list) { for (const r of list) delete r.naics; }
 
 // AI read of each notice's page and PDF attachments: fills eligibility (requires), a one-line scope and key
 // "shall" points, the same as the NYC/SAM feeds. Needs ANTHROPIC_API_KEY; without it rows stay "Not read".
@@ -213,7 +198,7 @@ function readPrevious() {
         if (!r || r.due < today || seen.has(r.id)) return false;
         seen.add(r.id); return true;
       });
-      await addStateEstimates(mine);
+      dropNaicsHint(mine);
       await addDocumentReads(mine, new Map(((prev && prev.rfqs) || []).map((r) => [r.id, r])), a, ctl);
       if (ctl.cancelled) return; // timed out while reading documents: runAdapter already recorded the failure
       // Sentence case, category and plain title are done per state, BEFORE the state counts as finished: a checkpoint then

@@ -50,21 +50,9 @@ Status dropdown was removed; bid tracking lives in the separate bidding app.)
                        Both fetchers ALWAYS try (b) before any estimate: a keyword pass
                        (stated-amount.js, no key needed, cue phrase + no conflicting
                        figures) and then the AI read when ANTHROPIC_API_KEY is set.
-                    c') Federal (SAM.gov) notices: same kind of estimate from USAspending.gov
-                       awards (last 3 years, purchase/delivery orders and contracts) with the
-                       same NAICS code, matched on title keywords, else all in that NAICS;
-                       needs at least 5 awards. Run by fetch-sam.js; or `node sam-estimates.js`.
-                    c'') State notices: same USAspending estimate, using a NAICS prefix mapped
-                       from the notice's UNSPSC codes or a NAICS stated in the text; labelled a
-                       rough guide. Run by fetch-states.js.
-                    c) Estimate from similar past awards (NYC): median with a
-                       25th-75th percentile range, from competitively bid City Record
-                       awards of the last 3 years (renewals, amendments, noncompetitive
-                       excluded). Tiers: same agency + category + title keywords;
-                       same category (any agency) + keywords; same agency + category
-                       with no keyword match ("broad estimate"). Needs at least 3
-                       awards. "How estimated" lists the method and 5 recent examples.
-                    d) "Not published" when none of the above exists.
+                    Values are NEVER inferred from other agencies' past awards (no
+                    USAspending / City Record estimates).
+                    d) "Not published" when (a) and (b) both fail.
                     DEFAULT SORT: descending by this value; unknown values last.
 10  Details         ONE merged column, same order in every cell. Top to bottom:
                     1) "Notice alerts" chips (Amended, warnings; NOT a bid status, see section 2c), only when present
@@ -316,7 +304,6 @@ Fetchers and helpers (project root)
  fetch-sam.js        SAM.gov -> live-sam.js (quota-aware, set-aside mapping, AI read).
  fetch-states.js     Runs the state adapters -> live-states.js (estimates, document reads,
                      retry pass, carry-over of failed states, backups in data/backups).
- sam-estimates.js    USAspending similar-award estimates (federal and state NAICS lookups).
  stated-amount.js    Keyword pass that finds a contract amount stated in a notice (no key).
  ai-extract.js       Claude Haiku reader: requires, scope, "shall" points, stated amount.
                      Validates output strictly, caches in ai-cache.json (saved per call), logs cost. Request timeout; a stated amount must match as a whole figure. Retries 429/5xx/network
