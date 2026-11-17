@@ -165,6 +165,13 @@ const RETRY_MAX = Number(process.env.RETRY_MAX || 3);
 let failedAfter = [], followUps = 0, followTimer = null;
 let followInfo = null;   // what the scheduled follow-up will retry and when, for the page banner: { at, attempt, sources }
 let gaveUp = null;       // set when the follow-ups ran out: { sources, at } (cleared by the next clean run or refresh)
+// The retry count survives restarts (kept in state, tagged with the daily cycle it belongs to), so a restart
+// does not hand a broken source a fresh set of follow-ups. A new morning cycle starts the count over.
+function saveRetry() { state.retry = { cycle: cycleStartMs(), count: followUps, gaveUp }; save(); }
+function loadRetry() {
+  const r = state.retry;
+  if (r && r.cycle === cycleStartMs()) { followUps = r.count || 0; gaveUp = r.gaveUp || null; }
+}
 function failures(bySource) { // sources that failed (not merely skipped) and individual states whose last fetch failed
   const out = [];
   for (const src of feed.SOURCES.filter((s) => s.script)) {
@@ -195,9 +202,10 @@ function failedStateCodes() {
 }
 function scheduleFollowUp() {
   if (followTimer) return;
-  if (!failedAfter.length) { followUps = 0; followInfo = null; gaveUp = null; return; }
-  if (followUps >= RETRY_MAX) { log(`still failing after ${followUps} follow-up refreshes (${failedAfter.join(", ")}); next try tomorrow morning`); gaveUp = { sources: failures(true), attempts: followUps }; followInfo = null; followUps = 0; failedAfter = []; return; }
+  if (!failedAfter.length) { followUps = 0; followInfo = null; gaveUp = null; saveRetry(); return; }
+  if (followUps >= RETRY_MAX) { log(`still failing after ${followUps} follow-up refreshes (${failedAfter.join(", ")}); next try tomorrow morning`); gaveUp = { sources: failures(true), attempts: followUps }; followInfo = null; failedAfter = []; saveRetry(); followUps = 0; return; }
   followUps++;
+  saveRetry();
   log(`still failing: ${failedAfter.join(", ")}; follow-up refresh ${followUps}/${RETRY_MAX} in ${RETRY_AFTER_MIN} min`);
   followInfo = { at: new Date(Date.now() + RETRY_AFTER_MIN * 60000).toISOString(), attempt: followUps, max: RETRY_MAX, sources: failures(true), states: failedStateCodes() };
   followTimer = setTimeout(() => { followTimer = null; followInfo = null; runRefresh(`follow-up ${followUps}/${RETRY_MAX} after failures`, { only: new Set(failures(true)), states: failedStateCodes() }); }, RETRY_AFTER_MIN * 60000); // retry only the sources that failed
@@ -429,7 +437,7 @@ const server = http.createServer((req, res) => {
           if (allStates || codes.length) only.add("states");
           if (!allStates && codes.length) states = { states: codes };
         }
-        if (followTimer) { clearTimeout(followTimer); followTimer = null; followUps = 0; } // this run replaces the scheduled follow-up
+        if (followTimer) { clearTimeout(followTimer); followTimer = null; followUps = 0; saveRetry(); } // this run replaces the scheduled follow-up
         runRefresh(portal ? "api request, portal " + portal : only ? "page opened, retrying failed sources" : "api request", only ? { only, states } : {}); // not awaited: a refresh takes minutes; poll /api/status
         return send(res, 202, { started: true, only: only ? [...only] : null });
       }
@@ -467,7 +475,7 @@ if (process.argv.includes("--once")) {
     const stats = feed.ingest(state); // pick up any live-*.js already on disk
     if (stats.added || stats.changed || stats.deactivated) save();
     startScheduler();
-    if (!due()) { failedAfter = failures(); scheduleFollowUp(); } // failures left from the last run: retry soon, not tomorrow
+    if (!due()) { loadRetry(); if (!gaveUp) { failedAfter = failures(); scheduleFollowUp(); } } // failures left from the last run: retry soon, not tomorrow
   });
   const stop = () => { log("stopping"); server.close(() => process.exit(0)); setTimeout(() => process.exit(0), 3000).unref(); };
   process.on("SIGINT", stop); process.on("SIGTERM", stop);
