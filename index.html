@@ -98,6 +98,7 @@
   .chip { display: inline-block; background: #eef1f5; border-radius: 4px; padding: 1px 6px; margin: 0 4px 4px 0; font-size: 12px; }
   .chip.flag { background: #fdecea; color: var(--bad); font-weight: 600; }
   .chip.amend { background: #fff3cd; color: #7a5b00; font-weight: 600; }
+  .chip.caveat { background: #f4f5f7; color: #555; border: 1px dashed #b8bcc4; } /* data warning: grey and dashed, so it does not read as an amendment */
   .dlist { margin: 0 0 8px; padding-left: 16px; font-size: 13px; }
   .dlist li { margin-bottom: 3px; }
   .dlist + .dlist { margin-top: -5px; }
@@ -869,7 +870,7 @@
     // "What you must provide" is in the "Who can bid" cell.
     var x = r.details, h = "";
     var status = x.amended ? '<span class="chip amend">Amended</span>' : "";
-    (x.warnings || []).forEach(function (w) { status += '<span class="chip amend">&#9888; ' + esc(w) + "</span>"; });
+    (x.warnings || []).forEach(function (w) { status += '<span class="chip caveat">&#9888; ' + esc(w) + "</span>"; });
     h += detailRow("Notice alerts", status);
     h += detailRow("Region", esc(x.region));
     return h ? '<ul class="dlist">' + h + "</ul>" : "";
