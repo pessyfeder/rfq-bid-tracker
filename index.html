@@ -1449,6 +1449,9 @@
           var det = "Step " + pg.step + " of " + pg.steps + ": " + pg.label;
           if (pg.total) det += ", " + pg.done + " of " + pg.total + " states done" + (pg.current ? " (now " + pg.current + ")" : "");
           since += " " + det + ".";
+          var nm = function (k) { return (STATE_NAMES[k] || k) + " (" + k + ")"; };
+          if (pg.updated && pg.updated.length) since += " Updated: " + pg.updated.map(nm).join(", ") + ".";
+          if (pg.failedNow && pg.failedNow.length) since += " Failed so far (will retry): " + pg.failedNow.map(nm).join(", ") + ".";
         }
         var onlyIds = st.refreshOnly && st.refreshOnly.length ? st.refreshOnly : null, prNow = problems(st);
         var head = onlyIds ? "Retrying " + onlyIds.map(function (id) { var c = st.refreshStates && st.refreshStates[id]; return c && c.length ? c.map(function (k) { return (STATE_NAMES[k] || k) + " (" + k + ")"; }).join(", ") : labelOf(st, id); }).join(", ") + " (failed in last run)\u2026"

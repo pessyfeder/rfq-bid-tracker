@@ -242,6 +242,7 @@ function readPrevious() {
     console.log(`@progress ${ran.length} ${toRun.length} ${a.code}`); // read by service/server.js for the page's refresh banner: states finished, states total, the one starting
     ran.push(a);
     await runAdapter(a);
+    console.log(`@done ${a.code} ${okNow.has(a.code) ? "ok" : "fail"}`); // read by service/server.js: the banner lists the states already updated
   }
   // One retry pass for states that failed, after a pause: a network dropout (e.g. right after a wake from sleep) often
   // hits several unrelated portals within minutes, and the 2 quick tries per request in states/common.js do not outlast it.

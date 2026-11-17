@@ -107,6 +107,8 @@ function runFetcher(src, args = []) {
       for (const l of lines) {
         const m = /^@progress (\d+) (\d+) (\S+)/.exec(l);
         if (m && refresh.progress) Object.assign(refresh.progress, { done: +m[1], total: +m[2], current: m[3] });
+        const d = /^@done (\S+) (ok|fail)/.exec(l);
+        if (d && refresh.progress) (refresh.progress[d[2] === "ok" ? "updated" : "failedNow"] ||= []).push(d[1]);
       }
     };
     child.stdout.on("data", keep); child.stderr.on("data", keep);
