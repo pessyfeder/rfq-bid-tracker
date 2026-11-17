@@ -1004,7 +1004,7 @@
     if (plain && isPreSol(r) && !/meeting/i.test(head)) head += " (meeting)";
     // The agency's original wording is no longer a visible line: it is the hover tooltip on the AI headline.
     // Only a headline that is the agency's own text (no AI rewrite) can be long enough to need Show more.
-    var long = !orig && head.length > TITLE_MAX;
+    var long = false; // headlines are never cut off
     var shown = long && !open ? head.slice(0, TITLE_MAX - 3).trim() + "..." : head;
     return '<div class="req-title"' + (orig ? ' title="' + esc("Listed by the agency as: " + t) + '"' : "") + ">" + esc(shown) + "</div>" +
       (long ? '<button class="toggle title-toggle" data-id="' + esc(r.id) + '" aria-expanded="' + open + '">' + (open ? "Show less" : "Show more") + "</button>" : "");
