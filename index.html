@@ -585,10 +585,10 @@
     { key: "posted",  label: "Posted",       type: "date" },
     { key: "due",      label: "Due date",     type: "date", flag: "noDueOk", flagLabel: "Include requests with no real due date" },
     { key: "days",     label: "Days left",    type: "num", note: "Requests with no due date follow the Due date setting.",
-      presets: [["Next 7 days", "", "7"], ["Next 14 days", "", "14"], ["Next 30 days", "", "30"]] },
+      presets: [["Next 7 days", "0", "7"], ["Next 14 days", "0", "14"], ["Next 30 days", "0", "30"]] },
     { key: "level",    label: "Level", type: "list", get: function (r) { return [r.level]; }, order: ["Federal", "State", "Local"] },
     { key: "value",    label: "Est. value",   type: "num", flag: "unknownOk", flagLabel: "Include requests with no known value", hint: "e.g. 50k",
-      presets: [["Under $50K", "", "50k"], ["$50K to $500K", "50k", "500k"], ["Over $500K", "500k", ""]] },
+      presets: [["Under $50K", "", "49999"], ["$50K to $500K", "50k", "500k"], ["Over $500K", "500001", ""]] }, // Min/Max are inclusive, so the outer bands stop a dollar short of the middle one
     { key: "detail",   label: "Details",      type: "text", note: "Search the Details bullets. Pick a bullet to look only inside it, or to find requests that have it (or lack it)." }
   ];
   var H = {};                       // key -> { hiddenValue: true }
@@ -701,7 +701,7 @@
       if (String(a).trim()) t.push((b ? "contains " : "") + "“" + String(a).trim() + "”");
       return f.label + ": " + t.join(", ");
     }
-    function fmtv(v) { return f.type === "date" ? fmtDate(v) : f.key === "value" ? compact(pnum(v)) : String(pnum(v)); }
+    function fmtv(v) { return f.type === "date" ? fmtDate(v) : f.key === "value" ? (pnum(v) % 1e3 ? "$" + pnum(v).toLocaleString("en-US") : compact(pnum(v))) : String(pnum(v)); }
     var hasA = f.type === "date" ? !!a : pnum(a) != null, hasB = f.type === "date" ? !!b : pnum(b) != null;
     if (hasA && hasB) parts.push(fmtv(a) + " to " + fmtv(b)); else if (hasA) parts.push(f.type === "date" ? "from " + fmtv(a) : fmtv(a) + " or more"); else if (hasB) parts.push(f.type === "date" ? "to " + fmtv(b) : "up to " + fmtv(b));
     if (f.flag && !R[f.flag]) parts.push(f.key === "due" ? "no undated" : "no unknown");
