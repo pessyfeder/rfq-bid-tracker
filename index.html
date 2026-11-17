@@ -89,7 +89,6 @@
   .more button { font: inherit; padding: 6px 14px; margin: 0 4px; border: 1px solid var(--line); border-radius: 6px; background: var(--card); cursor: pointer; }
   td.num, th.num { text-align: left; font-variant-numeric: tabular-nums; }
   .req-title { font-weight: 600; font-size: 15px; }
-  .req-orig { color: var(--muted); font-size: 12px; margin-top: 2px; }
   .agency { color: var(--muted); font-size: 12px; }
   .buyer { font-weight: 600; font-size: 13px; margin-top: 4px; }
   .lead { margin: 2px 0 6px; line-height: 1.35; }
@@ -922,7 +921,8 @@
   function agencyHtml(r) {
     var full = sentence(r.agency) || "", parts = full.split(/\s+\/\s+/), top = parts.length > 1 ? parts[0] : "";
     var main = parts[parts.length - 1];
-    return '<div class="buyer" title="' + esc(full) + '">' + esc(main) + "</div>" + (top ? '<div class="agency">' + esc(top) + "</div>" : "");
+    // The parent agency is not shown as its own line; it stays in the hover tooltip with the full path.
+    return '<div class="buyer" title="' + esc(full) + '">' + esc(main) + "</div>";
   }
   // TxDOT road-job titles: "FM 344, SH 155 - FM 346, SC 2027: FM 344, Smith County" ->
   // "Seal coat on Farm to Market Road 344, from State Highway 155 to Farm to Market Road 346 (Smith County)".
@@ -1002,11 +1002,11 @@
     var orig = plain && plain.toLowerCase().replace(/[^a-z0-9]/g, "") !== t.toLowerCase().replace(/[^a-z0-9]/g, "");
     var head = plain ? plain : t;
     if (plain && isPreSol(r) && !/meeting/i.test(head)) head += " (meeting)";
-    var long = (orig ? t : head).length > TITLE_MAX;
-    var shown = long && !open ? (orig ? t : head).slice(0, TITLE_MAX - 3).trim() + "..." : (orig ? t : head);
-    // When there is no separate "Listed as" line, the headline itself is the long text, so it is what gets cut.
-    return '<div class="req-title">' + esc(orig ? head : shown) + "</div>" +
-      (orig ? '<div class="req-orig" title="The agency&rsquo;s own wording">Listed as: ' + esc(shown) + "</div>" : "") +
+    // The agency's original wording is no longer a visible line: it is the hover tooltip on the AI headline.
+    // Only a headline that is the agency's own text (no AI rewrite) can be long enough to need Show more.
+    var long = !orig && head.length > TITLE_MAX;
+    var shown = long && !open ? head.slice(0, TITLE_MAX - 3).trim() + "..." : head;
+    return '<div class="req-title"' + (orig ? ' title="' + esc("Listed by the agency as: " + t) + '"' : "") + ">" + esc(shown) + "</div>" +
       (long ? '<button class="toggle title-toggle" data-id="' + esc(r.id) + '" aria-expanded="' + open + '">' + (open ? "Show less" : "Show more") + "</button>" : "");
   }
   // Pulls the few useful facts out of the description as short labeled bullets. Left out: anything the other columns already
@@ -1318,7 +1318,7 @@
         '</ul>' + (r.aiRead ? '<div class="elig-note">AI read, please verify against the full RFQ document.</div>' : "") + '<a href="' + esc(safeUrl(r.rfqUrl)) + '" target="_blank" rel="noopener">Open the full RFQ document</a></td></tr>' : "";
       var dl = docLinks(r);
       return '<tr>' +
-        '<td>' + titleHtml(r, !!titleOpen[r.id]) + agencyHtml(r) + (r.aiRead ? '<div class="elig-note">AI read, please verify.</div>' : "") + "</td>" +
+        '<td>' + titleHtml(r, !!titleOpen[r.id]) + agencyHtml(r) + "</td>" +
         "<td>" + esc(catLabel(r)).replace(/\//g, "/<wbr>") + "</td>" +
         eligCell(r) +
         "<td>" + fmtDate(r.posted) + "</td>" +
