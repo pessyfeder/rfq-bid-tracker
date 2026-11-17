@@ -1512,12 +1512,11 @@
     sb.box.classList.toggle("warn", !!anyWarn && !anyFail);
     if (!sb.box.querySelector(".closex")) {
       var x = document.createElement("button"); x.className = "closex"; x.type = "button"; x.title = "Dismiss"; x.setAttribute("aria-label", "Dismiss"); x.textContent = "×";
-      x.addEventListener("click", function () { sb.dismissed = true; sb.box.hidden = true; try { sessionStorage.setItem("rfqBannerDismissed", "1"); } catch (e) {} });
+      x.addEventListener("click", function () { sb.dismissed = true; sb.box.hidden = true; });
       sb.box.appendChild(x);
-      try { if (sessionStorage.getItem("rfqBannerDismissed")) sb.dismissed = true; } catch (e) {}
     }
     // A dismissed green banner stays hidden; any problem brings it back (and re-arms the dismissal for the next green one).
-    if (anyWarn) { sb.dismissed = false; try { sessionStorage.removeItem("rfqBannerDismissed"); } catch (e) {} }
+    if (anyWarn) { sb.dismissed = false; }
     sb.box.hidden = !!sb.dismissed;
     var t =document.title.replace(/^⚠ /, "");
     document.title = anyWarn ? "⚠ " + t : t;
