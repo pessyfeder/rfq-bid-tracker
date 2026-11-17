@@ -343,7 +343,7 @@ Docs and notes
  state-fetch-status.pdf  Per-state fetch status report.
 
 Other settings (environment or .env): PORT, HOST, REFRESH_TOKEN, REFRESH_MORNING_HOUR, WAKE_DELAY_SEC (45),
-FETCH_TIMEOUT_MIN (45), RETRY_AFTER_MIN, RETRY_MAX, SAM_DAILY_BUDGET, STATE_MAX_READS (60),
+FETCH_TIMEOUT_MIN (60), RETRY_AFTER_MIN, RETRY_MAX, SAM_DAILY_BUDGET, STATE_MAX_READS (60),
 STATE_RETRY_WAIT_SEC (60), STATE_REREAD_ONLY, BSO_DEBUG, SAM_BASE (offline testing only).
 
 Generated at run time (git-ignored): live-*.js, data/ (state.json, feed.json, service.log,

@@ -53,7 +53,7 @@ const CFG = {
   port: Number(process.env.PORT || 8765),
   morningHour: morningHourFromEnv(),   // daily cycle starts at this local hour; one refresh per cycle
   wakeDelaySec: Number(process.env.WAKE_DELAY_SEC || 45),       // after a wake, wait for Wi-Fi/VPN before fetching
-  fetchTimeoutMin: Number(process.env.FETCH_TIMEOUT_MIN || 45)
+  fetchTimeoutMin: Number(process.env.FETCH_TIMEOUT_MIN || 60)
 };
 const ALLOWED_HOSTS = (process.env.ALLOWED_HOSTS || "").toLowerCase().split(",").map((s) => s.trim()).filter(Boolean);
 const isLoopback =(h) => h === "127.0.0.1" || h === "::1" || h === "localhost";

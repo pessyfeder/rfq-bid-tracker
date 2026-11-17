@@ -179,12 +179,12 @@ function readPrevious() {
   const needsSetup = new Set(); // states waiting for a login/setting the user has not provided: retrying cannot help, so the retry pass skips them
 
   // Time limits: one slow or hung portal must not eat the whole run (service/server.js kills the script at FETCH_TIMEOUT_MIN,
-  // 45 by default, and then EVERY state counts as failed and the notices already fetched are lost). Each state gets
+  // 60 by default, and then EVERY state counts as failed and the notices already fetched are lost). Each state gets
   // STATE_TIMEOUT_MIN; the run as a whole stops starting states at STATE_RUN_BUDGET_MIN, so it always finishes and writes
   // the states that did succeed. States cut off by either limit are marked failed, keep last run's notices, and are retried
   // on their own by the service's follow-up (which runs only the failed states, so it fits well inside the budget).
-  const STATE_TIMEOUT_MS = Number(process.env.STATE_TIMEOUT_MIN || 8) * 60000;
-  const RUN_DEADLINE = Date.now() + Number(process.env.STATE_RUN_BUDGET_MIN || 36) * 60000;
+  const STATE_TIMEOUT_MS = Number(process.env.STATE_TIMEOUT_MIN || 12) * 60000;
+  const RUN_DEADLINE = Date.now() + Number(process.env.STATE_RUN_BUDGET_MIN || 50) * 60000;
   async function runAdapter(a) {
     const left = RUN_DEADLINE - Date.now();
     if (left <= 0) {
