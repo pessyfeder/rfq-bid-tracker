@@ -1365,7 +1365,7 @@
         leftCell(r) +
         '<td><span class="badge ' + esc(r.level) + '">' + esc(r.level) + "</span></td>" +
         '<td>' + dl.html +
-          (r.aiRead || dl.n ? "" :'<div><span class="elig unclear" title="The documents behind this posting were not read, so the details shown are only what the listing itself gives. Open the posting to see the rest.">Not checked</span></div>') + "</td>" +
+          (r.aiRead || dl.n ? "" :'<div><span class="na" title="The documents behind this posting were not read, so the details shown are only what the listing itself gives. Open the posting to see the rest.">Not checked</span></div>') + "</td>" +
         valueCell(r) +
         "<td>" + detailsHtml(r) +
           scopeHtml(r, !!scopeOpen[r.id]) +

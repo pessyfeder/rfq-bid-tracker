@@ -66,7 +66,7 @@ Status dropdown was removed; bid tracking lives in the separate bidding app.)
                        the key "shall" statements with section/page refs and a link to
                        the full RFQ. Only shown when shall[] is not empty.
                     AI-read rows are labelled "AI-read, verify".
-                    Rows whose documents were not read show a "No document access" badge
+                    Rows whose documents were not read show the plain "Not checked" placeholder (same as Value and Scope)
                     and a note saying why (e.g. the portal forbids automated reads, or needs
                     a login), so a thin row is not mistaken for a complete one.
 
