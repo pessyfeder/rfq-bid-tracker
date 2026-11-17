@@ -50,7 +50,7 @@ function toRfq(n, a) {
 function dropNaicsHint(list) { for (const r of list) delete r.naics; }
 
 // AI read of each notice's page and PDF attachments: fills eligibility (requires), a one-line scope and key
-// "shall" points, the same as the NYC/SAM feeds. Needs ANTHROPIC_API_KEY; without it rows stay "Not read".
+// "shall" points, the same as the NYC/SAM feeds. Needs ANTHROPIC_API_KEY; without it rows stay "Not checked".
 // Notices already read on an earlier run are reused (no fetch, no cost); MAX_READS caps new reads per run.
 const MAX_READS = Number(process.env.STATE_MAX_READS) || 60;
 // Bump DOCS_VERSION when states/docs.js learns to reach more documents; rows read before that with no restriction found are read again.
@@ -70,7 +70,7 @@ async function addDocumentReads(list, prevById, adapter, ctl) {
   if (!key) return;
   const local = adapter && adapter.noPageReads ? adapter.localDoc : null; // portal forbids reads: only files saved by hand
   if (adapter && adapter.noPageReads) {
-    if (!local) { console.log(`  ${adapter.code}: page reads skipped (${adapter.noPageReadsWhy || "the portal forbids automated reads"}); rows stay "Not read"`); return; }
+    if (!local) { console.log(`  ${adapter.code}: page reads skipped (${adapter.noPageReadsWhy || "the portal forbids automated reads"}); rows stay "Not checked"`); return; }
   }
   const readNotice = local ? async (url, r) => local(r.id.slice(adapter.code.length + 1)) : require("./states/docs").readNotice;
   const ai = require("./ai-extract");

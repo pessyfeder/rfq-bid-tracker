@@ -79,7 +79,7 @@ If `more` is `true`, the page was cut off by `limit`; call again with `after=<cu
 | `requires` | string[] \| null | What an offeror must hold (`["Small business"]`, `["GSA Schedule"]`…). **`[]` = open to all. `null` = not read / unknown**: do not treat as open. |
 | `restriction` | string \| null | Short restriction text. |
 | `requirements` | string[] | Chips such as selection method, mandatory pre-bid. |
-| `docAccess` | `read` \| `none` | `none` = the documents behind the posting were not read, so the record is only what the listing gives. The page shows a "No document access" badge. |
+| `docAccess` | `read` \| `none` | `none` = the documents behind the posting were not read, so the record is only what the listing gives. The page shows a "Not checked" badge. |
 | `sourceUrl` | string | Deep link to the source posting (same as `url`). |
 | `naics`, `docDue` | string \| null | NAICS code and due date (YYYY-MM-DD) as stated in the documents, AI-read; null when not stated. |
 | `shall` | `{text, ref}[]` | Key "shall" statements. |

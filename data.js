@@ -9,7 +9,7 @@
 // scope:    plain-English summary of the work ("" if unknown -> page shows "No data")
 // shall:    key "shall" statements: [{ text, ref }] ([] if unknown)
 // requires: what an offeror must hold to bid, e.g. ["GSA Schedule"]. [] = open to all.
-//           null = restriction not read -> page shows "Not read".
+//           null = restriction not read -> page shows "Not checked".
 //           Listed in the Eligibility column only; the app does not judge eligibility.
 
 window.RFQS = [];

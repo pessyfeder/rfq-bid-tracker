@@ -118,7 +118,7 @@
   .elig.chip.cost { background: #fff3cd; color: #7a5b00; }
   .elig.chip.possible { background: #f4f5f7; color: #555; border: 1px dashed #b8bcc4; font-weight: 400; }
   .elig.chip.meeting { background: #e0f2f1; color: #00695c; margin-top: 4px; }
-  .elig.unclear { background: #efe6f8; color: #5a2d82; } /* "Not read" / "No document access": purple, distinct from every eligibility and details chip */
+  .elig.unclear { background: #efe6f8; color: #5a2d82; } /* "Not checked": purple, distinct from every eligibility and details chip */
   .doc-kind { font-size: 11px; color: var(--muted); white-space: nowrap; }
   .elig-note { margin-top: 4px; font-size: 12px; color: var(--muted); }
   td.num:nth-child(9) { white-space: nowrap; font-size: clamp(10px, 1.05vw, 13px); }
@@ -174,7 +174,7 @@
     tbody td::before { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .02em; padding-top: 2px; }
     tbody tr:not(.shall-row) td:nth-child(1)::before { content: "Request"; }
     tbody tr:not(.shall-row) td:nth-child(2)::before { content: "Category"; }
-    tbody tr:not(.shall-row) td:nth-child(3)::before { content: "Eligibility"; }
+    tbody tr:not(.shall-row) td:nth-child(3)::before { content: "Who can bid"; }
     tbody tr:not(.shall-row) td:nth-child(4)::before { content: "Posted"; }
     tbody tr:not(.shall-row) td:nth-child(5)::before { content: "Due date"; }
     tbody tr:not(.shall-row) td:nth-child(6)::before { content: "Days left"; }
@@ -195,7 +195,8 @@
 <header>
   <h1>RFQ Bid Tracker</h1>
   <span class="sub">Discover Group &middot; Brooklyn, NY</span>
-  <span class="sub">Eligibility, bid factors, summaries, requirements and stated amounts marked &ldquo;AI read, please verify&rdquo; were extracted by AI from the notice; check them against the source.</span>
+  <span class="sub"><b>Not checked</b> = we did not read the documents. <b>None stated</b> = we read them and they say nothing on it. <b>Not found</b> = we looked for requirements and found none.</span>
+  <span class="sub">Who can bid, what you must provide, summaries, exact wording and stated amounts marked &ldquo;AI read, please verify&rdquo; were extracted by AI from the notice; check them against the source.</span>
 </header>
 
 <div class="refreshbar" id="refreshBar" role="status" hidden></div>
@@ -317,7 +318,7 @@
   var COLUMNS = [
     { key: "title",    label: "Request" },
     { key: "category", label: "Category" },
-    { key: "eligRank", label: "Eligibility" },
+    { key: "eligRank", label: "Who can bid" },
     { key: "posted",   label: "Posted" },
     { key: "dueSort",  label: "Due date" },
     { key: "daysLeft", label: "Days left", num: true },
@@ -434,7 +435,7 @@
       noDue: noDue,
       dueSort: noDue ? null : r.due,
       daysLeft: noDue ? null : diffDays(todayStr, r.due),
-      // Eligibility sort: fewest requirements first; "Not read" (null) last
+      // Eligibility sort: fewest requirements first; "Not checked" (null) last
       eligRank: r.requires == null && !eligList(r).length ? null : eligList(r).length,
       // one number to sort by: published value, else amount stated in the notice, else none
       valueSort: r.value != null ? r.value : r.valueEst && r.valueEst.kind === "stated" ? r.valueEst.amount : null
@@ -557,8 +558,8 @@
   function eligValues(r) {
     var items = eligList(r);
     if (items.length) return items.map(function (d) { return d.label; });
-    if (r.requires == null) return [r.aiRead ? "Not stated" : "Not read"];
-    if (!r.requires.length) return [r.aiRead ? "No requirements found" : "Not read"];
+    if (r.requires == null) return [r.aiRead ? "None stated" : "Not checked"];
+    if (!r.requires.length) return [r.aiRead ? "Not found" : "Not checked"];
     return r.requires;
   }
   // Eligibility items grouped by type; each group expands into its individual requirements.
@@ -570,7 +571,7 @@
     ["Experience & capacity", /experience|\b(years|clients)\b|rating|domiciled|facility/i],
     ["Licenses & certifications", /licens|certif|permit|\bDOH\b|approved|master (plumber|electrician)/i],
     ["Registrations & vendor numbers", /regist|vendor|enroll|\b(SAM|SPIN|SPAC|SPRS)\b|account number|good and standing|good standing|compliance express|incorporated|organized|SEAPORT|holder/i],
-    ["Not stated / not read", /^(not stated|not read|no requirements found|no document access)$/i]
+    ["Not checked / none stated / not found", /^(not checked|none stated|not found)$/i]
   ];
   function eligGroup(label) {
     for (var i = 0; i < ELIG_GROUPS.length; i++) if (ELIG_GROUPS[i][1].test(label)) return ELIG_GROUPS[i][0];
@@ -578,7 +579,7 @@
   }
   var FILTERS = [
     { key: "category", label: "Category",     type: "list", get: function (r) { return [catLabel(r)]; }, group: catGroup },
-    { key: "elig",     label: "Eligibility",  type: "list", get: eligValues, group: eligGroup, note: "Shows requests that list at least one checked requirement." },
+    { key: "elig",     label: "Who can bid", type: "list", get: eligValues, group: eligGroup, note: "Shows requests that list at least one checked requirement." },
     { key: "posted",  label: "Posted",       type: "date" },
     { key: "due",      label: "Due date",     type: "date", flag: "noDueOk", flagLabel: "Include requests with no real due date" },
     { key: "days",     label: "Days left",    type: "num", note: "Requests with no due date follow the Due date setting.",
@@ -656,7 +657,7 @@
         var gs = {}, gnames = [];
         vals.forEach(function (v) { var g = f.group(v); if (!gs[g]) { gs[g] = []; gnames.push(g); } gs[g].push(v); });
         gnames.sort(function (a, b) {
-          var la = /^(Other|General|Not stated)/.test(a), lb = /^(Other|General|Not stated)/.test(b);
+          var la = /^(Other|General|Not checked)/.test(a), lb = /^(Other|General|Not checked)/.test(b);
           return la !== lb ? (la ? 1 : -1) : a.localeCompare(b);
         });
         body = gnames.map(function (g) {
@@ -671,7 +672,7 @@
     } else if (f.type === "text") {
       h += '<div class="frange" style="flex-direction:column;align-items:stretch;gap:6px">' +
         '<label>Bullet<select data-p="b"><option value="">Any bullet</option></select></label>' +
-        '<label>Has it?<select data-p="c"><option value="">Either way</option><option value="has">Stated</option><option value="missing">Not stated / missing</option></select></label>' +
+        '<label>Has it?<select data-p="c"><option value="">Either way</option><option value="has">Stated</option><option value="missing">None stated / missing</option></select></label>' +
         '<label>Keywords<input type="text" data-p="a" placeholder="e.g. bond, site visit"></label></div>' +
         '<button type="button" class="freset" data-reset>Reset</button>';
     } else {
@@ -841,28 +842,32 @@
     return out;
   }
   function factsHtml(r) {
-    var f = keyFacts(r).filter(function (k) { return !k.gate; }); // gates are listed in Eligibility
-
+    var f = keyFacts(r).filter(function (k) { return !k.gate; }); // gates are listed under "Who can bid"
+    // Other requirement notes from Details (formerly the Terms row) join this box, once each; anything already shown as a gate or fact is skipped.
+    var shown = {};
+    eligList(r).forEach(function (d) { shown[d.label.toLowerCase()] = 1; });
+    f.forEach(function (k) { shown[k.label.toLowerCase()] = 1; });
+    var x = r.details || {};
+    f = f.concat((x.requirements || []).filter(function (q) {
+      var k = String(q).toLowerCase();
+      if (shown[k] || (x.restriction && q === x.restriction)) return false;
+      return (shown[k] = 1);
+    }).map(function (q) { return { label: String(q), sev: "info", why: "Requirement noted in the notice" }; }));
     if (!f.length) return "";
-    return '<div class="facts"><div class="facts-h">Bid factors' + (r.aiRead ? " &middot; AI read, please verify" : (f[0] && f[0].kw ? " &middot; keyword match on title/scope only" : "")) + "</div>" +
+    return '<div class="facts"><div class="facts-h">What you must provide' +(r.aiRead ? " &middot; AI read, please verify" : (f[0] && f[0].kw ? " &middot; keyword match on title/scope only" : "")) + "</div>" +
       f.map(function (k) {
         return '<span class="fact ' + k.sev + '" title="' + esc(k.why) + '">' + (k.sev === "hard" ? "&#9873; " : "") + esc(k.label) + "</span>";
       }).join("") + "</div>";
   }
 
   function detailsHtml(r) {
-    // Always in the same order: status chips, then labeled Region and Terms rows. Empty rows are left out.
-    // Bid factors are in the Eligibility cell.
-    // A small chart: fixed rows (Notice alerts, Region, Terms), label cell on the left, value on the right; "None" when empty.
+    // Always in the same order: status chips, then the Region row. Empty rows are left out.
+    // "What you must provide" is in the "Who can bid" cell.
     var x = r.details, h = "";
     var status = x.amended ? '<span class="chip amend">Amended</span>' : "";
     (x.warnings || []).forEach(function (w) { status += '<span class="chip amend">&#9888; ' + esc(w) + "</span>"; });
     h += detailRow("Notice alerts", status);
     h += detailRow("Region", esc(x.region));
-    // Restrictions / set-asides live in the Eligibility column only; other requirement notes are the Terms row.
-    var inElig = (r.requires || []).map(function (q) { return q.toLowerCase(); });
-    h += detailRow("Terms", x.requirements.filter(function (q) { return inElig.indexOf(String(q).toLowerCase()) < 0 && !(x.restriction && q === x.restriction); })
-      .map(function (q) { return '<span class="chip">' + esc(q) + "</span>"; }).join(""));
     return h ? '<ul class="dlist">' + h + "</ul>" : "";
   }
   // The Details bullets as plain {label, text} pairs, for the Details filter. Same content as the cell shows.
@@ -872,15 +877,12 @@
     var st = (x.amended ? ["Amended"] : []).concat(x.warnings || []).join("; ");
     if (st) out.push({ label: "Notice alerts", text: st });
     if (x.region) out.push({ label: "Region", text: x.region });
-    var inElig = (r.requires || []).map(function (q) { return String(q).toLowerCase(); });
-    var terms = (x.requirements || []).filter(function (q) { return inElig.indexOf(String(q).toLowerCase()) < 0 && !(x.restriction && q === x.restriction); });
-    if (terms.length) out.push({ label: "Terms", text: terms.join("; ") });
     if (r.scope) {
       if (r.aiRead && r.scope.length <= 300) out.push({ label: "Summary", text: sentence(decodeText(r.scope)) });
       else keyPoints(r).forEach(function (p) { out.push({ label: p[0] || "Notes", text: sentence(p[1]) }); });
     }
     var c = x.contact ? [x.contact.name, x.contact.email, x.contact.phone].filter(Boolean).join(" ") : "";
-    out.push({ label: "Contact information", text: c || "Not stated" });
+    out.push({ label: "Contact information", text: c || "None stated" });
     return (r._bul = out);
   }
   function detailMatch(r, o) {
@@ -895,7 +897,7 @@
     return words.every(function (w) { return hay.indexOf(w) >= 0; });
   }
   function fillDetailBullets() {
-    var sel = fwraps.detail.panel.querySelector("select[data-p=b]"), seen = {}, labs = ["Notice alerts", "Region", "Terms", "Summary", "Contact information"];
+    var sel = fwraps.detail.panel.querySelector("select[data-p=b]"), seen = {}, labs = ["Notice alerts", "Region", "Summary", "Contact information"];
     labs.forEach(function (l) { seen[l] = 1; });
     rows.forEach(function (r) { detailBullets(r).forEach(function (b) { if (!seen[b.label]) { seen[b.label] = 1; labs.push(b.label); } }); });
     sel.innerHTML = '<option value="">Any bullet</option>' + labs.map(function (l) { return '<option value="' + esc(l) + '">' + esc(l) + "</option>"; }).join("");
@@ -1071,8 +1073,8 @@
   }
   function scopeHtml(r, open) {
     // Contact information always closes the bullet list.
-    var contact = '<ul class="dlist">' + detailRow("Contact information", contactHtml(r.details && r.details.contact) || '<span style="color:var(--muted)">Not stated</span>') + "</ul>";
-    if (!r.scope) return '<div class="scope"><span class="na">' + esc(r.details && r.details.readWhy ? "Not read: " + r.details.readWhy + ". The source data has no description." : "No data") + "</span></div>" + contact;
+    var contact = '<ul class="dlist">' + detailRow("Contact information", contactHtml(r.details && r.details.contact) || '<span style="color:var(--muted)">None stated</span>') + "</ul>";
+    if (!r.scope) return '<div class="scope"><span class="na">' + esc(r.details && r.details.readWhy ? "Not checked: " + r.details.readWhy + ". The source data has no description." : (r.aiRead ? "None stated" : "Not checked")) + "</span></div>" + contact;
     // An AI-read notice gets its plain-English one-liner (buyer, work, place) in full; other notices keep the extracted key points.
     var lead = r.aiRead && r.scope.length <= 300 ? '<ul class="dlist"><li>' + glossHtml(sentence(decodeText(r.scope))) + "</li></ul>" : "";
     var pts = lead ? [] : keyPoints(r);
@@ -1119,13 +1121,13 @@
     }
     if (r.requires == null) {
       // Page was read but never says who may bid (e.g. Delaware's pages hold only title, dates and a contact)
-      if (r.aiRead) return '<td><span class="elig unclear">Not stated</span><div class="elig-note">' + esc((r.details && r.details.readNote) || "The notice was read but does not say who may bid. Check the agency's documents or contact.") + "</div>" + ai + "</td>";
-      return '<td><span class="elig unclear">Not read</span><div class="elig-note">' + esc((r.details && r.details.readNote) || "Restriction not read from the RFQ; check the document.") + "</div></td>";
+      if (r.aiRead) return '<td><span class="elig unclear">None stated</span><div class="elig-note">' + esc((r.details && r.details.readNote) || "The notice was read but does not say who may bid. Check the agency's documents or contact.") + "</div>" + ai + "</td>";
+      return '<td><span class="elig unclear">Not checked</span><div class="elig-note">' + esc((r.details && r.details.readNote) || "Restriction not read from the RFQ; check the document.") + "</div></td>";
     }
     if (!r.requires.length) {
       // Empty list from a notice that was never AI-read means nothing was looked for, not that nothing exists.
-      if (!r.aiRead) return '<td><span class="elig unclear">Not read</span><div class="elig-note">' + esc((r.details && r.details.readNote) || "Restriction not read from the RFQ; check the document.") + "</div></td>";
-      return '<td><span class="elig yes">No requirements found</span>' + ai + "</td>";
+      if (!r.aiRead) return '<td><span class="elig unclear">Not checked</span><div class="elig-note">' + esc((r.details && r.details.readNote) || "Restriction not read from the RFQ; check the document.") + "</div></td>";
+      return '<td><span class="elig yes">Not found</span>' + ai + "</td>";
     }
     return "<td>" + r.requires.map(function (q) { return '<span class="elig chip ' + reqSev(q) + '">' + esc(q) + "</span>"; }).join(" ") + ai + "</td>";
   }
@@ -1142,8 +1144,8 @@
         '<details class="val-ex"><summary>Where from</summary><div>Quoted from the notice: &ldquo;' + esc(e.quote) + "&rdquo;</div></details></td>";
     }
     // A notice that was never read cannot be said to state no amount: say that it was not looked for.
-    if (!r.aiRead) return '<td class="num"><span class="na">Not known</span><div class="val-note">Notice not read, so a stated amount was not looked for</div></td>';
-    return '<td class="num"><span class="na">Not published</span><div class="val-note">No amount published by the agency or stated in the notice</div></td>';
+    if (!r.aiRead) return '<td class="num"><span class="na">Not checked</span><div class="val-note">Notice not read, so a stated amount was not looked for</div></td>';
+    return '<td class="num"><span class="na">None stated</span><div class="val-note">No amount published by the agency or stated in the notice</div></td>';
   }
 
   // Read the filter controls and parse the search text once per render (not once per row).
@@ -1286,7 +1288,7 @@
     $("moreBtn").textContent = "Show " + Math.min(PAGE, left) + " more (" + left + " not shown)";
     function rowHtml(r) {
       var open = expanded[r.id];
-      var shallRow = open ? '<tr class="shall-row"><td colspan="' + COLUMNS.length + '"><h4>Key requirements ("shall")' + (r.aiRead ? " &middot; AI read, please verify" : "") + '</h4><ul>' +
+      var shallRow = open ? '<tr class="shall-row"><td colspan="' + COLUMNS.length + '"><h4>Exact wording from the notice ("shall")' + (r.aiRead ? " &middot; AI read, please verify" : "") + '</h4><ul>' +
         (r.shall || []).map(function (s) { return "<li>" + esc(s.text) + (s.ref ? ' <span class="ref">[' + esc(s.ref) + "]</span>" : "") + "</li>"; }).join("") +
         '</ul>' + (r.aiRead ? '<div class="elig-note">AI read, please verify against the full RFQ document.</div>' : "") + '<a href="' + esc(safeUrl(r.rfqUrl)) + '" target="_blank" rel="noopener">Open the full RFQ document</a></td></tr>' : "";
       var dl = docLinks(r);
@@ -1299,7 +1301,7 @@
         leftCell(r) +
         '<td><span class="badge ' + esc(r.level) + '">' + esc(r.level) + "</span></td>" +
         '<td>' + dl.html +
-          (r.aiRead || dl.n ? "" :'<div><span class="elig unclear" title="The documents behind this posting were not read, so the details shown are only what the listing itself gives. Open the posting to see the rest.">No document access</span></div>') + "</td>" +
+          (r.aiRead || dl.n ? "" :'<div><span class="elig unclear" title="The documents behind this posting were not read, so the details shown are only what the listing itself gives. Open the posting to see the rest.">Not checked</span></div>') + "</td>" +
         valueCell(r) +
         "<td>" + detailsHtml(r) +
           scopeHtml(r, !!scopeOpen[r.id]) +
