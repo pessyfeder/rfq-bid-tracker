@@ -291,6 +291,7 @@
     items.forEach(function (t, i) { var li = document.createElement("li"); li.textContent = t; if (itemCode[i]) li.dataset.state = itemCode[i]; ul.appendChild(li); });
     var pd = document.createElement("details"); pd.className = "stateprob";
     pd.appendChild(title); pd.appendChild(ul); box.appendChild(pd);
+    window.STATE_BANNER.title = title; window.STATE_BANNER.baseTitle = title.textContent;
     box.classList.toggle("warn", !failed);
     document.title = "⚠ " + document.title;
   }
@@ -574,14 +575,14 @@
     { key: "st",       label: "State",        type: "list", get: function (r) { return [r.st]; }, name: stName, into: "level" }, // lives inside the Municipality dropdown
     { key: "category", label: "Category",     type: "list", get: function (r) { return [catLabel(r)]; }, group: catGroup },
     { key: "elig",     label: "Eligibility",  type: "list", get: eligValues, group: eligGroup, note: "Shows requests that list at least one checked requirement." },
-    { key: "detail",   label: "Details",      type: "text", note: "Search the Details bullets. Pick a bullet to look only inside it, or to find requests that have it (or lack it)." },
-    { key: "posted",   label: "Posted",       type: "date" },
+    { key: "posted",  label: "Posted",       type: "date" },
     { key: "due",      label: "End date",     type: "date", flag: "noDueOk", flagLabel: "Include requests with no real due date" },
     { key: "days",     label: "Days left",    type: "num", note: "Requests with no due date follow the End date setting.",
       presets: [["Next 7 days", "", "7"], ["Next 14 days", "", "14"], ["Next 30 days", "", "30"]] },
     { key: "level",    label: "Municipality", type: "list", get: function (r) { return [r.level]; }, order: ["Federal", "State", "Local"] },
     { key: "value",    label: "Est. value",   type: "num", flag: "unknownOk", flagLabel: "Include requests with no known value", hint: "e.g. 50k",
-      presets: [["Under $50K", "", "50k"], ["$50K to $500K", "50k", "500k"], ["Over $500K", "500k", ""]] }
+      presets: [["Under $50K", "", "50k"], ["$50K to $500K", "50k", "500k"], ["Over $500K", "500k", ""]] },
+    { key: "detail",   label: "Details",      type: "text", note: "Search the Details bullets. Pick a bullet to look only inside it, or to find requests that have it (or lack it)." }
   ];
   var H = {};                       // key -> { hiddenValue: true }
   var R = { posted: {}, due: {}, days: {}, value: {}, noDueOk: true, unknownOk: true }; // key -> { a: from/min, b: to/max }
@@ -1550,6 +1551,14 @@
       if (sb) {
         var pgl = st.refreshing ? st.refreshProgress : null;
         sb.live.hidden = true;
+        // Live progress goes into the existing banner heading (no extra banner): which state is being retried, how many are done, and results so far.
+        if (sb.title) {
+          var tx = sb.baseTitle;
+          if (pgl && pgl.total) {
+            tx += " — ⟳ retrying now: " + (pgl.current ? (sb.NAMES[pgl.current] || pgl.current) + " (" + pgl.current + ")" : "starting");
+          }
+          if (sb.title.textContent !== tx) sb.title.textContent = tx;
+        }
         // Mark the failed row of the state being fetched/retried right now.
         var rows = sb.box.querySelectorAll("li[data-state]");
         for (var ri = 0; ri < rows.length; ri++) {
