@@ -214,6 +214,14 @@ function readPrevious() {
       await addStateEstimates(mine);
       await addDocumentReads(mine, new Map(((prev && prev.rfqs) || []).map((r) => [r.id, r])), a, ctl);
       if (ctl.cancelled) return; // timed out while reading documents: runAdapter already recorded the failure
+      // Sentence case, category and plain title are done per state, BEFORE the state counts as finished: a checkpoint then
+      // never holds rows without them, and a run killed mid-way leaves this state marked unfinished (so the follow-up reruns it).
+      // Each step is cached per notice, so a rerun costs nothing for rows already done. The steps never throw.
+      if (process.env.ANTHROPIC_API_KEY) {
+        const ai = require("./ai-extract"), key = process.env.ANTHROPIC_API_KEY;
+        await ai.recase(mine, key); await ai.categorize(mine, key); await ai.plainTitle(mine, key);
+        if (ctl.cancelled) return;
+      }
       // A partial run (some result pages blocked) must not drop the notices on the skipped pages: keep last run's rows we did not see.
       if (raw.partialPages && prev) {
         const have = new Set(mine.map((r) => r.id));
@@ -305,7 +313,7 @@ function readPrevious() {
   if (!okNow.size) { console.error("No state fetched successfully; leaving live-states.js unchanged."); process.exit(1); }
 
   const all = collect();
-  if (process.env.ANTHROPIC_API_KEY) { await require("./ai-extract").recase(all, process.env.ANTHROPIC_API_KEY); await require("./ai-extract").categorize(all, process.env.ANTHROPIC_API_KEY); await require("./ai-extract").plainTitle(all, process.env.ANTHROPIC_API_KEY); require("./ai-extract").reportUsage("State plain titles"); }
+  if (process.env.ANTHROPIC_API_KEY) require("./ai-extract").reportUsage("State plain titles"); // the AI steps ran per state, inside runAdapterInner
   writeOut(all, resultsSnapshot(false));
   console.log(`Wrote ${all.length} State solicitations to live-states.js`);
   console.log(`Requests this run: ${Object.entries(requests).map(([h, n]) => `${h} ${n}`).join(", ") || "none"}`);
