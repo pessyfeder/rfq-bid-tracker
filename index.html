@@ -528,10 +528,25 @@
     if (!r.requires.length) return [r.aiRead ? "No requirements found" : "Not read"];
     return r.requires;
   }
+  // Eligibility items grouped by type; each group expands into its individual requirements.
+  var ELIG_GROUPS = [
+    ["Prequalification", /pre-?qualif/i],
+    ["Set-asides (small / minority / veteran-owned)", /small business|\b(SBE|DBE|MBE|WBE)\b|SDVOSB|WOSB|HUBZone|8\(a\)|minority|women|veteran|set-?aside/i],
+    ["Security & background checks", /\b(TSA|TWIC)\b|clearance|public trust|background|fingerprint|criminal|E-?Verify|badg|CMMC/i],
+    ["Bonds & insurance", /\bbond|bonding|guarantee|insurance|surety/i],
+    ["Experience & capacity", /experience|\b(years|clients)\b|rating|domiciled|facility/i],
+    ["Licenses & certifications", /licens|certif|permit|\bDOH\b|approved|master (plumber|electrician)/i],
+    ["Registrations & vendor numbers", /regist|vendor|enroll|\b(SAM|SPIN|SPAC|SPRS)\b|account number|good and standing|good standing|compliance express|incorporated|organized|SEAPORT|holder/i],
+    ["Not stated / not read", /^(not stated|not read|no requirements found|no document access)$/i]
+  ];
+  function eligGroup(label) {
+    for (var i = 0; i < ELIG_GROUPS.length; i++) if (ELIG_GROUPS[i][1].test(label)) return ELIG_GROUPS[i][0];
+    return "Other requirements";
+  }
   var FILTERS = [
     { key: "st",       label: "State",        type: "list", get: function (r) { return [r.st]; }, name: stName, into: "level" }, // lives inside the Municipality dropdown
     { key: "category", label: "Category",     type: "list", get: function (r) { return [catLabel(r)]; }, group: catGroup },
-    { key: "elig",     label: "Eligibility",  type: "list", get: eligValues, note: "Shows requests that list at least one checked requirement." },
+    { key: "elig",     label: "Eligibility",  type: "list", get: eligValues, group: eligGroup, note: "Shows requests that list at least one checked requirement." },
     { key: "posted",   label: "Posted",       type: "date" },
     { key: "due",      label: "End date",     type: "date", flag: "noDueOk", flagLabel: "Include requests with no real due date" },
     { key: "days",     label: "Days left",    type: "num", note: "Requests with no due date follow the End date setting.",
@@ -606,7 +621,7 @@
         var gs = {}, gnames = [];
         vals.forEach(function (v) { var g = f.group(v); if (!gs[g]) { gs[g] = []; gnames.push(g); } gs[g].push(v); });
         gnames.sort(function (a, b) {
-          var la = /^(Other|General)/.test(a), lb = /^(Other|General)/.test(b);
+          var la = /^(Other|General|Not stated)/.test(a), lb = /^(Other|General|Not stated)/.test(b);
           return la !== lb ? (la ? 1 : -1) : a.localeCompare(b);
         });
         body = gnames.map(function (g) {
