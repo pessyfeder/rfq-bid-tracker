@@ -250,11 +250,12 @@
 // for every state whose last fetch failed (red) or was partial (amber). Failed states keep showing their last notices,
 // so without this the rows would look current. Also sets window.STATE_ISSUES for the state dropdown.
 (function () {
-  var NAMES = { AK: "Alaska", AR: "Arkansas", CO: "Colorado", DE: "Delaware", FL: "Florida", HI: "Hawaii", IA: "Iowa", ID: "Idaho", IN: "Indiana", KS: "Kansas", LA: "Louisiana", MO: "Missouri", MS: "Mississippi", NE: "Nebraska", NY: "New York", OK: "Oklahoma", PA: "Pennsylvania", RI: "Rhode Island", SC: "South Carolina", SD: "South Dakota", TX: "Texas", TXDOT: "Texas (TxDOT)", VT: "Vermont", WV: "West Virginia", WY: "Wyoming" };
+  var NAMES = window.STATE_NAMES = Object.assign({ AL: "Alabama", AK: "Alaska", AZ: "Arizona", AR: "Arkansas", CA: "California", CO: "Colorado", CT: "Connecticut", DE: "Delaware", DC: "District of Columbia", FL: "Florida", GA: "Georgia", HI: "Hawaii", ID: "Idaho", IL: "Illinois", IN: "Indiana", IA: "Iowa", KS: "Kansas", KY: "Kentucky", LA: "Louisiana", ME: "Maine", MD: "Maryland", MA: "Massachusetts", MI: "Michigan", MN: "Minnesota", MS: "Mississippi", MO: "Missouri", MT: "Montana", NE: "Nebraska", NV: "Nevada", NH: "New Hampshire", NJ: "New Jersey", NM: "New Mexico", NY: "New York", NC: "North Carolina", ND: "North Dakota", OH: "Ohio", OK: "Oklahoma", OR: "Oregon", PA: "Pennsylvania", RI: "Rhode Island", SC: "South Carolina", SD: "South Dakota", TN: "Tennessee", TX: "Texas", UT: "Utah", VT: "Vermont", VA: "Virginia", WA: "Washington", WV: "West Virginia", WI: "Wisconsin", WY: "Wyoming" }, { AK: "Alaska", AR: "Arkansas", CO: "Colorado", DE: "Delaware", FL: "Florida", HI: "Hawaii", IA: "Iowa", ID: "Idaho", IN: "Indiana", KS: "Kansas", LA: "Louisiana", MO: "Missouri", MS: "Mississippi", NE: "Nebraska", NY: "New York", OK: "Oklahoma", PA: "Pennsylvania", RI: "Rhode Island", SC: "South Carolina", SD: "South Dakota", TX: "Texas", TXDOT: "Texas (TxDOT)", VT: "Vermont", WV: "West Virginia", WY: "Wyoming" });
   var src = window.LIVE_SOURCES || [], st = null, issues = {}, items = [], failed = 0;
   src.forEach(function (s) { if (s.meta && s.meta.states) st = s.meta.states; });
   var box = document.getElementById("failBanner");
   function when(iso) { return iso ? new Date(iso).toLocaleString("en-US") : null; }
+  var itemCode = {}; // index in items -> state code, so the poller can mark the row being retried
   if (!st) {
     // live-states.js missing or unreadable: no state data at all
     items.push("The state feed file (live-states.js) did not load, so no state notices are shown.");
@@ -265,16 +266,16 @@
       if (r.ok === false) {
         failed++;
         issues[code] = "failed";
-        items.push(name + " (" + code + "): FETCH FAILED - " + (r.error || "unknown error") + ". " +
-          (r.fetchedAt ? "Showing older notices from the last good fetch on " + when(r.fetchedAt) + (r.count != null ? " (" + r.count + " then)" : "") + "; new notices will be missing." : "No notices have ever been fetched for this state."));
+        var msg = name + " (" + code + "): FETCH FAILED - " + (r.error || "unknown error") + ". " +
+          (r.fetchedAt ? "Showing older notices from the last good fetch on " + when(r.fetchedAt) + (r.count != null ? " (" + r.count + " then)" : "") + "; new notices will be missing." : "No notices have ever been fetched for this state.");
+        itemCode[items.length] = code; items.push(msg);
       } else if (r.partial) {
         issues[code] = issues[code] || "partial";
         items.push(name + " (" + code + "): PARTIAL fetch - " + r.partial + ". Some notices may be missing.");
       }
     });
   }
-  window.STATE_ISSUES = issues;
-  // States that fetched fine (shown in green under the problems), plus a live "running now" line the refresh poller fills in.
+  window.STATE_ISSUES = issues;  // States that fetched fine (shown in green under the problems), plus a live "running now" line the refresh poller fills in.
   var okItems = [];
   Object.keys(st || {}).sort().forEach(function (code) {
     var r = st[code] || {};
@@ -286,7 +287,7 @@
     var title = document.createElement("summary");
     title.textContent = failed ? "⚠ Data problem: " + failed + " state source" + (failed === 1 ? "" : "s") + " failed to update" : "⚠ Some state data is incomplete";
     var ul = document.createElement("ul");
-    items.forEach(function (t) { var li = document.createElement("li"); li.textContent = t; ul.appendChild(li); });
+    items.forEach(function (t, i) { var li = document.createElement("li"); li.textContent = t; if (itemCode[i]) li.dataset.state = itemCode[i]; ul.appendChild(li); });
     var pd = document.createElement("details"); pd.className = "stateprob";
     pd.appendChild(title); pd.appendChild(ul); box.appendChild(pd);
     box.classList.toggle("warn", !failed);
@@ -444,7 +445,7 @@
 
   // State filter options (only ids that look like a state code)
   // Every state by full name, with its notice count; states with no notices yet are listed but greyed out.
-  var STATE_NAMES = { AL: "Alabama", AK: "Alaska", AZ: "Arizona", AR: "Arkansas", CA: "California", CO: "Colorado", CT: "Connecticut", DE: "Delaware", DC: "District of Columbia", FL: "Florida", GA: "Georgia", HI: "Hawaii", ID: "Idaho", IL: "Illinois", IN: "Indiana", IA: "Iowa", KS: "Kansas", KY: "Kentucky", LA: "Louisiana", ME: "Maine", MD: "Maryland", MA: "Massachusetts", MI: "Michigan", MN: "Minnesota", MS: "Mississippi", MO: "Missouri", MT: "Montana", NE: "Nebraska", NV: "Nevada", NH: "New Hampshire", NJ: "New Jersey", NM: "New Mexico", NY: "New York", NC: "North Carolina", ND: "North Dakota", OH: "Ohio", OK: "Oklahoma", OR: "Oregon", PA: "Pennsylvania", RI: "Rhode Island", SC: "South Carolina", SD: "South Dakota", TN: "Tennessee", TX: "Texas", UT: "Utah", VT: "Vermont", VA: "Virginia", WA: "Washington", WV: "West Virginia", WI: "Wisconsin", WY: "Wyoming" };
+  var STATE_NAMES = window.STATE_NAMES;
   var stCount = {};
   rows.forEach(function (r) { stCount[r.st] = (stCount[r.st] || 0) + 1; });
   function stName(code) {
@@ -1477,6 +1478,13 @@
           if (pgl.failedNow && pgl.failedNow.length) txt += " Failed so far: " + pgl.failedNow.map(n2).join(", ") + ".";
           sb.live.textContent = txt; sb.live.hidden = false; sb.box.hidden = false;
         } else sb.live.hidden = true;
+        // Mark the failed row of the state being fetched/retried right now.
+        var rows = sb.box.querySelectorAll("li[data-state]");
+        for (var ri = 0; ri < rows.length; ri++) {
+          var cur = pgl && pgl.current === rows[ri].dataset.state, mk = rows[ri].querySelector(".retrynow");
+          if (cur && !mk) { mk = document.createElement("strong"); mk.className = "retrynow"; mk.textContent = "⟳ Retrying now — "; rows[ri].insertBefore(mk, rows[ri].firstChild); }
+          else if (!cur && mk) mk.remove();
+        }
       }
       if (st.refreshing) {
         was = true;
