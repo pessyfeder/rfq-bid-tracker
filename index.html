@@ -38,6 +38,11 @@
   .frow .n { margin-left: auto; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
   .frow.all { border-bottom: 1px solid var(--line); padding-bottom: 6px; margin-bottom: 4px; font-weight: 600; }
   .flist { max-height: 260px; overflow-y: auto; }
+  .ghead { display: flex; align-items: center; }
+  .ghead .frow { flex: 1; font-weight: 600; }
+  .gtog { border: 0; background: none; cursor: pointer; color: var(--muted); font-size: 14px; padding: 2px 8px; }
+  .gsub { margin: 0 0 4px 22px; padding-left: 8px; border-left: 2px solid var(--line); }
+  .gsub .frow { font-size: 13px; }
   .frange { display: flex; gap: 8px; }
   .frange label { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; color: var(--muted); font-size: 12px; }
   .frange input { width: 100%; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; font: inherit; color: var(--ink); }
@@ -482,6 +487,37 @@
     return t ? c + " \u2013 " + t : c;
   }
 
+  // Broad group for a category label, so the Category dropdown can show ~15 groups that expand into the exact categories.
+  var NAICS_GROUP = { "11": "Agriculture", "21": "Utilities & energy", "22": "Utilities & energy", "23": "Construction", "31": "Goods & equipment",
+    "32": "Goods & equipment", "33": "Goods & equipment", "42": "Goods & equipment", "44": "Goods & equipment", "45": "Goods & equipment",
+    "48": "Transportation & vehicles", "49": "Transportation & vehicles", "51": "IT & telecom", "52": "Business & administrative",
+    "53": "Business & administrative", "54": "Engineering & professional", "55": "Business & administrative", "56": "Maintenance & facilities",
+    "61": "Education & recreation", "62": "Health & human services", "71": "Education & recreation", "72": "Goods & equipment",
+    "81": "Maintenance & facilities", "92": "Government & safety" };
+  var GROUP_RULES = [
+    ["General / procurement type", /^(rfp|rfq|rfi|rfx|ifb|invitation|request for|single feasible|hybrid|grant|committee|no data|miscellaneous|misc\b|goods( and| &|&|$)|services$|commodities|service - misc|equipment$|municipality|quasi|reques)/],
+    ["Construction", /construct|highway|bridge|roadway|structures|sidewalk|seal coat|overlay|building and/],
+    ["Agriculture", /agricultur|farming|forestry|wildlife|live plant|landscap|feed, bedding/],
+    ["Environmental", /environment|air quality/],
+    ["IT & telecom", /^(?!.*non-it).*(information technology|\bit\b|info technology|telecom|software|internet|database|broadcast)/],
+    ["Maintenance & facilities", /maintenance|facilit|janitor|industrial cleaning|pest|repair/],
+    ["Health & human services", /health|medical|human services|case management|drug|pharma|podiatr|client services/],
+    ["Education & recreation", /educat|training|recreation|sports|music|toys/],
+    ["Utilities & energy", /utilit|power gen|energy|fuel|lubricant/],
+    ["Transportation & vehicles", /transport|freight|moving|warehous|vehicle|aviation/],
+    ["Government & safety", /politic|civic|defense|public order|security|safety|judicial|law enforcement/],
+    ["Engineering & professional", /engineer|architect|survey|professional|prof\b|research|legal|investigat/],
+    ["Business & administrative", /management|mngmnt|business|administrative|personnel|personal|advertis|marketing|photograph|printing|financ|insurance|real property|land,|travel/],
+    ["Goods & equipment", /equipment|supplies|machinery|mach\.|components|products|materials|chemicals|apparel|food|furniture|chair|illuminator|manufactur|distribution|laboratory|electrical|electronic|published/]
+  ];
+  function catGroup(label) {
+    var m = /^NAICS (\d{2})/.exec(label);
+    if (m) return NAICS_GROUP[m[1]] || "Other";
+    var s = label.split(";")[0].toLowerCase().trim();
+    for (var i = 0; i < GROUP_RULES.length; i++) if (GROUP_RULES[i][1].test(s)) return GROUP_RULES[i][0];
+    return "Other";
+  }
+
   // ---- Per-column filters ----
   // List filters (state, category, eligibility, municipality) store what is HIDDEN, so "Select all" = nothing hidden and
   // values that first appear after a refresh show up by default. A request is hidden when any of its values is hidden.
@@ -494,7 +530,7 @@
   }
   var FILTERS = [
     { key: "st",       label: "State",        type: "list", get: function (r) { return [r.st]; }, name: stName, into: "level" }, // lives inside the Municipality dropdown
-    { key: "category", label: "Category",     type: "list", get: function (r) { return [catLabel(r)]; } },
+    { key: "category", label: "Category",     type: "list", get: function (r) { return [catLabel(r)]; }, group: catGroup },
     { key: "elig",     label: "Eligibility",  type: "list", get: eligValues, note: "Shows requests that list at least one checked requirement." },
     { key: "posted",   label: "Posted",       type: "date" },
     { key: "due",      label: "End date",     type: "date", flag: "noDueOk", flagLabel: "Include requests with no real due date" },
@@ -529,6 +565,12 @@
     Array.prototype.forEach.call(document.querySelectorAll(".fpanel .frow[data-fk] .n"), function (n) {
       var l = n.parentNode; n.textContent = counts[l.dataset.fk][l.dataset.fv];
     });
+    FILTERS.forEach(function (f) {
+      if (!f.groups) return;
+      Array.prototype.forEach.call(fwraps[f.key].panel.querySelectorAll("[data-gn]"), function (n) {
+        n.textContent = f.groups[n.dataset.gn].reduce(function (s, v) { return s + counts[f.key][v]; }, 0);
+      });
+    });
   }
   recount();
   function pnum(s) { // "50000", "$50,000", "50k", "1.5m"
@@ -556,10 +598,26 @@
     if (f.note) h += '<p class="fnote">' + esc(f.note) + "</p>";
     if (f.type === "list") {
       var nm = f.name || function (v) { return v; };
-      h += '<label class="frow all"><input type="checkbox" data-all> Select all</label><div class="flist">' +
-        listValues(f).map(function (v) {
-          return '<label class="frow" data-fk="' + f.key + '" data-fv="' + esc(v) + '"><input type="checkbox" data-v="' + esc(v) + '"> ' + esc(nm(v)) + '<span class="n">' + counts[f.key][v] + "</span></label>";
-        }).join("") + "</div>";
+      function vrow(v) {
+        return '<label class="frow" data-fk="' + f.key + '" data-fv="' + esc(v) + '"><input type="checkbox" data-v="' + esc(v) + '"> ' + esc(nm(v)) + '<span class="n">' + counts[f.key][v] + "</span></label>";
+      }
+      var vals = listValues(f), body;
+      if (f.group) { // groups that expand into their members; a group's checkbox ticks / unticks all of them
+        var gs = {}, gnames = [];
+        vals.forEach(function (v) { var g = f.group(v); if (!gs[g]) { gs[g] = []; gnames.push(g); } gs[g].push(v); });
+        gnames.sort(function (a, b) {
+          var la = /^(Other|General)/.test(a), lb = /^(Other|General)/.test(b);
+          return la !== lb ? (la ? 1 : -1) : a.localeCompare(b);
+        });
+        body = gnames.map(function (g) {
+          var tot = gs[g].reduce(function (s, v) { return s + counts[f.key][v]; }, 0);
+          return '<div class="fgrp" data-gname="' + esc(g) + '"><div class="ghead"><label class="frow"><input type="checkbox" data-g="' + esc(g) + '"> ' + esc(g) +
+            '<span class="n" data-gn="' + esc(g) + '">' + tot + '</span></label><button type="button" class="gtog" aria-expanded="false" title="Show categories">&#9656;</button></div>' +
+            '<div class="gsub" hidden>' + gs[g].map(vrow).join("") + "</div></div>";
+        }).join("");
+        f.groups = gs;
+      } else body = vals.map(vrow).join("");
+      h += '<label class="frow all"><input type="checkbox" data-all> Select all</label><div class="flist">' + body + "</div>";
     } else {
       var kind = f.type === "date" ? "date" : "text", ph = f.type === "num" ? (f.hint ? 'placeholder="' + esc(f.hint) + '"' : 'inputmode="numeric"') : "";
       h += '<div class="frange"><label>' + (f.type === "date" ? "From" : "Min") + '<input type="' + kind + '" data-p="a" ' + ph + ">" +
@@ -599,6 +657,10 @@
         var all = x.panel.querySelector(":scope > .frow.all [data-all]"), tot = listValues(f).length;
         all.checked = n === 0; all.indeterminate = n > 0 && n < tot;
         Array.prototype.forEach.call(x.panel.querySelectorAll(":scope > .flist [data-v]"), function (cb) { cb.checked = !H[f.key][cb.dataset.v]; });
+        if (f.groups) Array.prototype.forEach.call(x.panel.querySelectorAll(":scope > .flist [data-g]"), function (cb) {
+          var vs = f.groups[cb.dataset.g], hid = vs.filter(function (v) { return H[f.key][v]; }).length;
+          cb.checked = hid === 0; cb.indeterminate = hid > 0 && hid < vs.length;
+        });
         var nm = f.name || function (v) { return v; };
         if (n && n <= 3) Object.keys(H[f.key]).forEach(function (v) { chips.push('<button type="button" class="fchip" data-unhide="' + f.key + '" data-v="' + esc(v) + '">Hide ' + esc(nm(v)) + " &#10005;</button>"); });
         else if (n) chips.push('<button type="button" class="fchip" data-reset="' + f.key + '">' + esc(f.label) + ": " + n + " hidden &#10005;</button>");
@@ -628,6 +690,8 @@
     }
     var panel = e.target.closest(".fpanel"); if (!panel) return;
     f = FILTERS.filter(function (x) { return x.key === panel.dataset.key; })[0];
+    var tg = e.target.closest(".gtog");
+    if (tg) { var sb = tg.closest(".fgrp").querySelector(".gsub"); sb.hidden = !sb.hidden; tg.setAttribute("aria-expanded", String(!sb.hidden)); tg.innerHTML = sb.hidden ? "&#9656;" : "&#9662;"; return; }
     var pr = e.target.closest("[data-a]"), rs = e.target.closest("[data-reset]");
     if (pr) { R[f.key].a = pr.dataset.a; R[f.key].b = pr.dataset.b; applyFilters(); }
     else if (rs) { resetFilter(f); applyFilters(); }
@@ -636,6 +700,7 @@
     var t = e.target, panel = t.closest(".fpanel"); if (!panel) return;
     var f = FILTERS.filter(function (x) { return x.key === panel.dataset.key; })[0];
     if (t.hasAttribute("data-all")) { H[f.key] = {}; if (!t.checked) listValues(f).forEach(function (v) { H[f.key][v] = true; }); }
+    else if (t.dataset.g != null) { f.groups[t.dataset.g].forEach(function (v) { if (t.checked) delete H[f.key][v]; else H[f.key][v] = true; }); }
     else if (t.dataset.v != null) { if (t.checked) delete H[f.key][t.dataset.v]; else H[f.key][t.dataset.v] = true; }
     else if (t.dataset.flag) R[t.dataset.flag] = t.checked;
     else return;
