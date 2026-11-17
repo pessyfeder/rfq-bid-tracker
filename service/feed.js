@@ -96,6 +96,7 @@ function normalize(r, source) {
     requirements: (r.details && r.details.requirements) || [],
     shall: Array.isArray(r.shall) ? r.shall : [],
     amended: !!(r.details && r.details.amended),
+    contact: (r.details && r.details.contact) || null, // { name?, email?, phone? } of the buyer / contracting officer
     docAccess: r.aiRead ? "read" : "none", // "none" = documents not read: a thin record, not a complete one
     sourceUrl: r.rfqUrl,                  // deep link to the source posting
     naics: r.naics || null,               // from the documents (AI-read), when stated

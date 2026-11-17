@@ -816,7 +816,17 @@
     var inElig = (r.requires || []).map(function (q) { return q.toLowerCase(); });
     h += detailRow("Terms", x.requirements.filter(function (q) { return inElig.indexOf(String(q).toLowerCase()) < 0 && !(x.restriction && q === x.restriction); })
       .map(function (q) { return '<span class="chip">' + esc(q) + "</span>"; }).join(""));
+    h += detailRow("Contact information", contactHtml(x.contact));
     return h ? '<ul class="dlist">' + h + "</ul>" : "";
+  }
+  // Name, email (mail link) and phone of whoever the notice names as the buyer. Empty when the source gives none.
+  function contactHtml(c) {
+    if (!c) return "";
+    var parts = [];
+    if (c.name) parts.push(esc(c.name));
+    if (c.email && /^[^\s@<>"]+@[^\s@<>"]+$/.test(c.email)) parts.push('<a href="mailto:' + esc(c.email) + '">' + esc(c.email) + "</a>");
+    if (c.phone) parts.push(esc(c.phone));
+    return parts.join(" &middot; ");
   }
   function detailRow(label, inner) { return inner ? '<li><b>' + label + ":</b> " + inner + "</li>" : ""; }
 

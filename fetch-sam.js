@@ -87,7 +87,7 @@ function toRfq(o) {
     agency: o.fullParentPathName ? o.fullParentPathName.split(".").slice(0, 2).join(" / ") : "Unknown agency",
     value: null, // the v2 search API carries no award amount on open notices; estimates are filled in later
     rfqUrl: url,
-    details: { region, requirements, restriction: code && requirements.length ? requirements[0] : null, amended: false }
+    details: { region, requirements, restriction: code && requirements.length ? requirements[0] : null, amended: false, contact: require("./contacts").fromSam(o.pointOfContact) }
   };
 }
 
@@ -160,6 +160,7 @@ async function getPage(from, to, offset) {
 
 // Description text plus everything derived from it (restrictions, stated amount, AI read). Mutates r.
 async function enrich(r, o, text, AI_KEY) {
+  if (!r.details.contact) r.details.contact = require("./contacts").fromText(text); // search result had no point of contact: try the description
   const found = restrictionsFromText(text);
   if (found.length) {
     r.requires = Array.from(new Set((r.requires || []).concat(found)));
@@ -222,6 +223,7 @@ async function enrich(r, o, text, AI_KEY) {
           } else if (old.rfq.due !== r.due || old.rfq.dueTime !== r.dueTime) { // deadline moved = amended
             Object.assign(old.rfq, { due: r.due, dueTime: r.dueTime }); old.rfq.details.amended = true;
           }
+          if (old && !old.rfq.details.contact && r.details.contact) old.rfq.details.contact = r.details.contact; // cached before contacts were collected
         }
         offset += 100;
         if (items.length < 100 || offset >= (page.totalRecords || 0)) { finished = true; cache.searchedThrough = today; cache.resume = null; }

@@ -66,7 +66,8 @@ function toRfq(o) {
     agency: o.agency_name || "NYC agency",
     value: o.contract_amount && Number(o.contract_amount) > 0 ? Number(o.contract_amount) : null,
     rfqUrl: "https://a856-cityrecord.nyc.gov/RequestDetail/" + encodeURIComponent(o.request_id),
-    details: { region: "New York City", requirements, restriction: null, amended: false, warnings: warnings(o) }
+    details: { region: "New York City", requirements, restriction: null, amended: false, warnings: warnings(o),
+      contact: require("./contacts").make(o.contact_name, o.email, o.contact_phone) || require("./contacts").fromText(o.additional_description_1 + " " + (o.other_info_1 || "")) }
   };
 }
 

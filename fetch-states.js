@@ -40,7 +40,8 @@ function toRfq(n, a) {
     valueLabel: n.valueLabel || undefined,
     naics: n.naics || null, // internal: dropped before writing; only used to look up the estimate
     rfqUrl: url,
-    details: { region: clean(n.region) || a.name, requirements: [], restriction: null, amended: false, warnings }
+    details: { region: clean(n.region) || a.name, requirements: [], restriction: null, amended: false, warnings,
+      contact: (n.contact && require("./contacts").make(n.contact.name, n.contact.email, n.contact.phone)) || require("./contacts").fromText(n.description) }
   };
 }
 
@@ -103,7 +104,7 @@ async function addDocumentReads(list, prevById, adapter) {
     const amended = p && p.aiRead && p.aiSig && p.aiSig !== r.aiSig;
     if (amended) { newSig.set(r, r.aiSig); r.aiSig = p.aiSig; } // keep the old fingerprint until the re-read succeeds, so a failed one is retried next run
     const stale = (p && p.requires == null && (p.docsV || 0) < DOCS_VERSION && REREAD_STATES.has(adapter.code)) || amended;
-    if (p && p.aiRead) { r.requires = p.requires; r.scope = p.scope; r.shall = p.shall; if (p.naics) r.naics = p.naics; if (p.docDue) r.docDue = p.docDue; r.aiRead = true; if (p.docsV) r.docsV = p.docsV; } // a failed re-read keeps this
+    if (p && p.aiRead) { r.requires = p.requires; r.scope = p.scope; r.shall = p.shall; if (p.naics) r.naics = p.naics; if (p.docDue) r.docDue = p.docDue; r.aiRead = true; if (p.docsV) r.docsV = p.docsV; if (p.details && p.details.contact && !r.details.contact) r.details.contact = p.details.contact; } // a failed re-read keeps this
     if (p && p.aiRead && !stale) reused++;
     else if (stale) todo.push(r);
     else if (process.env.STATE_REREAD_ONLY && !(p && p.aiRead)) continue; // re-read only notices that were already read once
@@ -129,6 +130,7 @@ async function addDocumentReads(list, prevById, adapter) {
         if (res.scope) r.scope = res.scope;
         if (res.shall.length) r.shall = res.shall;
         { const n = naicsIn(doc.text); if (n) r.naics = n; } // regex on the page/Word text, not the model (PDF text is not scanned)
+        if (!r.details.contact) r.details.contact = require("./contacts").fromText(doc.text); // contact named in the page / Word text
         r.aiRead = true; r.docsV = DOCS_VERSION; read++;
         if (r.details) delete r.details.readNote;
       } catch (e) {
