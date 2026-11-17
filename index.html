@@ -207,8 +207,8 @@
 <div class="toolbar">
   <span class="sub">Filter by</span>
   <span class="filters" id="filters"></span>
-  <label title="A solicitation counts as closed when its due date has already passed (Days left is negative). Notices with no usable due date (blank, or a placeholder more than 3 years out) are never treated as closed; those are controlled by the Due date filter (Include requests with no usable due date)."><input type="checkbox" id="hideClosed" checked> Hide closed</label>
-  <label title="Hides notices that were posted more than a year ago, even if their due date is still in the future. Many of these are long-running or forgotten listings. Untick to see them. Notices with no usable due date are handled separately by the Due date filter."><input type="checkbox" id="hideOld" checked> Hide old</label>
+  <label title="Hides notices whos due dates have already passed."><input type="checkbox" id="hideClosed" checked> Hide closed</label>
+  <label title="Hides notices that were posted more than a year ago."><input type="checkbox" id="hideOld" checked> Hide old</label>
   <span class="sub" id="count"></span>
   <span class="refresh-ctl">
     <span class="seg" id="refreshMode" title="What the Refresh button fetches">
@@ -1291,7 +1291,7 @@
     var shown = list.slice(0, limit);
     var left = total - shown.length;
     $("more").hidden = left <= 0;
-    $("moreBtn").textContent = "Show " + Math.min(PAGE, left) + " more (" + left + " not shown)";
+    $("moreBtn").textContent = "Show " + Math.min(PAGE, left) + " more (" + left + " not yet shown)";
     function rowHtml(r) {
       var open = expanded[r.id];
       var shallRow = open ? '<tr class="shall-row"><td colspan="' + COLUMNS.length + '"><h4>Exact wording from the notice ("shall")</h4><ul>' +
@@ -1332,7 +1332,7 @@
     rows.forEach(function (r) {
       if (r.daysLeft >= 0 && isOld(r)) old++;
     });
-    $("count").textContent = total + " shown" + (f.hideOld ? " (" + old + " hidden as old)" : "") + " " +
+    $("count").textContent = (left > 0 ? "showing " + shown.length + " of " + total : total + " shown") + (f.hideOld ? " (" + old + " hidden as old)" : "") + " " +
       (m ? "live from " + m.source + ", updated " + new Date(m.fetchedAt).toLocaleString("en-US") : "No data");
   }
 
