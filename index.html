@@ -308,7 +308,8 @@
     okItems.forEach(function (t) { var li = document.createElement("li"); li.textContent = t; ok.appendChild(li); });
     det.appendChild(sum); det.appendChild(ok); box.appendChild(det);
   }
-  box.hidden = !(items.length || okItems.length);
+  try { window.RFQ_JUST_REFRESHED = !!sessionStorage.getItem("rfqAutoReload"); } catch (e) {} // set by the page's own reload after a refresh ends
+  box.hidden = !(items.length || (okItems.length && window.RFQ_JUST_REFRESHED));
   if (!items.length) box.classList.add("ok");
 })();
 </script>
@@ -1579,7 +1580,8 @@
     }
     // A dismissed green banner stays hidden; any problem brings it back (and re-arms the dismissal for the next green one).
     if (anyWarn) { sb.dismissed = false; }
-    sb.box.hidden = !!sb.dismissed;
+    // The all-green banner only appears during a refresh and on the page load that follows it, not on a plain startup/reload.
+    sb.box.hidden = !!sb.dismissed || (!anyWarn && !pgl && !window.RFQ_JUST_REFRESHED);
     var t =document.title.replace(/^⚠ /, "");
     document.title = anyWarn ? "⚠ " + t : t;
   }
