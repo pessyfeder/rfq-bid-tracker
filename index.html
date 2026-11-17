@@ -207,8 +207,8 @@
 <div class="toolbar">
   <span class="sub">Filter by</span>
   <span class="filters" id="filters"></span>
-  <label title="A solicitation counts as closed when its due date has already passed (Days left is negative). Notices with no usable due date (blank, or a placeholder more than 3 years out) are never treated as closed; those are covered by Hide stale."><input type="checkbox" id="hideClosed" checked> Hide closed</label>
-  <label title="Hides notices with a placeholder due date (blank, or more than 3 years out) and notices posted over a year ago."><input type="checkbox" id="hideFlagged" checked> Hide stale</label>
+  <label title="A solicitation counts as closed when its due date has already passed (Days left is negative). Notices with no usable due date (blank, or a placeholder more than 3 years out) are never treated as closed; those are controlled by the Due date filter (Include requests with no usable due date)."><input type="checkbox" id="hideClosed" checked> Hide closed</label>
+  <label title="Hides notices that were posted more than a year ago, even if their due date is still in the future. Many of these are long-running or forgotten listings. Untick to see them. Notices with no usable due date are handled separately by the Due date filter."><input type="checkbox" id="hideOld" checked> Hide old</label>
   <span class="sub" id="count"></span>
   <span class="refresh-ctl">
     <span class="seg" id="refreshMode" title="What the Refresh button fetches">
@@ -428,6 +428,8 @@
   var noDueCutoff = new Date(); noDueCutoff.setFullYear(noDueCutoff.getFullYear() + 3);
   var noDueStr = noDueCutoff.toISOString().slice(0, 10);
   function hasNoRealDue(r) { return !r.due || r.due > noDueStr; }
+  // "Old" = the fetchers tagged it as posted over a year ago (placeholder dates have their own warning and filter).
+  function isOld(r) { return ((r.details && r.details.warnings) || []).indexOf("Posted over a year ago") !== -1; }
 
   var rows = window.RFQS.map(function (r) {
     var noDue = hasNoRealDue(r);
@@ -1158,7 +1160,7 @@
     return { lists: FILTERS.filter(function (x) { return x.type === "list" && hiddenN(x); }),
       days: [pnum(R.days.a), pnum(R.days.b)], value: [pnum(R.value.a), pnum(R.value.b)],
       detail: isActive(FILTERS.filter(function (x) { return x.key === "detail"; })[0]),
-      hideClosed: $("hideClosed").checked, hideFlagged: $("hideFlagged").checked, pq: q ? parseQuery(q) : null };
+      hideClosed: $("hideClosed").checked, hideOld: $("hideOld").checked, pq: q ? parseQuery(q) : null };
   }
   function matches(r, f) {
     if (f.hideClosed && r.daysLeft < 0) return false;
@@ -1183,7 +1185,7 @@
       if (f.value[0] != null && r.valueSort < f.value[0]) return false;
       if (f.value[1] != null && r.valueSort > f.value[1]) return false;
     }
-    if (f.hideFlagged && ((r.details.warnings || []).length || r.noDue)) return false;
+    if (f.hideOld && isOld(r)) return false;
     if (f.detail && !detailMatch(r, R.detail)) return false;
     var pq = f.pq;
     if (pq) {
@@ -1326,11 +1328,11 @@
     $("empty").hidden = total > 0;
     $("empty").textContent = rows.length ? "No requests match your filters." : "No data";
     var m = window.RFQS_META;
-    var flagged = 0;
+    var old = 0;
     rows.forEach(function (r) {
-      if (r.daysLeft >= 0 && ((r.details.warnings || []).length || r.noDue)) flagged++;
+      if (r.daysLeft >= 0 && isOld(r)) old++;
     });
-    $("count").textContent = total + " shown" + (f.hideFlagged ? " (" + flagged + " hidden as placeholder/old)" : "") + " " +
+    $("count").textContent = total + " shown" + (f.hideOld ? " (" + old + " hidden as old)" : "") + " " +
       (m ? "live from " + m.source + ", updated " + new Date(m.fetchedAt).toLocaleString("en-US") : "No data");
   }
 
@@ -1358,7 +1360,7 @@
   });
   $("moreBtn").addEventListener("click", function () { limit += PAGE; render(); });
   $("allBtn").addEventListener("click", function () { limit = Infinity; render(); });
-  ["hideClosed", "hideFlagged"].forEach(function (id) {
+  ["hideClosed", "hideOld"].forEach(function (id) {
     function onFilter() { limit = PAGE; recount(); render(); }
     var timer;
     $(id).addEventListener("input", function () { clearTimeout(timer); timer = setTimeout(onFilter, 0); }); // coalesce events from one keystroke
@@ -1373,7 +1375,7 @@
   }
   window.saveUiState = function () {
     try {
-      var o = { at: Date.now(), sort: sort, expanded: expanded, scopeOpen: scopeOpen, scrollY: window.scrollY, hideClosed: $("hideClosed").checked, hideFlagged: $("hideFlagged").checked, H: H, R: R };
+      var o = { at: Date.now(), sort: sort, expanded: expanded, scopeOpen: scopeOpen, scrollY: window.scrollY, hideClosed: $("hideClosed").checked, hideOld: $("hideOld").checked, H: H, R: R };
       UI_FIELDS.forEach(function (id) { o[id] = $(id).value; });
       sessionStorage.setItem(UI_KEY, JSON.stringify(o));
     } catch (e) {}
@@ -1385,7 +1387,7 @@
     if (saved && Date.now() - saved.at < 10 * 60000) {
       UI_FIELDS.forEach(function (id) { if (saved[id] != null) $(id).value = saved[id]; });
       $("hideClosed").checked = saved.hideClosed !== false;
-      $("hideFlagged").checked = saved.hideFlagged !== false;
+      $("hideOld").checked = saved.hideOld !== false;
       recount();
       if (saved.sort && saved.sort.key) sort = saved.sort;
       if (saved.H) FILTERS.forEach(function (x) { if (x.type === "list" && saved.H[x.key]) H[x.key] = saved.H[x.key]; });
