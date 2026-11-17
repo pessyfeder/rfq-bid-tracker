@@ -38,7 +38,7 @@ Status dropdown was removed; bid tracking lives in the separate bidding app.)
                     out are treated as placeholders: shown as "No real due date".
  6  Days left       Days from today to the end date. "Closed" if past, a dash if no real
                     due date. Colored: 7 or fewer = red, 14 or fewer = orange, else green.
- 7  Municipality    Federal / State / Local badge.
+ 7  Level           Federal / State / Local badge.
  8  RFQ doc         "Open RFQ" link to the solicitation (NYC City Record page or SAM.gov
                     notice, or the state portal's page). Only https links are
                     opened; anything else becomes a dead link.
@@ -69,7 +69,7 @@ Status dropdown was removed; bid tracking lives in the separate bidding app.)
 10  Details         ONE merged column, same order in every cell. Top to bottom:
                     1) status chips (Amended, warnings), only when present
                     2) labeled rows, left out when empty: "Region" (small muted label;
-                       kept because Municipality shows only Federal / State / Local),
+                       kept because Level shows only Federal / State / Local),
                        "Terms" (plain requirement chips, e.g. selection method,
                        mandatory pre-bid). The "Bid factors" box (see below) is in the
                        Eligibility cell.
@@ -139,10 +139,10 @@ Search (query syntax in the code; no search box in the toolbar at present)
               Field names: value/price/amount/cost, days left, due/ends/closes/deadline,
               posted/date. Operators: > < >= <= = != ; k/m/b suffixes; ranges.
    dates:     "due < 2026-12-31", "posted >= 2026-10-01" (a bare date means due date).
-   column:    "municipality: local", "category: construction", "agency: ...",
+   column:    "level: local", "category: construction", "agency: ...",
               "request: ...", "region: ...", "eligibility: <requirement>".
    "no due date" finds placeholder or missing deadlines.
-   A bare column name (e.g. "municipality") does not narrow the results.
+   A bare column name (e.g. "level") does not narrow the results.
 
 
 2. OPEN QUESTIONS / POSSIBLE GAPS (to confirm with Israel)

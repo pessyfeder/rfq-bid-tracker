@@ -79,7 +79,7 @@
   th:nth-child(7) { width: 6%; min-width: 84px; }  th:nth-child(8) { width: 8%; }  th:nth-child(9) { width: 11%; }
   /* Est. value is column 9; Details (10) takes the rest */
   th { overflow-wrap: normal; }
-  th:nth-child(7) { overflow-wrap: anywhere; } /* Municipality: wrap the word rather than cut it off */
+  th:nth-child(7) { overflow-wrap: anywhere; } /* Level: wrap the word rather than cut it off */
   tr.shall-row td { text-align: left; }
   th { text-align: left; position: sticky; top: 0; background: #eef1f5; font-size: 11px; text-transform: uppercase; letter-spacing: .02em; color: var(--muted); cursor: pointer; user-select: none; }
   th.nosort { cursor: default; }
@@ -179,7 +179,7 @@
     tbody tr:not(.shall-row) td:nth-child(4)::before { content: "Posted"; }
     tbody tr:not(.shall-row) td:nth-child(5)::before { content: "End date"; }
     tbody tr:not(.shall-row) td:nth-child(6)::before { content: "Days left"; }
-    tbody tr:not(.shall-row) td:nth-child(7)::before { content: "Municipality"; }
+    tbody tr:not(.shall-row) td:nth-child(7)::before { content: "Level"; }
     tbody tr:not(.shall-row) td:nth-child(8)::before { content: "View Documents"; }
     tbody tr:not(.shall-row) td:nth-child(9)::before { content: "Est. value"; }
     tbody tr:not(.shall-row) td:nth-child(10)::before { content: "Details"; }
@@ -322,7 +322,7 @@
     { key: "posted",   label: "Posted" },
     { key: "dueSort",  label: "End date" },
     { key: "daysLeft", label: "Days left", num: true },
-    { key: "level",    label: "Municipality" },
+    { key: "level",    label: "Level" },
     { key: "rfqUrl",   label: "View Documents", nosort: true },
     { key: "valueSort", label: "Est. value", num: true },
     { key: "details",  label: "Details", nosort: true }
@@ -553,7 +553,7 @@
   }
 
   // ---- Per-column filters ----
-  // List filters (state, category, eligibility, municipality) store what is HIDDEN, so "Select all" = nothing hidden and
+  // List filters (state, category, eligibility, level) store what is HIDDEN, so "Select all" = nothing hidden and
   // values that first appear after a refresh show up by default. A request is hidden when any of its values is hidden.
   function eligValues(r) {
     var items = eligList(r);
@@ -578,14 +578,14 @@
     return "Other requirements";
   }
   var FILTERS = [
-    { key: "st",       label: "State",        type: "list", get: function (r) { return [r.st]; }, name: stName, into: "level" }, // lives inside the Municipality dropdown
+    { key: "st",       label: "State",        type: "list", get: function (r) { return [r.st]; }, name: stName, into: "level" }, // lives inside the Level dropdown
     { key: "category", label: "Category",     type: "list", get: function (r) { return [catLabel(r)]; }, group: catGroup },
     { key: "elig",     label: "Eligibility",  type: "list", get: eligValues, group: eligGroup, note: "Shows requests that list at least one checked requirement." },
     { key: "posted",  label: "Posted",       type: "date" },
     { key: "due",      label: "End date",     type: "date", flag: "noDueOk", flagLabel: "Include requests with no real due date" },
     { key: "days",     label: "Days left",    type: "num", note: "Requests with no due date follow the End date setting.",
       presets: [["Next 7 days", "", "7"], ["Next 14 days", "", "14"], ["Next 30 days", "", "30"]] },
-    { key: "level",    label: "Municipality", type: "list", get: function (r) { return [r.level]; }, order: ["Federal", "State", "Local"] },
+    { key: "level",    label: "Level", type: "list", get: function (r) { return [r.level]; }, order: ["Federal", "State", "Local"] },
     { key: "value",    label: "Est. value",   type: "num", flag: "unknownOk", flagLabel: "Include requests with no known value", hint: "e.g. 50k",
       presets: [["Under $50K", "", "50k"], ["$50K to $500K", "50k", "500k"], ["Over $500K", "500k", ""]] },
     { key: "detail",   label: "Details",      type: "text", note: "Search the Details bullets. Pick a bullet to look only inside it, or to find requests that have it (or lack it)." }
@@ -716,7 +716,7 @@
       x.btn.classList.toggle("on", on || !!(sub && isActive(sub)));
       x.btn.innerHTML = esc(f.label) + (nb ? " (" + nb + " hidden)" : "") + ' <span class="caret">&#9662;</span>';
       if (f.type === "list") {
-        // Only this panel's own controls: a nested sub-panel (State inside Municipality) has its own [data-all]/[data-v].
+        // Only this panel's own controls: a nested sub-panel (State inside Level) has its own [data-all]/[data-v].
         var all = x.panel.querySelector(":scope > .frow.all [data-all]"), tot = listValues(f).length;
         all.checked = n === 0; all.indeterminate = n > 0 && n < tot;
         Array.prototype.forEach.call(x.panel.querySelectorAll(":scope > .flist [data-v]"), function (cb) { cb.checked = !H[f.key][cb.dataset.v]; });
@@ -1646,7 +1646,7 @@
       } else bar.hidden = true;
     }).catch(function (e) {
       // 404 = something answered but it is not the RFQ service (e.g. a plain file server): it will never refresh this page.
-      if (e === 404) show("This page is not connected to the RFQ service, so it cannot refresh or check for new data. Open it at http://127.0.0.1:8765/ instead. The data below may be out of date.", "offline");
+      if (e === 404) show("This is a static snapshot; not connected to data feed service. Cannot refresh data.", "offline");
       else if (++misses >= 2) show("Can't reach the RFQ service (it may be restarting or stopped). Retrying every 5 seconds. The data below may be out of date." + (lastAsOf ? " It is from " + dayhm(lastAsOf) + " or earlier." : ""), "offline");
     });
   }
