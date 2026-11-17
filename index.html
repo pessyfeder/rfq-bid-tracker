@@ -578,7 +578,6 @@
     return "Other requirements";
   }
   var FILTERS = [
-    { key: "st",       label: "State",        type: "list", get: function (r) { return [r.st]; }, name: stName, into: "level" }, // lives inside the Level dropdown
     { key: "category", label: "Category",     type: "list", get: function (r) { return [catLabel(r)]; }, group: catGroup },
     { key: "elig",     label: "Eligibility",  type: "list", get: eligValues, group: eligGroup, note: "Shows requests that list at least one checked requirement." },
     { key: "posted",  label: "Posted",       type: "date" },
@@ -586,6 +585,7 @@
     { key: "days",     label: "Days left",    type: "num", note: "Requests with no due date follow the End date setting.",
       presets: [["Next 7 days", "", "7"], ["Next 14 days", "", "14"], ["Next 30 days", "", "30"]] },
     { key: "level",    label: "Level", type: "list", get: function (r) { return [r.level]; }, order: ["Federal", "State", "Local"] },
+    { key: "st",       label: "State",        type: "list", get: function (r) { return [r.st]; }, name: stName }, // its own dropdown, next to Level
     { key: "value",    label: "Est. value",   type: "num", flag: "unknownOk", flagLabel: "Include requests with no known value", hint: "e.g. 50k",
       presets: [["Under $50K", "", "50k"], ["$50K to $500K", "50k", "500k"], ["Over $500K", "500k", ""]] },
     { key: "detail",   label: "Details",      type: "text", note: "Search the Details bullets. Pick a bullet to look only inside it, or to find requests that have it (or lack it)." }
