@@ -108,7 +108,10 @@ function runFetcher(src, args = []) {
         const m = /^@progress (\d+) (\d+) (\S+)/.exec(l);
         if (m && refresh.progress) Object.assign(refresh.progress, { done: +m[1], total: +m[2], current: m[3] });
         const d = /^@done (\S+) (ok|fail)/.exec(l);
-        if (d && refresh.progress) (refresh.progress[d[2] === "ok" ? "updated" : "failedNow"] ||= []).push(d[1]);
+        if (d && refresh.progress) {
+          (refresh.progress[d[2] === "ok" ? "updated" : "failedNow"] ||= []).push(d[1]);
+          if (refresh.progress.current === d[1]) refresh.progress.current = null; // finished: no longer "retrying now"
+        }
       }
     };
     child.stdout.on("data", keep); child.stderr.on("data", keep);

@@ -1555,7 +1555,7 @@
         if (sb.title) {
           var tx = sb.baseTitle;
           if (pgl && pgl.total) {
-            tx += " — ⟳ retrying now: " + (pgl.current ? (sb.NAMES[pgl.current] || pgl.current) + " (" + pgl.current + ")" : "starting");
+            tx += pgl.current ? " — ⟳ retrying now: " + (sb.NAMES[pgl.current] || pgl.current) + " (" + pgl.current + ")" : " — ⟳ retrying…";
           }
           if (sb.title.textContent !== tx) sb.title.textContent = tx;
         }
