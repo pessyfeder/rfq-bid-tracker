@@ -218,7 +218,7 @@
       <label class="frow"><input type="checkbox" value="states"> All state portals</label>
       <div class="sp-states" id="specificStates"></div>
     </div>
-    <button type="button" id="refreshBtn">Refresh</button>
+    <button type="button" id="refreshBtn">Refresh data</button>
     <span class="refresh-hint">Data refreshes automatically once a day (after 5:00 AM). Sources that fail are retried on their own, and again when you open this page. Press this button to refresh manually</span>
   </span>
 </div>
@@ -853,11 +853,11 @@
   function detailsHtml(r) {
     // Always in the same order: status chips, then labeled Region and Terms rows. Empty rows are left out.
     // Bid factors are in the Eligibility cell.
-    // A small chart: fixed rows (Status, Region, Terms), label cell on the left, value on the right; "None" when empty.
+    // A small chart: fixed rows (Notice alerts, Region, Terms), label cell on the left, value on the right; "None" when empty.
     var x = r.details, h = "";
     var status = x.amended ? '<span class="chip amend">Amended</span>' : "";
     (x.warnings || []).forEach(function (w) { status += '<span class="chip amend">&#9888; ' + esc(w) + "</span>"; });
-    h += detailRow("Status", status);
+    h += detailRow("Notice alerts", status);
     h += detailRow("Region", esc(x.region));
     // Restrictions / set-asides live in the Eligibility column only; other requirement notes are the Terms row.
     var inElig = (r.requires || []).map(function (q) { return q.toLowerCase(); });
@@ -870,7 +870,7 @@
     if (r._bul) return r._bul;
     var out = [], x = r.details || {};
     var st = (x.amended ? ["Amended"] : []).concat(x.warnings || []).join("; ");
-    if (st) out.push({ label: "Status", text: st });
+    if (st) out.push({ label: "Notice alerts", text: st });
     if (x.region) out.push({ label: "Region", text: x.region });
     var inElig = (r.requires || []).map(function (q) { return String(q).toLowerCase(); });
     var terms = (x.requirements || []).filter(function (q) { return inElig.indexOf(String(q).toLowerCase()) < 0 && !(x.restriction && q === x.restriction); });
@@ -895,7 +895,7 @@
     return words.every(function (w) { return hay.indexOf(w) >= 0; });
   }
   function fillDetailBullets() {
-    var sel = fwraps.detail.panel.querySelector("select[data-p=b]"), seen = {}, labs = ["Status", "Region", "Terms", "Summary", "Contact information"];
+    var sel = fwraps.detail.panel.querySelector("select[data-p=b]"), seen = {}, labs = ["Notice alerts", "Region", "Terms", "Summary", "Contact information"];
     labs.forEach(function (l) { seen[l] = 1; });
     rows.forEach(function (r) { detailBullets(r).forEach(function (b) { if (!seen[b.label]) { seen[b.label] = 1; labs.push(b.label); } }); });
     sel.innerHTML = '<option value="">Any bullet</option>' + labs.map(function (l) { return '<option value="' + esc(l) + '">' + esc(l) + "</option>"; }).join("");
@@ -1588,10 +1588,10 @@
     btn.disabled = true; btn.textContent = "Starting…";
     fetch("/api/refresh" + (modeSel.value === "failed" ? "?failed=1" : modeSel.value === "specific" ? "?portal=" + encodeURIComponent(portal) : ""), { method: "POST" }).then(function (r) {
       if (!r.ok && r.status !== 409) throw r.status; // 409 = one is already running: just show its progress
-      if (r.status === 200) { btn.disabled = false; btn.textContent = "Refresh"; show("Nothing failed last time, so there is nothing to retry.", ""); return; }
+      if (r.status === 200) { btn.disabled = false; btn.textContent = "Refresh data"; show("Nothing failed last time, so there is nothing to retry.", ""); return; }
       retried = true; poll();
     }).catch(function (e) {
-      btn.disabled = false; btn.textContent = "Refresh";
+      btn.disabled = false; btn.textContent = "Refresh data";
       show(e === 403 || e === 401 ? "The service refused the refresh request (it only accepts it from this machine, or needs REFRESH_TOKEN)."
                                   : "Could not start a refresh. Is the RFQ service running?", "offline");
     });
@@ -1599,7 +1599,7 @@
   function poll() {
     fetch("/api/status", { cache: "no-store" }).then(function (r) { if (!r.ok) throw r.status; return r.json(); }).then(function (st) {
       misses = 0; lastAsOf = st.dataAsOf || lastAsOf;
-      btn.disabled = modeSel.disabled = portalSel.disabled = !!st.refreshing; btn.textContent = st.refreshing ? "Refreshing…" : "Refresh";
+      btn.disabled = modeSel.disabled = portalSel.disabled = !!st.refreshing; btn.textContent = st.refreshing ? "Refreshing…" : "Refresh data";
       if (!retried && !st.refreshing) retryFailed(st);
       // Live status inside the state banner: what is running now, what finished OK and what failed so far in this run.
       var sb = window.STATE_BANNER;
