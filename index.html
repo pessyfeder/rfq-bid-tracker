@@ -1032,9 +1032,19 @@
       var label = seen[type] > 1 ? type + " " + seen[type] : type;
       out.push('<div><a href="' + esc(safeUrl(url)) + '" target="_blank" rel="noopener" title="' + esc(name || "Source posting") + '">' + esc(label) + "</a></div>");
     }
-    add(isPreSol(r) ? "Notice" : "RFQ", r.rfqUrl, "Source posting");
-    (r.docs || []).forEach(function (d) { if (d && d.url && d.url !== r.rfqUrl) add(d.type || "Project Document", d.url, d.name); });
-    return out.join("");
+    var listed = (r.docs || []).filter(function (d) { return d && d.url && d.url !== r.rfqUrl; });
+    // Some notices (Texas) only give the document location as a link inside the description text.
+    var inText = [];
+    String(r.scope || "").replace(/https:\/\/[^\s<>"')]+/gi, function (u) {
+      u = u.replace(/[.,;:]+$/, "");
+      if (u !== r.rfqUrl && !inText.some(function (x) { return x.url === u; }) && !listed.some(function (d) { return d.url === u; }))
+        inText.push({ url: u, type: /(^|\.)box\.com\//i.test(u.replace(/^https:\/\//i, "")) ? "Project Documents" : "Linked Document", name: u });
+    });
+    var found = listed.concat(inText);
+    // Attachments found on the posting keep the posting link first; links that only appear in the text replace it.
+    if (listed.length || !found.length) add(isPreSol(r) ? "Notice" : "RFQ", r.rfqUrl, "Source posting");
+    found.forEach(function (d) { add(d.type || "Project Document", d.url, d.name); });
+    return { html: out.join(""), n: found.length };
   }
   function eligCell(r) {
     var h = eligCellBase(r), f = factsHtml(r);
@@ -1245,6 +1255,7 @@
       var shallRow = open ? '<tr class="shall-row"><td colspan="' + COLUMNS.length + '"><h4>Key requirements ("shall")' + (r.aiRead ? " &middot; AI read, please verify" : "") + '</h4><ul>' +
         (r.shall || []).map(function (s) { return "<li>" + esc(s.text) + (s.ref ? ' <span class="ref">[' + esc(s.ref) + "]</span>" : "") + "</li>"; }).join("") +
         '</ul>' + (r.aiRead ? '<div class="elig-note">AI read, please verify against the full RFQ document.</div>' : "") + '<a href="' + esc(safeUrl(r.rfqUrl)) + '" target="_blank" rel="noopener">Open the full RFQ document</a></td></tr>' : "";
+      var dl = docLinks(r);
       return '<tr>' +
         '<td>' + titleHtml(r, !!titleOpen[r.id]) + agencyHtml(r) + (r.aiRead ? '<div class="elig-note">AI read, please verify.</div>' : "") + "</td>" +
         "<td>" + esc(catLabel(r)).replace(/\//g, "/<wbr>") + "</td>" +
@@ -1253,8 +1264,8 @@
         "<td>" + (r.noDue ? (/eMarketplace/.test(r.dueTime || "") ? esc(r.dueTime) : "No real due date") : '<span style="white-space:nowrap">' + fmtDate(r.due).replace(/, (\d{4})$/, ",</span><br><span>$1") + '</span><div class="agency">' + esc(r.dueTime) + "</div>") + "</td>" +
         leftCell(r) +
         '<td><span class="badge ' + esc(r.level) + '">' + esc(r.level) + "</span></td>" +
-        '<td>' + docLinks(r) +
-          (r.aiRead ? "" : '<div><span class="elig unclear" title="The documents behind this posting were not read, so the details shown are only what the listing itself gives. Open the posting to see the rest.">No document access</span></div>') + "</td>" +
+        '<td>' + dl.html +
+          (r.aiRead || dl.n ? "" :'<div><span class="elig unclear" title="The documents behind this posting were not read, so the details shown are only what the listing itself gives. Open the posting to see the rest.">No document access</span></div>') + "</td>" +
         valueCell(r) +
         "<td>" + detailsHtml(r) +
           scopeHtml(r, !!scopeOpen[r.id]) +
