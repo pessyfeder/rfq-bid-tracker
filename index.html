@@ -188,6 +188,8 @@
   }
   .refreshbar { margin: 0 24px 8px; padding: 8px 12px; border-radius: 6px; background: #e8f0fb; color: var(--accent); border: 1px solid #c5d6ee; }
   .refreshbar.warn { background: #fff4e0; color: var(--warn); border-color: #f0d9a8; }
+  .refreshbar { position: relative; padding-right: 36px; }
+  .refreshbar .barx { position: absolute; top: 6px; right: 8px; border: 0; background: none; color: inherit; font-size: 20px; line-height: 1; cursor: pointer; padding: 2px 6px; }
   .refreshbar ul { margin: 4px 0 0; padding-left: 20px; }
   .refreshbar.offline { background: #fdecea; color: var(--bad); border-color: #f3c4c0; }
 </style>
@@ -1409,6 +1411,8 @@
   function hhmm(iso) { var d = new Date(iso); return isNaN(d) ? "" : d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }); }
   function dayhm(iso) { var d = new Date(iso); return isNaN(d) ? "" : d.toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }); }
   function show(msg, kind, notes) {
+    var key = msg + "|" + (notes || []).join("|");
+    if (key === dismissedKey) return; // the user closed this exact message with the x
     bar.className = "refreshbar" + (kind ? " " + kind : "");
     bar.textContent = msg;
     if (notes && notes.length) {
@@ -1416,8 +1420,12 @@
       notes.forEach(function (t) { var li = document.createElement("li"); li.textContent = t; ul.appendChild(li); });
       bar.appendChild(ul);
     }
+    var x = document.createElement("button"); x.type = "button"; x.className = "barx"; x.title = "Dismiss"; x.setAttribute("aria-label", "Dismiss"); x.textContent = "×";
+    x.addEventListener("click", function () { dismissedKey = key; bar.hidden = true; });
+    bar.appendChild(x);
     bar.hidden = false;
   }
+  var dismissedKey = null;
   // What the last refresh left behind. Skipped = needs a key or login that is not set up; failed = it tried and errored.
   // Plain-language reason for a raw error string. Unknown errors fall back to the raw text (minus unrelated notes).
   function why(err) {
@@ -1604,7 +1612,7 @@
         var since = st.refreshStartedAt ? " (started " + hhmm(st.refreshStartedAt) + ")" : "";
         // The state banner shows live progress, so no separate top banner while a run is going.
         if (!hasData) show("Fetching data for the first time… This takes several minutes; the page will fill in by itself.");
-        else bar.hidden = true;
+        // otherwise leave the banner as it is: it only goes away when the user clicks its x
         return;
       }
       if (was) { if (window.saveUiState) window.saveUiState(); try { sessionStorage.setItem("rfqAutoReload", "1"); } catch (e) {} location.reload(); return; }
@@ -1619,7 +1627,7 @@
         show(old ? "The data is out of date." : pr.failed.length ? "The last refresh had problems. Some data may be out of date." : "Some sources are not included.", old || pr.failed.length ? "warn" : "", notes);
       } else if (st.stale) {
         show("A refresh is due and will start shortly.");
-      } else bar.hidden = true;
+      } // else: nothing to report; any banner already showing stays until the user clicks its x
     }).catch(function (e) {
       // 404 = something answered but it is not the RFQ service (e.g. a plain file server): it will never refresh this page.
       if (e === 404) show("This is a static snapshot; not connected to data feed service. Cannot refresh data.", "offline");
