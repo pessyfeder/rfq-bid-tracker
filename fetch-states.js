@@ -178,9 +178,34 @@ function readPrevious() {
   const okNow = new Set(); // states fetched successfully in THIS run
   const needsSetup = new Set(); // states waiting for a login/setting the user has not provided: retrying cannot help, so the retry pass skips them
 
+  // Time limits: one slow or hung portal must not eat the whole run (service/server.js kills the script at FETCH_TIMEOUT_MIN,
+  // 45 by default, and then EVERY state counts as failed and the notices already fetched are lost). Each state gets
+  // STATE_TIMEOUT_MIN; the run as a whole stops starting states at STATE_RUN_BUDGET_MIN, so it always finishes and writes
+  // the states that did succeed. States cut off by either limit are marked failed, keep last run's notices, and are retried
+  // on their own by the service's follow-up (which runs only the failed states, so it fits well inside the budget).
+  const STATE_TIMEOUT_MS = Number(process.env.STATE_TIMEOUT_MIN || 8) * 60000;
+  const RUN_DEADLINE = Date.now() + Number(process.env.STATE_RUN_BUDGET_MIN || 36) * 60000;
   async function runAdapter(a) {
+    const left = RUN_DEADLINE - Date.now();
+    if (left <= 0) {
+      results[a.code] = { ...(prevStates[a.code] || {}), ok: false, error: "Not reached before the run's time limit; retried next" };
+      console.error(`${a.code}: SKIPPED - run time limit reached`);
+      return;
+    }
+    const limit = Math.min(STATE_TIMEOUT_MS, left), ctl = { cancelled: false };
+    let timer;
+    const cut = new Promise((_, rej) => { timer = setTimeout(() => { ctl.cancelled = true; rej(new Error(`Timed out after ${Math.round(limit / 60000)} min`)); }, limit); });
+    try { await Promise.race([runAdapterInner(a, ctl), cut]); }
+    catch (e) {
+      // runAdapterInner reports its own errors; this is the timeout (its late work is discarded via ctl.cancelled).
+      results[a.code] = { ...(prevStates[a.code] || {}), ok: false, error: String(e.message).slice(0, 200) };
+      console.error(`${a.code}: FAILED - ${e.message}`);
+    } finally { clearTimeout(timer); }
+  }
+  async function runAdapterInner(a, ctl) {
     try {
       const raw = await a.fetch();
+      if (ctl.cancelled) return;
       const seen = new Set();
       const mine = raw.map((n) => toRfq(n, a)).filter((r) => {
         if (!r || r.due < today || seen.has(r.id)) return false;
@@ -188,6 +213,7 @@ function readPrevious() {
       });
       await addStateEstimates(mine);
       await addDocumentReads(mine, new Map(((prev && prev.rfqs) || []).map((r) => [r.id, r])), a);
+      if (ctl.cancelled) return; // timed out while reading documents: runAdapter already recorded the failure
       // A partial run (some result pages blocked) must not drop the notices on the skipped pages: keep last run's rows we did not see.
       if (raw.partialPages && prev) {
         const have = new Set(mine.map((r) => r.id));
@@ -200,6 +226,7 @@ function readPrevious() {
       if (raw.partialPages) console.error(`${a.code}: PARTIAL - ${raw.partialPages} page(s) could not be read`);
       console.log(`${a.code}: ${mine.length} open (of ${raw.length} read)`);
     } catch (e) {
+      if (ctl.cancelled) return;
       results[a.code] = { ...(prevStates[a.code] || {}), ok: false, error: String(e.message).slice(0, 200) };
       if (/^Waiting for/.test(e.message)) needsSetup.add(a.code);
       console.error(`${a.code}: FAILED - ${e.message}`);
@@ -254,4 +281,5 @@ function readPrevious() {
   fs.renameSync(tmp, OUT);
   console.log(`Wrote ${rfqs.length} State solicitations to live-states.js`);
   console.log(`Requests this run: ${Object.entries(requests).map(([h, n]) => `${h} ${n}`).join(", ") || "none"}`);
+  process.exit(0); // an adapter that timed out may still have sockets open; do not wait for them
 })().catch((e) => { console.error(e.message); process.exit(1); });
