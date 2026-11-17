@@ -1027,10 +1027,13 @@
   // "View Documents": the posting itself, then each attachment found, named by type (RFQ, Specifications, Project Document...).
   function docLinks(r) {
     var seen = {}, out = [];
-    function add(type, url, name) {
-      seen[type] = (seen[type] || 0) + 1;
-      var label = seen[type] > 1 ? type + " " + seen[type] : type;
-      out.push('<div><a href="' + esc(safeUrl(url)) + '" target="_blank" rel="noopener" title="' + esc(name || "Source posting") + '">' + esc(label) + "</a></div>");
+    // The posting link is labelled "Source posting"; every attachment is "Attachment" (numbered), with its type and name on hover.
+    function add(type, url, name, isPosting) {
+      var key = isPosting ? "Source posting" : "Attachment";
+      seen[key] = (seen[key] || 0) + 1;
+      var label = seen[key] > 1 ? key + " " + seen[key] : key;
+      var tip = isPosting ? "Source posting" : (type && type !== name ? type + ": " : "") + (name || "");
+      out.push('<div><a href="' + esc(safeUrl(url)) + '" target="_blank" rel="noopener" title="' + esc(tip) + '">' + esc(label) + "</a></div>");
     }
     var listed = (r.docs || []).filter(function (d) { return d && d.url && d.url !== r.rfqUrl; });
     // Some notices (Texas) only give the document location as a link inside the description text.
@@ -1042,7 +1045,7 @@
     });
     var found = listed.concat(inText);
     // Attachments found on the posting keep the posting link first; links that only appear in the text replace it.
-    if (listed.length || !found.length) add(isPreSol(r) ? "Notice" : "RFQ", r.rfqUrl, "Source posting");
+    if (listed.length || !found.length) add(isPreSol(r) ? "Notice" : "RFQ", r.rfqUrl, "Source posting", true);
     found.forEach(function (d) { add(d.type || "Project Document", d.url, d.name); });
     return { html: out.join(""), n: found.length };
   }
