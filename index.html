@@ -234,7 +234,7 @@
     <tbody id="body"></tbody>
   </table>
   <div class="empty" id="empty" hidden>No requests match your filters.</div>
-  <div class="more" id="more" hidden><button id="moreBtn" type="button"></button> <button id="allBtn" type="button">Show all</button></div>
+  <div class="more" id="more" hidden><button id="moreBtn" type="button"></button></div>
 </div>
 
 <script src="data.js"></script>
@@ -450,7 +450,6 @@
   // The server sends rows without their long "shall" lists (r.shallCount says how many); a list is fetched when its row is opened.
   function shallN(r) { return r.shallCount != null ? r.shallCount : (r.shall || []).length; }
   var expanded = {}; // request id -> true when its "shall" list is open
-  var ALL_WARN = 1000; // "Show all" asks for confirmation above this many remaining rows
   var PAGE = 100, limit = PAGE; // rows drawn so far; reset to one page whenever the filters or sort change
 
   var $ = function (id) { return document.getElementById(id); };
@@ -1293,8 +1292,6 @@
     var left = total - shown.length;
     $("more").hidden = left <= 0;
     $("moreBtn").textContent = "Show " + Math.min(PAGE, left) + " more (" + left + " not yet shown)";
-    $("allBtn").textContent = "Show all " + left + (left > ALL_WARN ? " (slow)" : "");
-    $("allBtn").title = left > ALL_WARN ? "Draws all " + left + " remaining rows at once; the page may become slow." : "";
     function rowHtml(r) {
       var open = expanded[r.id];
       var shallRow = open ? '<tr class="shall-row"><td colspan="' + COLUMNS.length + '"><h4>Exact wording from the notice ("shall")</h4><ul>' +
@@ -1362,11 +1359,6 @@
     render();
   });
   $("moreBtn").addEventListener("click", function () { limit += PAGE; render(); });
-  $("allBtn").addEventListener("click", function () {
-    var left = parseInt(($("allBtn").textContent.match(/\d+/) || [0])[0], 10);
-    if (left > ALL_WARN && !confirm("Draw all " + left + " remaining rows at once? This can make the page slow or unresponsive.")) return;
-    limit = Infinity; render();
-  });
   ["hideClosed", "hideOld"].forEach(function (id) {
     function onFilter() { limit = PAGE; recount(); render(); }
     var timer;
