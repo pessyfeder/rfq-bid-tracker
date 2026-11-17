@@ -24,14 +24,23 @@ const SNAPSHOT_FILE = path.join(DATA, "feed.json");
 const LOG_FILE = path.join(DATA, "service.log");
 
 // ---- config: environment, with an optional git-ignored .env file for the same names -------------
-(function loadDotEnv() {
-  let text;
-  try { text = fs.readFileSync(path.join(ROOT, ".env"), "utf8"); } catch { return; }
+// Called at startup and again at the start of every refresh, so edits to .env apply without a restart.
+// A variable set in the real environment always wins; only names this function set itself are updated or removed.
+const dotEnvKeys = new Set();
+function loadDotEnv() {
+  let text = "";
+  try { text = fs.readFileSync(path.join(ROOT, ".env"), "utf8"); } catch { /* no .env: drop anything it set earlier */ }
+  const seen = new Set();
   for (const line of text.split(/\r?\n/)) {
     const m = /^\s*([A-Z0-9_]+)\s*=\s*(.*?)\s*$/.exec(line);
-    if (m && !line.trim().startsWith("#") && process.env[m[1]] === undefined) process.env[m[1]] = m[2].replace(/^(["'])(.*)\1$/, "$2");
+    if (!m || line.trim().startsWith("#")) continue;
+    if (process.env[m[1]] !== undefined && !dotEnvKeys.has(m[1])) continue; // real environment wins
+    process.env[m[1]] = m[2].replace(/^(["'])(.*)\1$/, "$2");
+    dotEnvKeys.add(m[1]); seen.add(m[1]);
   }
-})();
+  for (const k of [...dotEnvKeys]) if (!seen.has(k)) { delete process.env[k]; dotEnvKeys.delete(k); } // line removed from .env
+}
+loadDotEnv();
 
 function morningHourFromEnv() { // an invalid hour makes every date comparison NaN, which silently stops all refreshes
   const raw = process.env.REFRESH_MORNING_HOUR, h = Number(raw || 5);
@@ -113,6 +122,7 @@ function runFetcher(src, args = []) {
 // opts.only (optional Set of source ids): run just those sources; the rest keep their last data and run state.
 async function runRefresh(reason, opts = {}) {
   if (refresh.running) return false;
+  loadDotEnv(); // pick up any .env edits (API keys etc.) made since the last refresh
   refresh.running = true; refresh.startedAt = new Date().toISOString();
   refresh.reason = reason; refresh.only = opts.only ? [...opts.only] : null; refresh.states = opts.states || null; gaveUp = null;
   rotateLog();
