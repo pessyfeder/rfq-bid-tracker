@@ -459,7 +459,7 @@
   rows.forEach(function (r) { stCount[r.st] = (stCount[r.st] || 0) + 1; });
   function stName(code) {
     var issue = (window.STATE_ISSUES || {})[code] || (code === "TX" && (window.STATE_ISSUES || {}).TXDOT);
-    var nm = code === "US" ? "Federal (US)" : code === "NYC" ? "New York City" : (STATE_NAMES[code] || code) + " (" + code + ")";
+    var nm = code === "US" ? "Federal (US)" : code === "NYC" ? "New York City (NYC only, not in NY)" : code === "NY" ? "New York State (NY, excludes NYC)" : (STATE_NAMES[code] || code) + " (" + code + ")";
     return (issue ? "⚠ " : "") + nm + (issue === "failed" ? " - fetch failed" : issue ? " - partial" : "");
   }
 
