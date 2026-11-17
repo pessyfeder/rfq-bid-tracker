@@ -467,9 +467,17 @@
     "811310": "Commercial and Industrial Machinery Repair and Maintenance", "811490": "Other Personal and Household Goods Repair and Maintenance", "812320": "Drycleaning and Laundry Services",
     "812910": "Pet Care Services", "813910": "Business Associations", "921190": "Other General Government Support", "928110": "National Security" };
   // "NAICS 541990" -> "NAICS 541990 - All Other Professional, Scientific and Technical Services" (sector name when the exact code isn't listed)
+  // Some portals publish categories in capitals ("CONSTRUCTION"): sentence-case those so they merge with the same
+  // category from other states, keeping known acronyms ("INFORMATION TECHNOLOGY (IT)" -> "Information technology (IT)").
+  var CAT_ACRONYMS = { IT: 1, RFP: 1, RFQ: 1, RFI: 1, IFB: 1, SFS: 1, HVAC: 1, IDIQ: 1, NAICS: 1, UNSPSC: 1 };
+  function tidyCat(c) {
+    if (!/[A-Z]/.test(c) || /[a-z]/.test(c)) return c;
+    var s = c.toLowerCase().replace(/[a-z]+/g, function (w) { return CAT_ACRONYMS[w.toUpperCase()] ? w.toUpperCase() : w; });
+    return s.replace(/[a-zA-Z]/, function (ch) { return ch.toUpperCase(); }).replace(/\bnon-IT\b/i, "non-IT");
+  }
   function catLabel(r) {
     var c = r.category || "", m = /^NAICS (\d{6})$/.exec(c);
-    if (!m) return c;
+    if (!m) return tidyCat(c);
     var t = NAICS_TITLE[m[1]] || NAICS_SECTOR[m[1].slice(0, 2)];
     return t ? c + " \u2013 " + t : c;
   }
@@ -587,9 +595,10 @@
       x.btn.classList.toggle("on", on || !!(sub && isActive(sub)));
       x.btn.innerHTML = esc(f.label) + (nb ? " (" + nb + " hidden)" : "") + ' <span class="caret">&#9662;</span>';
       if (f.type === "list") {
-        var all = x.panel.querySelector("[data-all]"), tot = listValues(f).length;
+        // Only this panel's own controls: a nested sub-panel (State inside Municipality) has its own [data-all]/[data-v].
+        var all = x.panel.querySelector(":scope > .frow.all [data-all]"), tot = listValues(f).length;
         all.checked = n === 0; all.indeterminate = n > 0 && n < tot;
-        Array.prototype.forEach.call(x.panel.querySelectorAll("[data-v]"), function (cb) { cb.checked = !H[f.key][cb.dataset.v]; });
+        Array.prototype.forEach.call(x.panel.querySelectorAll(":scope > .flist [data-v]"), function (cb) { cb.checked = !H[f.key][cb.dataset.v]; });
         var nm = f.name || function (v) { return v; };
         if (n && n <= 3) Object.keys(H[f.key]).forEach(function (v) { chips.push('<button type="button" class="fchip" data-unhide="' + f.key + '" data-v="' + esc(v) + '">Hide ' + esc(nm(v)) + " &#10005;</button>"); });
         else if (n) chips.push('<button type="button" class="fchip" data-reset="' + f.key + '">' + esc(f.label) + ": " + n + " hidden &#10005;</button>");
@@ -748,7 +757,15 @@
   // The control-section code ("SC 2027") and the repeated road are dropped. Returns null for any other title.
   function txTitle(title, scope) {
     var m = /^(.+?),\s*(.+?)[,.]\s*SC\b[^:]*:\s*.+?,\s*([A-Za-z. ]+ County)\s*$/.exec(String(title || "").trim());
-    if (!m) return null;
+    if (!m) {
+      // Intersection / "from ... to ..." style with no control-section code: "IH 45 at FM 664: IH 45, Ellis County"
+      var g = /^([^:]+?):\s*[^:,]+,\s*([A-Za-z. ]+ County)\s*$/.exec(String(title || "").trim());
+      if (!g || !/\b(FM|RM|SH|US|IH|SL|SS|BU|BS|BI|PR|CR|RE|FS|SP|LP)\s*\d/.test(g[1])) return null;
+      var w2 = /Type of work:\s*(.+?)\.\s/i.exec(decodeText(scope || "").replace(/\s+/g, " "));
+      var s2 = roadName(g[1]).replace(/\b(North|South|East|West|Northeast|Northwest|Southeast|Southwest)\s+of\b/g, function (x) { return x.toLowerCase(); });
+      if (w2) s2 = w2[1].charAt(0).toUpperCase() + w2[1].slice(1).toLowerCase() + " on " + s2;
+      return s2 + " (" + g[2] + ")";
+    }
     var lim = m[2].split(/\s+-\s+|(?<=\d)-(?=[A-Z])/);
     var w = /Type of work:\s*(.+?)\.\s/i.exec(decodeText(scope || "").replace(/\s+/g, " "));
     var road = roadName(m[1]);
