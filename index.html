@@ -149,6 +149,12 @@
   .failbar b { font-size: 15px; }
   .failbar ul { margin: 6px 0 0; padding-left: 20px; color: var(--ink); }
   .failbar li { margin-bottom: 2px; }
+  .failbar.ok { background: #e9f6ec; color: #1e6b34; border-color: #1e6b34; }
+  .failbar .statelive { margin-bottom: 8px; padding: 6px 10px; border-radius: 6px; background: #e8f0fb; color: var(--accent); border: 1px solid #c5d6ee; }
+  .failbar .stateok { margin-top: 10px; color: #1e6b34; }
+  .failbar .stateok summary { cursor: pointer; font-weight: 600; }
+  .failbar .stateok ul { color: var(--ink); }
+  .failbar .stateprob summary { cursor: pointer; font-weight: 700; }
   @media (max-width: 900px) { .failbar { margin: 0 12px 12px; } }
   /* Narrow screens: each request becomes a card with its cells stacked vertically, labelled. */
   @media (max-width: 900px) {
@@ -268,15 +274,34 @@
     });
   }
   window.STATE_ISSUES = issues;
-  if (!items.length) return;
-  var title = document.createElement("b");
-  title.textContent = failed ? "⚠ Data problem: " + failed + " state source" + (failed === 1 ? "" : "s") + " failed to update" : "⚠ Some state data is incomplete";
-  var ul = document.createElement("ul");
-  items.forEach(function (t) { var li = document.createElement("li"); li.textContent = t; ul.appendChild(li); });
-  box.appendChild(title); box.appendChild(ul);
-  box.classList.toggle("warn", !failed);
-  box.hidden = false;
-  document.title = "⚠ " + document.title;
+  // States that fetched fine (shown in green under the problems), plus a live "running now" line the refresh poller fills in.
+  var okItems = [];
+  Object.keys(st || {}).sort().forEach(function (code) {
+    var r = st[code] || {};
+    if (r.ok !== false) okItems.push((NAMES[code] || code) + " (" + code + ")" + (r.count != null ? ": " + r.count + " notices" : "") + (r.fetchedAt ? ", updated " + when(r.fetchedAt) : ""));
+  });
+  var live = document.createElement("div"); live.id = "stateLive"; live.className = "statelive"; live.hidden = true;
+  window.STATE_BANNER = { box: box, live: live, NAMES: NAMES };
+  if (items.length) {
+    var title = document.createElement("summary");
+    title.textContent = failed ? "⚠ Data problem: " + failed + " state source" + (failed === 1 ? "" : "s") + " failed to update" : "⚠ Some state data is incomplete";
+    var ul = document.createElement("ul");
+    items.forEach(function (t) { var li = document.createElement("li"); li.textContent = t; ul.appendChild(li); });
+    var pd = document.createElement("details"); pd.className = "stateprob";
+    pd.appendChild(title); pd.appendChild(ul); box.appendChild(pd);
+    box.classList.toggle("warn", !failed);
+    document.title = "⚠ " + document.title;
+  }
+  box.insertBefore(live, box.firstChild);
+  if (okItems.length) {
+    var det = document.createElement("details"); det.className = "stateok";
+    var sum = document.createElement("summary"); sum.textContent = "✓ " + okItems.length + " state source" + (okItems.length === 1 ? "" : "s") + " updated successfully";
+    var ok = document.createElement("ul");
+    okItems.forEach(function (t) { var li = document.createElement("li"); li.textContent = t; ok.appendChild(li); });
+    det.appendChild(sum); det.appendChild(ok); box.appendChild(det);
+  }
+  box.hidden = !(items.length || okItems.length);
+  if (!items.length) box.classList.add("ok");
 })();
 </script>
 <script>
@@ -1441,6 +1466,18 @@
       misses = 0; lastAsOf = st.dataAsOf || lastAsOf;
       btn.disabled = modeSel.disabled = portalSel.disabled = !!st.refreshing; btn.textContent = st.refreshing ? "Refreshing…" : "Refresh";
       if (!retried && !st.refreshing) retryFailed(st);
+      // Live status inside the state banner: what is running now, what finished OK and what failed so far in this run.
+      var sb = window.STATE_BANNER;
+      if (sb) {
+        var pgl = st.refreshing ? st.refreshProgress : null;
+        if (pgl) {
+          var n2 = function (k) { return (STATE_NAMES[k] || k) + " (" + k + ")"; };
+          var txt = "Running now: " + (pgl.total && pgl.current ? n2(pgl.current) + " — " + pgl.done + " of " + pgl.total + " states started" : pgl.label) + " (step " + pgl.step + " of " + pgl.steps + ").";
+          if (pgl.updated && pgl.updated.length) txt += " Updated so far: " + pgl.updated.map(n2).join(", ") + ".";
+          if (pgl.failedNow && pgl.failedNow.length) txt += " Failed so far: " + pgl.failedNow.map(n2).join(", ") + ".";
+          sb.live.textContent = txt; sb.live.hidden = false; sb.box.hidden = false;
+        } else sb.live.hidden = true;
+      }
       if (st.refreshing) {
         was = true;
         var since = st.refreshStartedAt ? " (started " + hhmm(st.refreshStartedAt) + ")" : "";
