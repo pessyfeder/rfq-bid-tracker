@@ -743,8 +743,23 @@
     var main = parts[parts.length - 1];
     return '<div class="buyer" title="' + esc(full) + '">' + esc(main) + "</div>" + (top ? '<div class="agency">' + esc(top) + "</div>" : "");
   }
+  // TxDOT road-job titles: "FM 344, SH 155 - FM 346, SC 2027: FM 344, Smith County" ->
+  // "Seal coat on Farm to Market Road 344, from State Highway 155 to Farm to Market Road 346 (Smith County)".
+  // The control-section code ("SC 2027") and the repeated road are dropped. Returns null for any other title.
+  function txTitle(title, scope) {
+    var m = /^(.+?),\s*(.+?)[,.]\s*SC\b[^:]*:\s*.+?,\s*([A-Za-z. ]+ County)\s*$/.exec(String(title || "").trim());
+    if (!m) return null;
+    var lim = m[2].split(/\s+-\s+|(?<=\d)-(?=[A-Z])/);
+    var w = /Type of work:\s*(.+?)\.\s/i.exec(decodeText(scope || "").replace(/\s+/g, " "));
+    var road = roadName(m[1]);
+    var s = lim.length > 1 ? road + ", from " + roadName(lim[0]) + " to " + roadName(lim[1]) : road + ", " + roadName(lim[0]);
+    if (w) s = w[1].charAt(0).toUpperCase() + w[1].slice(1).toLowerCase() + " on " + s;
+    return s + " (" + m[3] + ")";
+  }
   function titleHtml(r, open) {
     var t = sentence(r.title) || "";
+    var tx = txTitle(t, r.scope);
+    if (tx) t = tx;
     // Say "meeting" in the title itself instead of using a separate chip.
     if (isPreSol(r) && !/meeting/i.test(t)) t = /conferences?/i.test(t) ? t.replace(/conference/i, "meeting").replace(/conferences/i, "meetings") : t + " (meeting)";
     // Headline = a plain-English line saying what is being requested (written by the AI step). The agency's own wording stays below it.
