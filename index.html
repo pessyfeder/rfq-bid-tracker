@@ -848,13 +848,16 @@
     eligList(r).forEach(function (d) { shown[d.label.toLowerCase()] = 1; });
     f.forEach(function (k) { shown[k.label.toLowerCase()] = 1; });
     var x = r.details || {};
+    // Each bid factor reads "Must provide <what>" (one chip, no separate header); noted requirements are full sentences and stay as written.
+    f = f.map(function (k) { return { label: "Must provide " + k.label.charAt(0).toLowerCase() + k.label.slice(1), sev: k.sev, why: k.why, kw: k.kw }; });
     f = f.concat((x.requirements || []).filter(function (q) {
       var k = String(q).toLowerCase();
       if (shown[k] || (x.restriction && q === x.restriction)) return false;
       return (shown[k] = 1);
     }).map(function (q) { return { label: String(q), sev: "info", why: "Requirement noted in the notice" }; }));
     if (!f.length) return "";
-    return '<div class="facts"><div class="facts-h">What you must provide' +(r.aiRead ? " &middot; AI read, please verify" : (f[0] && f[0].kw ? " &middot; keyword match on title/scope only" : "")) + "</div>" +
+    var note = r.aiRead ? "AI read, please verify" : (f[0] && f[0].kw ? "Keyword match on title/scope only" : "");
+    return '<div class="facts">' + (note ? '<div class="facts-h">' + note + "</div>" : "") +
       f.map(function (k) {
         return '<span class="fact ' + k.sev + '" title="' + esc(k.why) + '">' + (k.sev === "hard" ? "&#9873; " : "") + esc(k.label) + "</span>";
       }).join("") + "</div>";
