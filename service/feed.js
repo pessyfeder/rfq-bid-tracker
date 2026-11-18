@@ -147,7 +147,8 @@ function ingest(state, now = new Date()) {
       if (!raw || !raw.id) continue;
       const rec = normalize(raw, src);
       seen.add(rec.id);
-      const h = hashOf(rec);
+      const { hasRealDeadline: _t, ...hashable } = rec; // time-dependent: must not make an unchanged notice look changed
+    const h = hashOf(hashable);
       const old = Object.hasOwn(state.records, rec.id) ? state.records[rec.id] : undefined;
       if (!old) {
         state.records[rec.id] = { ...rec, firstSeen: nowIso, lastSeen: nowIso, updatedAt: nowIso, active: true, seq: ++state.seq, _h: h };
@@ -206,7 +207,7 @@ function query(state, params, opts = {}) {
   let list = Object.values(state.records).filter((r) => {
     if (!includeInactive && !r.active) return false;
     if (after !== null && r.seq <= after) return false;
-    if (level && r.level.toLowerCase() !== level.toLowerCase()) return false;
+    if (level && String(r.level || "").toLowerCase() !== level.toLowerCase()) return false;
     if (source && r.source !== source) return false;
     if (openOnly && r.active && (r.dueAt ? r.dueAt < nowIso : r.due < etToday())) return false;
     if (realOnly && !r.hasRealDeadline) return false;

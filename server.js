@@ -116,7 +116,7 @@ function runFetcher(src, args = []) {
     };
     child.stdout.on("data", keep); child.stderr.on("data", keep);
     const timer = setTimeout(() => { out += "\n[killed: timeout]"; killTree(child); }, CFG.fetchTimeoutMin * 60000);
-    child.on("error", (e) => { clearTimeout(timer); resolve({ ok: false, error: e.message }); });
+    child.on("error", (e) => { clearTimeout(timer); refresh.child = null; resolve({ ok: false, error: e.message }); });
     child.on("close", (code) => {
       clearTimeout(timer); refresh.child = null;
       resolve({ ok: code === 0, error: code === 0 ? null : (out.trim().split("\n").slice(-3).join(" | ") || "exit " + code), tail: out.trim() });

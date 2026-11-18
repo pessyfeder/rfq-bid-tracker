@@ -26,6 +26,7 @@ function learnAcronyms(titles) {
   }
 }
 function tidyTitle(t) {
+  if (t) t = String(t).replace(/[\x00-\x08\x0b-\x1f\x7f]/g, "-").replace(/\s+-\s+-\s+/g, " - "); // stray control chars (a mangled dash in the source)
   if (!t || /[a-z]/.test(t) || !/[A-Z]{2}/.test(t)) return t;
   return t.toLowerCase().replace(/[a-z][a-z'’]*/g, (w, i) => {
     const up = w.toUpperCase();

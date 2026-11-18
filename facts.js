@@ -13,7 +13,7 @@
     { label: "Bonding capacity minimum",   sev: "hard", gate: true, re: /bonding (capacity|capability)[^.]{0,40}(minimum|at least|\$)|\$[\d,.]+\s*(million)?[^.]{0,30}bonding (capacity|capability)/i },
     { label: "Performance / payment bond", sev: "cost", re: /(performance|payment|surety)\s+(bond|security)|\bsurety\b|bonding/i },
     { label: "Insurance minimums",         sev: "cost", re: /\binsurance\b|general liability|workers.? comp/i },
-    { label: "Prevailing / living wage",   sev: "cost", re: /prevailing wage|living wage|service contract (labor )?standards|\bSCA\b|davis[- ]bacon|wage determination|union|collective bargaining/i },
+    { label: "Prevailing / living wage",   sev: "cost", re: /prevailing wage|living wage|service contract (labor )?standards|\bSCA\b|davis[- ]bacon|wage determination|\bunions?\b(?!\s+(station|square|city|county|pacific|street|avenue))|collective bargaining/i },
     { label: "Mandatory site visit / pre-bid", sev: "cost", re: /(mandatory|required)[^.]{0,60}(pre-?bid|site (visit|walk)|walk-?through|conference)|pre-?bid[^.]{0,40}mandatory/i },
     { label: "24/7 or after-hours",        sev: "cost", re: /24\s*\/\s*7|24[- ]hour|after[- ]hours|overnight|night shift|on-?call|emergency response/i },
     { label: "Local / in-state preference", sev: "info", re: /\b(local|in-state|resident) (vendor|bidder|business|preference)\b/i },
@@ -25,7 +25,7 @@
   function excerpt(text, m) {
     text = String(text).replace(/\s+/g, " ").trim();
     var max = 120;
-    var at = Math.max(0, text.indexOf(m[0]));
+    var at = Math.max(0, text.indexOf(String(m[0]).replace(/\s+/g, " ").trim())); // m[0] is from the raw text: collapse it the same way
     // The sentence holding the match: from the previous ". " to the next one.
     var start = text.lastIndexOf(". ", at);
     start = start < 0 ? 0 : start + 2;
