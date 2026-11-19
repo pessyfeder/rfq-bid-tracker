@@ -34,6 +34,21 @@
       url: "", steps: ["Registration differs by state. Open a bid from that state and follow its own portal link."] }
   ];
 
+  // Bid value choices, shared with the main page's "Bid value" filter. [min, max] in dollars (null = open-ended).
+  var VALUE_OPTS = [["any", "Any value"], ["under50", "Under $50K"], ["mid", "$50K to $500K"], ["over500", "Over $500K"], ["over1m", "Over $1M"], ["over5m", "Over $5M"],
+    ["over10m", "Over $10M"], ["over50m", "Over $50M"], ["over100m", "Over $100M"], ["none", "No stated value"], ["custom", "Custom amount…"]];
+  var RANGES = { under50: [null, 49999.99], mid: [50000, 500000], over500: [500000.01, null], over1m: [1000000, null], over5m: [5000000, null], over10m: [10000000, null], over50m: [50000000, null], over100m: [100000000, null] };
+  function num(x) { x = parseFloat(String(x == null ? "" : x).replace(/[$,\s]/g, "")); return isFinite(x) && x >= 0 ? x : null; }
+  // Does a bid with value v (number or null) pass the filter f = { value, vmin, vmax }?
+  function valueOk(f, v) {
+    var k = f && f.value || "any";
+    if (k === "any") return true;
+    if (k === "none") return v == null;
+    var lo, hi;
+    if (k === "custom") { lo = num(f.vmin); hi = num(f.vmax); if (lo == null && hi == null) return true; }
+    else { var r = RANGES[k]; if (!r) return true; lo = r[0]; hi = r[1]; }
+    return v != null && (lo == null || v >= lo) && (hi == null || v <= hi);
+  }
   function load() { try { var p = JSON.parse(localStorage.getItem(KEY)); return p && typeof p === "object" ? p : null; } catch (e) { return null; } }
   function save(p) { try { localStorage.setItem(KEY, JSON.stringify(p)); } catch (e) {} }
 
@@ -106,7 +121,7 @@
     ".wz .wz-note{color:#64748b;font-size:13px}.wz .wz-sum{list-style:none;padding:0}.wz .wz-sum li{margin:8px 0;padding:10px 14px;border-radius:6px;background:#f7f9fb;border:1px solid #e5e9f0}" +
     ".wz a{color:#1e3a5f;font-weight:600}" +
     ".wz-dd{position:relative;margin-top:14px}.wz-dd-btn{display:flex!important;justify-content:space-between;width:100%;text-align:left}" +
-    ".wz-dd:has(.wz-dd-list){margin-bottom:320px}" +
+    ".wz-dd:has(.wz-dd-list){margin-bottom:320px}.wz-cust{display:flex;gap:12px;margin-top:10px}.wz-cust[hidden]{display:none}.wz-cust label{flex:1;font-size:13px;color:#64748b}.wz-cust input{width:100%;font:inherit;padding:8px 10px;border:1px solid #b8c2cf;border-radius:6px;margin-top:3px;color:#1f2937}.wz-sel{width:100%;font:inherit;padding:9px 11px;border:1px solid #b8c2cf;border-radius:6px;background:#fff;color:#1f2937}" +
     ".wz-dd-list{position:absolute;left:0;right:0;top:100%;margin-top:4px;background:#fff;border:1px solid #b8c2cf;border-radius:6px;padding:6px 10px;max-height:300px;overflow:auto;box-shadow:0 4px 12px rgba(15,23,42,.15);z-index:5}" +
     ".wz-gh{display:flex;align-items:center;gap:8px;margin:2px 0;padding:5px 2px;border-bottom:1px solid #eef1f5}.wz-gt{flex:1;cursor:pointer;font-weight:600;font-size:14px;color:#1f2937}.wz-gt em{font-style:normal;font-weight:400;font-size:12px;color:#64748b;margin-left:6px}.wz-arr{display:inline-block;width:14px;color:#64748b}.wz-kids{padding:2px 0 6px 24px}" +
     ".wz-grp{position:sticky;top:-6px;background:#fff;margin:8px 0 2px;padding:4px 2px;font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#64748b}" +
@@ -121,7 +136,7 @@
   function open() {
     var cur = load() || {};
     var d = { cats: (cur.cats || CATS.map(function (c) { return c.id; })).slice(), extra: cur.extra || "",
-      src: (cur.src || SOURCES.map(function (s) { return s.id; })).slice(), reg: Object.assign({}, cur.reg || {}) };
+      src: (cur.src || SOURCES.map(function (s) { return s.id; })).slice(), reg: Object.assign({}, cur.reg || {}), value: cur.value || "any", vmin: cur.vmin || "", vmax: cur.vmax || "" };
     close();
     back = document.createElement("div"); back.className = "wz-back";
     document.body.insertBefore(back, document.body.firstChild); document.body.classList.add("wz-open"); window.scrollTo(0, 0);
@@ -183,13 +198,28 @@
               return "<label class='wz-row'><input type='checkbox' data-jur='" + h(o.v) + "'" + (d.where.indexOf(o.v) >= 0 ? " checked" : "") + "> <span>" + h(o.label) + " <em class='wz-note'>(" + o.n + ")</em></span></label>";
             }).join("");
           }).join("") + "</div>" : "") + "</div>" +
-        "<div class='wz-btns'><button data-a='back'>&larr; Back</button><button class='pri' data-a='finish'" + (d.where.length ? "" : " disabled") + ">Done</button></div></div>";
+        "<div class='wz-btns'><button data-a='back'>&larr; Back</button><button class='pri' data-a='next3'" + (d.where.length ? "" : " disabled") + ">Next &rarr;</button></div></div>";
+    }
+    // Step 3: which bid value. Stored as the same keys the main page's "Bid value" filter uses ("any" = no restriction).
+    var openV = false;
+    function vLabel() { var o = VALUE_OPTS.filter(function (x) { return x[0] === d.value; })[0]; return o ? o[1] : "Any value"; }
+    function drawV() {
+      back.innerHTML = "<div class='wz' role='dialog' aria-modal='true' aria-label='Setup'><p class='wz-step'>Step 3</p><h2>Which value would you like to see?</h2>" +
+        "<p class='wz-note'>Many bids do not state a value; choosing a range hides those. Change it any time.</p>" +
+        "<div class='wz-dd'><button type='button' class='wz-dd-btn' data-a='vtoggle' aria-expanded='" + openV + "'><span>" + h(vLabel()) + "</span><span>&#9662;</span></button>" +
+        (openV ? "<div class='wz-dd-list'>" + VALUE_OPTS.map(function (o) {
+          return "<label class='wz-row'><input type='radio' name='wz-value' data-vpick='" + h(o[0]) + "'" + (d.value === o[0] ? " checked" : "") + "> <span>" + h(o[1]) + "</span></label>";
+        }).join("") + "</div>" : "") + "</div>" +
+        "<div class='wz-cust' data-cust" + (d.value === "custom" ? "" : " hidden") + "><label>From $ <input type='text' inputmode='numeric' data-vmin placeholder='no minimum' value='" + h(d.vmin) + "'></label>" +
+        "<label>To $ <input type='text' inputmode='numeric' data-vmax placeholder='no maximum' value='" + h(d.vmax) + "'></label></div>" +
+        "<div class='wz-btns'><button data-a='back3'>&larr; Back</button><button class='pri' data-a='finish'>Done</button></div></div>";
     }
     function collectJ() {
       var boxes = back.querySelectorAll("[data-jur]");
       if (boxes.length) { d.where = []; Array.prototype.forEach.call(boxes, function (el) { if (el.checked) d.where.push(el.dataset.jur); }); }
     }
     function draw() {
+      if (step === 3) return drawV();
       if (step === 2) return drawJ();
       if (!openDd) loadAll(); // pick up bid categories that arrived after the page loaded (live data)
       back.innerHTML = "<div class='wz' role='dialog' aria-modal='true' aria-label='Setup'><p class='wz-step'>Step 1</p><h2>Which request categories would you like to see?</h2>" +
@@ -209,8 +239,10 @@
         Array.prototype.forEach.call(back.querySelectorAll("[data-kids='" + t.dataset.grp + "'] [data-cat]"), function (el) { el.checked = t.checked; });
         collect(); sync();
       } else if (t.dataset.cat) { collect(); sync(); }
+      else if (t.dataset.vpick != null) { d.value = t.dataset.vpick; openV = false; drawV(); }
       else if (t.dataset.jur) { collectJ(); var f = back.querySelector("[data-a=finish]"); if (f) f.disabled = !d.where.length; var jl = back.querySelector(".wz-dd-btn span"); if (jl) jl.textContent = jLabel(); }
     });
+    back.addEventListener("input", function (e) { var t = e.target; if (t.dataset.vmin != null) d.vmin = t.value; else if (t.dataset.vmax != null) d.vmax = t.value; });
     back.addEventListener("click", function (e) {
       var g = e.target.closest("[data-g]"); if (!g) return;
       var gr = groups()[+g.dataset.g], kids = back.querySelector("[data-kids='" + g.dataset.g + "']");
@@ -220,14 +252,17 @@
     back.addEventListener("click", function (e) {
       var a = e.target.closest("[data-a]"); if (!a) return;
       var act = a.dataset.a;
-      if (step === 2) collectJ(); else collect();
+      if (step === 2) collectJ(); else if (step === 1) collect();
       if (act === "toggle") openDd = !openDd;
       else if (act === "all") d.cats = ALL.map(function (c) { return c.v; });
       else if (act === "none") d.cats = [];
       else if (act === "jtoggle") openJ = !openJ;
+      else if (act === "vtoggle") openV = !openV;
       else if (act === "jall") d.where = J.map(function (o) { return o.v; });
       else if (act === "jnone") d.where = [];
       else if (act === "back") { step = 1; openJ = false; }
+      else if (act === "back3") { step = 2; openJ = false; }
+      else if (act === "next3") { if (!d.where.length) return; step = 3; openV = false; }
       else if (act === "done") {
         if (!d.cats.length) return;
         step = 2; openJ = false;
@@ -235,7 +270,7 @@
       else if (act === "finish") {
         if (!d.where.length) return;
         var every = J.length && J.every(function (o) { return d.where.indexOf(o.v) >= 0; });
-        save({ cats: d.cats, where: every ? [] : d.where, extra: d.extra.trim(), src: d.src, reg: d.reg, saved: new Date().toISOString() });
+        save({ cats: d.cats, where: every ? [] : d.where, value: d.value, vmin: d.vmin, vmax: d.vmax, extra: d.extra.trim(), src: d.src, reg: d.reg, saved: new Date().toISOString() });
         try { localStorage.removeItem(SKIP); } catch (x) {}
         close(); window.dispatchEvent(new Event("rfqprofilechange")); return;
       }
@@ -257,7 +292,7 @@
     p.reg = p.reg || {}; if (yes) p.reg[id] = "yes"; else delete p.reg[id];
     save(p);
   }
-  window.RFQProfile = { get: load, match: match, categories: categories, catHits: catHits, open: open, sourceFor: sourceFor, regInfo: regInfo, setReg: setReg };
+  window.RFQProfile = { get: load, match: match, categories: categories, catHits: catHits, open: open, sourceFor: sourceFor, regInfo: regInfo, setReg: setReg, valueOpts: VALUE_OPTS, valueOk: valueOk };
   // First visit: offer the setup once. (Skipping is remembered; the toolbar button reopens it.)
   // Opened immediately (not on window "load") so the main page never paints before the wizard hides it.
   // The bid-category list comes from home.js, which loads after this file, so wait until every script has run.

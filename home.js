@@ -6,7 +6,7 @@
   var $app = document.getElementById("app");
   if (!$app) return;
   var DAY = 86400000, PAGE = 25;
-  var st = { kw: "", cats: [], where: [], close: "any", posted: "any", value: "any", aside: "any", reg: "any", sort: "new", shown: PAGE, dd: null, more: false, regOpen: {}, openG: { "My products": true } };
+  var st = { kw: "", cats: [], where: [], close: "any", posted: "any", value: "any", vmin: "", vmax: "", aside: "any", reg: "any", sort: "new", shown: PAGE, dd: null, more: false, regOpen: {}, openG: { "My products": true } };
 
   var css = document.createElement("style");
   css.textContent =
@@ -75,6 +75,7 @@
     ".hm-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));width:100%;gap:6px;flex-wrap:nowrap}.hm-field{width:auto;min-width:0}" +
     ".hm-field select,.hm-dd-btn,.hm-field:not(:has(.on)) select,.hm-field:not(:has(.on)) .hm-dd-btn{height:30px;font-size:11.5px;padding:0 22px 0 8px;background-size:10px 10px;background-position:right 6px center;text-overflow:ellipsis;overflow:hidden}.hm-field .hm-dd-btn span,.hm-field:not(:has(.on)) .hm-dd-btn span{line-height:28px;overflow:hidden;text-overflow:ellipsis}.hm-dd-btn:after{right:9px;width:4px;height:4px}" +
     /* a set filter only gets a dark blue outline: the label text stays exactly as it was (the select's own text is hidden, a fixed label is drawn over it) */
+    ".hm-cust{display:inline-flex;gap:6px}.hm-cust input{height:30px;width:92px;font-size:11.5px;padding:0 8px;border:1px solid #c5cdd8;border-radius:6px;box-shadow:inset 0 0 0 1px #0e5a73}" +
     ".hm-face{position:absolute;left:8px;right:22px;top:0;bottom:0;display:flex;align-items:center;pointer-events:none;font-size:11.5px;font-weight:500;color:#4a5562;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}" +
     ".hm-field select[data-sel]{color:transparent}.hm-field select[data-sel] option{color:#1f3347}" +
     ".hm-dd-btn.on,.hm-field select.on{color:#4a5562;box-shadow:inset 0 0 0 1px #0e5a73}.hm-dd-btn.on span{color:#4a5562}" +
@@ -152,7 +153,7 @@
 
   var CLOSE_OPT = [["any", "Any"], ["7", "Closing in 7 days"], ["14", "Closing in 14 days"], ["30", "Closing in 30 days"], ["60", "Closing in 60 days"], ["none", "No firm deadline"]];
   var POSTED_OPT = [["any", "Any"], ["3", "Last 3 days"], ["7", "Last 7 days"], ["30", "Last 30 days"]];
-  var VALUE_OPT = [["any", "Any"], ["under50", "Under $50K"], ["mid", "$50K to $500K"], ["over500", "Over $500K"], ["stated", "Has a stated value"]];
+  var VALUE_OPT = window.RFQProfile ? window.RFQProfile.valueOpts.map(function (o) { return o[0] === "any" ? ["any", "Any"] : o; }) : [["any", "Any"]];
   var ASIDE_OPT = [["any", "Anyone"], ["open", "Open to all (no set-aside found)"], ["small", "Small business set-aside"], ["vet", "Veteran-owned (SDVOSB)"], ["women", "Women-owned (WOSB)"], ["other", "HUBZone, 8(a), minority-owned"]];
   var REG_OPT = [["any", "Any"], ["yes", "Only where I'm registered"]];
   var SORT_OPT = [["new", "Newest first"], ["soon", "Closing date (soonest first)"], ["value", "Value (biggest first)"]];
@@ -167,25 +168,26 @@
     if (st.close === "none") { if (r.days != null) return false; }
     else if (st.close !== "any" && (r.days == null || r.days > +st.close)) return false;
     if (st.posted !== "any" && (!r.posted || (today - new Date(r.posted.slice(0, 10) + "T00:00:00")) / DAY > +st.posted)) return false;
-    var v = r.value;
-    if (st.value === "stated" && v == null) return false;
-    if (st.value === "under50" && !(v != null && v < 50000)) return false;
-    if (st.value === "mid" && !(v != null && v >= 50000 && v <= 500000)) return false;
-    if (st.value === "over500" && !(v != null && v > 500000)) return false;
+    if (st.value !== "any" && window.RFQProfile && !window.RFQProfile.valueOk({ value: st.value, vmin: st.vmin, vmax: st.vmax }, r.value)) return false;
     if (st.aside === "open" ? r.aside.any : st.aside !== "any" && !r.aside[st.aside]) return false;
     if (st.reg === "yes") { var info = window.RFQProfile && window.RFQProfile.regInfo(window.RFQProfile.sourceFor(r.level, r.code)); if (!info || !info.registered) return false; }
     return true;
   }
   function ctxNow() { return { words: st.kw.toLowerCase().split(/\s+/).filter(Boolean), cats: selCats() }; }
 
-  function resetFilters(keepCats) { st.kw = ""; st.cats = []; st.where = []; st.close = "any"; st.posted = "any"; st.value = "any"; st.aside = "any"; st.reg = "any"; st.shown = PAGE; }
+  function resetFilters(keepCats) { st.kw = ""; st.cats = []; st.where = []; st.close = "any"; st.posted = "any"; st.value = "any"; st.vmin = ""; st.vmax = ""; st.aside = "any"; st.reg = "any"; st.shown = PAGE; }
   function lab(key, v) { return OPTS[key].filter(function (o) { return o[0] === v; })[0][1]; }
+  function money(x) { x = +x; return x >= 1e6 ? "$" + +(x / 1e6).toFixed(2) + "M" : x >= 1e3 ? "$" + +(x / 1e3).toFixed(1) + "K" : "$" + x; }
+  function customLabel() {
+    var lo = parseFloat(String(st.vmin).replace(/[$,\s]/g, "")), hi = parseFloat(String(st.vmax).replace(/[$,\s]/g, ""));
+    return isFinite(lo) && isFinite(hi) ? money(lo) + " to " + money(hi) : isFinite(lo) ? "Over " + money(lo) : isFinite(hi) ? "Under " + money(hi) : "Custom amount";
+  }
   function chipList() { // every active filter, shown as a removable chip under the filter row
     var out = [], cats = selCats(), cl = catOpts();
     if (st.kw.trim()) out.push(["kw", "“" + st.kw.trim() + "”"]);
     if (cats.length) out.push(["cats", "Category: " + (cats.length === 1 ? (cl.filter(function (c) { return c.v === cats[0]; })[0] || {}).label : st.cats === null ? "my products (" + cats.length + ")" : cats.length + " selected")]);
     if (st.where.length) out.push(["where", st.where.length === 1 ? stateName(st.where[0]) : st.where.length + " jurisdictions"]);
-    ["close", "posted", "value", "aside", "reg"].forEach(function (k) { if (st[k] !== "any") out.push([k, (k === "close" ? "" : SELECTS[k] + ": ") + lab(k, st[k])]); });
+    ["close", "posted", "value", "aside", "reg"].forEach(function (k) { if (st[k] !== "any") out.push([k, (k === "close" ? "" : SELECTS[k] + ": ") + (k === "value" && st.value === "custom" ? customLabel() : lab(k, st[k]))]); });
     return out;
   }
 
@@ -209,8 +211,9 @@
   var ICON_CLOCK = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
 
   function selectHtml(key) {
+    var cust = key === "value" && st.value === "custom" ? '<span class="hm-cust"><input type="text" inputmode="numeric" data-vc="vmin" placeholder="Min $" aria-label="Minimum value" value="' + esc(st.vmin) + '"><input type="text" inputmode="numeric" data-vc="vmax" placeholder="Max $" aria-label="Maximum value" value="' + esc(st.vmax) + '"></span>' : "";
     return '<div class="hm-field"><span class="hm-lb">' + SELECTS[key] + '</span><span class="hm-face">' + SELECTS[key] + '</span><select data-sel="' + key + '" aria-label="' + SELECTS[key] + '" class="' + (st[key] !== "any" ? "on" : "") + '">' +
-      OPTS[key].map(function (o) { return '<option value="' + o[0] + '"' + (st[key] === o[0] ? " selected" : "") + ">" + esc(o[0] === "any" ? SELECTS[key] : o[1]) + "</option>"; }).join("") + "</select></div>";
+      OPTS[key].map(function (o) { return '<option value="' + o[0] + '"' + (st[key] === o[0] ? " selected" : "") + ">" + esc(o[0] === "any" ? SELECTS[key] : o[1]) + "</option>"; }).join("") + "</select></div>" + cust;
   }
   function ddText(label, opts, sel) {
     return label; // the label never changes; a set filter is shown by the outline (and the chip below) only
@@ -409,6 +412,7 @@
       Array.prototype.forEach.call(t.parentNode.nextElementSibling.querySelectorAll("input[data-ms]"), function (i) { i.checked = t.checked; });
       t = t.parentNode.nextElementSibling.querySelector("input[data-ms]"); if (!t) return;
     }
+    if (t.dataset.sel === "value" && (t.value === "custom" || st.value === "custom")) { st.value = t.value; st.shown = PAGE; return refreshAll(); }
     if (t.dataset.sel) { st[t.dataset.sel] = t.value; st.shown = PAGE; t.classList.toggle("on", t.value !== "any" && t.dataset.sel !== "sort"); return results(); }
     if (t.dataset.ms) {
       var key = t.dataset.ms, ids = Array.prototype.slice.call($app.querySelectorAll('input[data-ms="' + key + '"]')).filter(function (i) { return i.checked; }).map(function (i) { return i.value; });
@@ -420,11 +424,13 @@
     }
   });
   var kwTimer = null;
-  $app.addEventListener("input", function (e) { if (e.target.dataset.kw != null) { st.kw = e.target.value; st.shown = PAGE; clearTimeout(kwTimer); kwTimer = setTimeout(results, 150); } });
+  $app.addEventListener("input", function (e) { if (e.target.dataset.vc) { st[e.target.dataset.vc] = e.target.value; st.shown = PAGE; clearTimeout(kwTimer); kwTimer = setTimeout(results, 250); return; } if (e.target.dataset.kw != null) { st.kw = e.target.value; st.shown = PAGE; clearTimeout(kwTimer); kwTimer = setTimeout(results, 150); } });
   $app.addEventListener("submit", function (e) { e.preventDefault(); st.dd = null; syncOpen(); results(); });
   function profWhere() { var p = P(); return p && p.where && p.where.length ? p.where.slice() : []; } // [] = every jurisdiction
-  st.where = profWhere();
-  window.addEventListener("rfqprofilechange", function () { st.where = profWhere(); render(); });
+  function profValue() { var p = P(); return p && p.value && VALUE_OPT.some(function (o) { return o[0] === p.value; }) ? p.value : "any"; }
+  function profRange() { var p = P() || {}; st.vmin = st.value === "custom" ? p.vmin || "" : ""; st.vmax = st.value === "custom" ? p.vmax || "" : ""; }
+  st.where = profWhere(); st.value = profValue(); profRange();
+  window.addEventListener("rfqprofilechange", function () { st.where = profWhere(); st.value = profValue(); profRange(); render(); });
   window.addEventListener("rfqwizardclose", render);
   render();
 })();
