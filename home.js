@@ -73,6 +73,12 @@
     ".hm-kw{flex:0 0 auto!important;align-self:flex-start;width:50%;min-width:0;height:30px;padding:0 9px;box-sizing:border-box}.hm-kw input{font-size:11.5px}.hm-kw svg{width:14px;height:14px}" +
     ".hm-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));width:100%;gap:6px;flex-wrap:nowrap}.hm-field{width:auto;min-width:0}" +
     ".hm-field select,.hm-dd-btn,.hm-field:not(:has(.on)) select,.hm-field:not(:has(.on)) .hm-dd-btn{height:30px;font-size:11.5px;padding:0 22px 0 8px;background-size:10px 10px;background-position:right 6px center;text-overflow:ellipsis;overflow:hidden}.hm-field .hm-dd-btn span,.hm-field:not(:has(.on)) .hm-dd-btn span{line-height:28px;overflow:hidden;text-overflow:ellipsis}.hm-dd-btn:after{right:9px;width:4px;height:4px}" +
+    /* a set filter only gets a dark blue outline: the label text stays exactly as it was (the select's own text is hidden, a fixed label is drawn over it) */
+    ".hm-face{position:absolute;left:8px;right:22px;top:0;bottom:0;display:flex;align-items:center;pointer-events:none;font-size:11.5px;font-weight:500;color:#4a5562;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}" +
+    ".hm-field select[data-sel]{color:transparent}.hm-field select[data-sel] option{color:#1f3347}" +
+    ".hm-dd-btn.on,.hm-field select.on{color:#4a5562;box-shadow:inset 0 0 0 1px #0e5a73}.hm-dd-btn.on span{color:#4a5562}" +
+    /* search box ends where the Location filter ends: 2 of the 6 equal filter columns */
+    "@media(min-width:1101px){.hm-fields{grid-template-columns:repeat(6,minmax(0,1fr))}.hm-kw{width:calc((100% - 30px) / 3 + 6px)}}" +
     "@media(max-width:1100px){.hm-bar{flex-wrap:wrap}.hm-kw{flex:1 1 100%!important}.hm-fields{flex:1 1 100%!important;flex-wrap:wrap}.hm-field{flex:1 1 calc(25% - 6px)!important;min-width:110px}.hm-field.rt .hm-dd-panel{left:auto;right:0}.hm-item{grid-template-columns:minmax(0,1fr)}.hm-map{display:none}.hm-dates{grid-column:1;min-width:0;grid-template-columns:auto auto;justify-content:start}}" +
     "@media(max-width:620px){.hm-in{padding:0 14px}.hm-title h1{font-size:22px}.hm-fields{gap:6px}.hm-field{flex-basis:calc(50% - 6px)}.hm-dd-panel{width:92vw}.hm-field:nth-child(odd) .hm-dd-panel{left:0;right:auto}.hm-field:nth-child(even) .hm-dd-panel{left:auto;right:0}.hm-resbar select{min-width:0;width:100%}.hm-item{grid-template-columns:1fr;padding:9px 14px}.hm-ic{display:none}.hm-reg,.hm-dates{grid-column:1}}";
   document.head.appendChild(css);
@@ -200,11 +206,11 @@
   var ICON_CLOCK = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
 
   function selectHtml(key) {
-    return '<div class="hm-field"><span class="hm-lb">' + SELECTS[key] + '</span><select data-sel="' + key + '" aria-label="' + SELECTS[key] + '" class="' + (st[key] !== "any" ? "on" : "") + '">' +
+    return '<div class="hm-field"><span class="hm-lb">' + SELECTS[key] + '</span><span class="hm-face">' + SELECTS[key] + '</span><select data-sel="' + key + '" aria-label="' + SELECTS[key] + '" class="' + (st[key] !== "any" ? "on" : "") + '">' +
       OPTS[key].map(function (o) { return '<option value="' + o[0] + '"' + (st[key] === o[0] ? " selected" : "") + ">" + esc(o[0] === "any" ? SELECTS[key] : o[1]) + "</option>"; }).join("") + "</select></div>";
   }
   function ddText(label, opts, sel) {
-    return !sel.length ? label : sel.length === 1 ? (opts.filter(function (o) { return o.v === sel[0]; })[0] || { label: "1" }).label : "";
+    return label; // the label never changes; a set filter is shown by the outline (and the chip below) only
   }
   // Multi-select dropdown. Nothing ticked = no filter (any).
   function ddHtml(key, label, opts, sel, topLinks, cls) {
@@ -345,7 +351,7 @@
     }
     var b = e.target.closest("button"); if (!b) return;
     var d = b.dataset;
-    if (d.a === "profile") return window.RFQProfile.open();
+    if (d.a === "profile") { window.location.href = "/profile.html"; return; }
     if (d.a === "refresh") { var rb = document.getElementById("refreshBtn"); if (rb) rb.click(); b.textContent = "Refreshing…"; return; }
     if (d.a === "clear") { resetFilters(false); clearKw(); return refreshAll(); }
     if (d.a === "more-filters") { st.more = !(st.more || MORE_KEYS.some(function (k) { return st[k] !== "any"; })); if (!st.more) { MORE_KEYS.forEach(function (k) { st[k] = "any"; }); } return refreshAll(); }
