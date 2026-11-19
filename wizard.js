@@ -66,22 +66,30 @@
   // ---------- UI ----------
   var css = document.createElement("style");
   css.textContent =
-    ".wz-back{position:fixed;inset:0;background:rgba(20,28,40,.5);z-index:100;display:flex;align-items:center;justify-content:center;padding:12px}" +
-    ".wz{background:#fff;color:#1c2430;border-radius:10px;max-width:560px;width:100%;max-height:92vh;overflow:auto;padding:20px 22px;box-shadow:0 10px 40px rgba(0,0,0,.3)}" +
-    ".wz h2{margin:0 0 4px;font-size:18px}.wz .wz-step{color:#6b7686;font-size:12px;margin-bottom:12px}" +
-    ".wz p{margin:6px 0}.wz label.wz-row{display:flex;gap:8px;align-items:flex-start;padding:4px 0;cursor:pointer}" +
-    ".wz textarea,.wz input[type=text]{width:100%;font:inherit;padding:6px 8px;border:1px solid #e3e7ed;border-radius:6px}" +
-    ".wz .wz-btns{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap}" +
-    ".wz button{font:inherit;padding:6px 14px;border-radius:6px;border:1px solid #1f4e8c;background:#fff;color:#1f4e8c;cursor:pointer}" +
-    ".wz button.pri{background:#1f4e8c;color:#fff}.wz button.link{border:0;background:none;text-decoration:underline;padding:6px 4px}" +
-    ".wz .wz-src{border:1px solid #e3e7ed;border-radius:8px;padding:10px 12px;margin:10px 0}.wz .wz-src b{display:block;margin-bottom:4px}" +
-    ".wz .wz-src ol{margin:6px 0 0;padding-left:20px;color:#444;font-size:13px}.wz .wz-seg label{margin-right:14px;cursor:pointer}" +
-    ".wz .wz-note{color:#6b7686;font-size:12px}.wz .wz-sum li{margin:3px 0}" +
+    "body.wz-open #app{display:none}" +
+    ".wz-back{min-height:100vh;background:#f1f4f8;display:flex;align-items:center;justify-content:center;padding:20px;font:15px/1.5 system-ui,-apple-system,'Segoe UI',sans-serif}" +
+    ".wz{background:#fff;color:#1f2937;border:1px solid #d9dfe7;border-radius:8px;max-width:660px;width:100%;padding:28px 32px;box-shadow:0 1px 3px rgba(15,23,42,.08)}" +
+    ".wz-step{color:#64748b;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px}" +
+    ".wz-bar{height:3px;background:#e5e9f0;margin-bottom:20px;overflow:hidden}.wz-bar i{display:block;height:100%;background:#1e3a5f;transition:width .25s}" +
+    ".wz h2{margin:0 0 10px;font-size:22px;font-weight:600;color:#0f2742}" +
+    ".wz p{margin:8px 0}.wz label.wz-row{display:flex;gap:12px;align-items:center;padding:9px 12px;margin:6px 0;border:1px solid #d9dfe7;border-radius:6px;cursor:pointer}" +
+    ".wz label.wz-row:hover{background:#f7f9fb}.wz label.wz-row:has(input:checked){border-color:#1e3a5f;background:#f0f4f9}" +
+    ".wz input[type=checkbox],.wz input[type=radio]{width:16px;height:16px;accent-color:#1e3a5f;flex:none}" +
+    ".wz textarea{width:100%;font:inherit;padding:9px 11px;border:1px solid #c5cdd8;border-radius:6px}.wz textarea:focus{outline:2px solid #1e3a5f33;border-color:#1e3a5f}" +
+    ".wz .wz-btns{display:flex;gap:10px;justify-content:flex-end;margin-top:26px;padding-top:18px;border-top:1px solid #e5e9f0;flex-wrap:wrap;align-items:center}" +
+    ".wz button{font:inherit;font-weight:500;padding:8px 18px;border-radius:6px;border:1px solid #b8c2cf;background:#fff;color:#1f2937;cursor:pointer}.wz button:hover:not(:disabled){background:#f1f4f8}" +
+    ".wz button:disabled{opacity:.4;cursor:default}" +
+    ".wz button.pri{background:#1e3a5f;border-color:#1e3a5f;color:#fff}.wz button.pri:hover{background:#16304f}" +
+    ".wz button.link{border:0;background:none!important;font-weight:400;color:#64748b;text-decoration:underline;margin-right:auto;padding:8px 0}" +
+    ".wz .wz-src{border-radius:6px;padding:12px 16px;margin:12px 0;background:#f7f9fb;border:1px solid #d9dfe7;border-left:3px solid #b45309}.wz .wz-src b{display:block;margin-bottom:4px}" +
+    ".wz .wz-src ol{margin:6px 0 0;padding-left:22px;color:#374151;font-size:14px}.wz .wz-seg{display:flex;gap:8px;flex-wrap:wrap}.wz .wz-seg label{flex:1;min-width:140px;display:flex;gap:8px;align-items:center;padding:9px 12px;border:1px solid #d9dfe7;border-radius:6px;cursor:pointer}.wz .wz-seg label:has(input:checked){border-color:#1e3a5f;background:#f0f4f9}" +
+    ".wz .wz-note{color:#64748b;font-size:13px}.wz .wz-sum{list-style:none;padding:0}.wz .wz-sum li{margin:8px 0;padding:10px 14px;border-radius:6px;background:#f7f9fb;border:1px solid #e5e9f0}" +
+    ".wz a{color:#1e3a5f;font-weight:600}" +
     ".match-chip{display:inline-block;background:#e3f4ea;color:#1d7a46;border-radius:4px;padding:1px 6px;margin:0 6px 0 0;font-size:12px;font-weight:600;cursor:help}";
   document.head.appendChild(css);
 
   var back = null;
-  function close() { if (back) { back.remove(); back = null; } }
+  function close() { if (back) { back.remove(); back = null; document.body.classList.remove("wz-open"); window.dispatchEvent(new Event("rfqwizardclose")); } }
   function h(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
 
   function open() {
@@ -91,8 +99,7 @@
     var step = 0;
     close();
     back = document.createElement("div"); back.className = "wz-back";
-    back.addEventListener("click", function (e) { if (e.target === back) skip(); });
-    document.body.appendChild(back);
+    document.body.insertBefore(back, document.body.firstChild); document.body.classList.add("wz-open"); window.scrollTo(0, 0);
 
     function skip() { try { if (!load()) localStorage.setItem(SKIP, "1"); } catch (e) {} close(); }
     function srcList() { return SOURCES.filter(function (s) { return d.src.indexOf(s.id) >= 0; }); }
@@ -120,21 +127,21 @@
           (st === "no" || st === "unsure" ? "<div class='wz-src'><b>How to get registered</b><ol>" + s.steps.map(function (x) { return "<li>" + h(x) + "</li>"; }).join("") + "</ol>" +
             (s.url ? "<p><a href='" + h(s.url) + "' target='_blank' rel='noopener'>Open the registration page &rarr;</a></p><p class='wz-note'>Links can change; if one fails, search the portal name.</p>" : "") + "</div>" : "");
       } else {
-        h2 = "All set";
+        h2 = "Review your setup";
         var todo = srcList().filter(function (s) { return d.reg[s.id] !== "yes"; });
         html = "<ul class='wz-sum'><li><b>Selling:</b> " + h(keywords({ cats: d.cats, extra: d.extra }).length ? d.cats.map(function (id) { return CATS.filter(function (c) { return c.id === id; })[0].label; }).concat(d.extra.trim() ? [d.extra.trim()] : []).join("; ") : "nothing selected") + "</li>" +
           "<li><b>Bidding in:</b> " + h(srcList().map(function (s) { return s.label; }).join(", ") || "none") + "</li>" +
           "<li><b>Still to register:</b> " + (todo.length ? h(todo.map(function (s) { return s.label + (d.reg[s.id] === "unsure" ? " (check)" : ""); }).join(", ")) : "nothing") + "</li></ul>" +
-          "<p class='wz-note'>Reopen this any time with &ldquo;My profile&rdquo; in the toolbar.</p>";
+          "<p class='wz-note'>You can change these answers any time with &ldquo;Edit my profile&rdquo;.</p>";
       }
       return { h2: h2, html: html };
     }
 
     function draw() {
       var b = body(), total = steps(), last = step === total - 1;
-      back.innerHTML = "<div class='wz' role='dialog' aria-modal='true' aria-label='Setup'><h2>" + b.h2 + "</h2><div class='wz-step'>Step " + (step + 1) + " of " + total + "</div>" + b.html +
-        "<div class='wz-btns'><button class='link' data-a='skip'>" + (load() ? "Cancel" : "Skip for now") + "</button>" + (step ? "<button data-a='back'>Back</button>" : "") +
-        "<button class='pri' data-a='" + (last ? "done" : "next") + "'>" + (last ? "Save" : "Next") + "</button></div></div>";
+      back.innerHTML = "<div class='wz' role='dialog' aria-modal='true' aria-label='Setup'><div class='wz-step'>Step " + (step + 1) + " of " + total + "</div><div class='wz-bar'><i style='width:" + Math.round((step + 1) / total * 100) + "%'></i></div><h2>" + b.h2 + "</h2>" + b.html +
+        "<div class='wz-btns'><button class='link' data-a='skip'>" + (load() ? "Cancel" : "Skip, just show me everything") + "</button>" + "<button data-a='back'" + (step ? "" : " disabled") + ">&larr; Back</button>" +
+        "<button class='pri' data-a='" + (last ? "done" : "next") + "'>" + (last ? "Show my bids" : "Next &rarr;") + "</button></div></div>";
     }
     function collect() {
       Array.prototype.forEach.call(back.querySelectorAll("[data-cat]"), function (el, _i, all) { if (el === all[0]) d.cats = []; if (el.checked) d.cats.push(el.dataset.cat); });
@@ -160,11 +167,15 @@
       }
       draw();
     });
-    document.addEventListener("keydown", function esc(e) { if (!back) return document.removeEventListener("keydown", esc); if (e.key === "Escape") skip(); });
     draw();
   }
 
-  window.RFQProfile = { get: load, match: match, open: open };
+  function todo() {
+    var p = load(); if (!p) return [];
+    return SOURCES.filter(function (s) { return (p.src || []).indexOf(s.id) >= 0 && (p.reg || {})[s.id] !== "yes" && s.id !== "other"; })
+      .map(function (s) { return { label: s.label, url: s.url, unsure: (p.reg || {})[s.id] === "unsure" }; });
+  }
+  window.RFQProfile = { get: load, match: match, open: open, todo: todo };
   // First visit: offer the setup once. (Skipping is remembered; the toolbar button reopens it.)
   window.addEventListener("load", function () {
     var skipped = false; try { skipped = !!localStorage.getItem(SKIP); } catch (e) {}

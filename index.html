@@ -196,12 +196,15 @@
 </style>
 </head>
 <body>
+<div class="refreshbar" id="refreshBar" role="status" hidden></div>
+<div id="app"></div>
+<!-- The original full table is kept only as a hidden data-preparation layer; it is never shown. -->
+<div id="legacy" hidden style="display:none">
 <header>
   <h1>RFQ Bid Tracker</h1>
   <span class="sub">Discover Group &middot; Brooklyn, NY</span>
 </header>
 
-<div class="refreshbar" id="refreshBar" role="status" hidden></div>
 
 <style>.is-demo #failBanner { display: none !important; }</style>
 <script>if (/\.github\.io$/.test(location.hostname)) document.documentElement.classList.add("is-demo"); // hosted demo: no data-problem banner</script>
@@ -239,6 +242,7 @@
     <tbody id="body"></tbody>
   </table>
   <div class="empty" id="empty" hidden>No requests match your filters.</div>
+</div>
 </div>
 
 <script src="data.js"></script>
@@ -1719,5 +1723,6 @@
   poll(); setInterval(poll, 5000);
 })();
 </script>
+<script src="home.js"></script>
 </body>
 </html>
