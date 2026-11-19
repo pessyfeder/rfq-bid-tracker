@@ -571,6 +571,7 @@
     for (var i = 0; i < GROUP_RULES.length; i++) if (GROUP_RULES[i][1].test(s)) return GROUP_RULES[i][0];
     return "Other";
   }
+  window.RFQCat = { label: catLabel, group: catGroup }; // used by the home screen's Category dropdown
 
   // ---- Per-column filters ----
   // List filters (state, category, eligibility, level) store what is HIDDEN, so "Show all" = nothing hidden and
