@@ -219,7 +219,7 @@
       back.innerHTML = "<div class='wz' role='dialog' aria-modal='true' aria-label='Setup'><p class='wz-step'>Step 3</p><h2>Which value would you like to see?</h2>" +
         "<p class='wz-note'>Many bids do not state a value; choosing a range hides those. Change it any time.</p>" +
         "<div class='wz-dd'><button type='button' class='wz-dd-btn' data-a='vtoggle' aria-expanded='" + openV + "'><span>" + h(vLabel()) + "</span><span>&#9662;</span></button>" +
-        (openV ? "<div class='wz-dd-list'>" + VALUE_OPTS.map(function (o) {
+        (openV ? "<div class='wz-dd-list'><div class='wz-dd-tools'><button type='button' class='link' data-a='vall'>Select all</button><button type='button' class='link' data-a='vnone'>Clear</button></div>" + VALUE_OPTS.map(function (o) {
           return "<label class='wz-row'><input type='checkbox' data-vpick='" + h(o[0]) + "'" + (d.value.indexOf(o[0]) >= 0 ? " checked" : "") + "> <span>" + h(o[1]) + "</span></label>";
         }).join("") + "</div>" : "") + "</div>" +
         "<div class='wz-cust' data-cust" + (d.value.indexOf("custom") >= 0 ? "" : " hidden") + "><label>From $ <input type='text' inputmode='numeric' data-vmin placeholder='no minimum' value='" + h(d.vmin) + "'></label>" +
@@ -233,7 +233,7 @@
       back.innerHTML = "<div class='wz' role='dialog' aria-modal='true' aria-label='Setup'><p class='wz-step'>Step 4</p><h2>Which eligibility criteria would you like to see?</h2>" +
         "<p class='wz-note'>Some bids are reserved for certain businesses. Pick the eligibility you want to see. Change it any time.</p>" +
         "<div class='wz-dd'><button type='button' class='wz-dd-btn' data-a='atoggle' aria-expanded='" + openA + "'><span>" + h(aLabel()) + "</span><span>&#9662;</span></button>" +
-        (openA ? "<div class='wz-dd-list'>" + ASIDE_OPTS.map(function (o) {
+        (openA ? "<div class='wz-dd-list'><div class='wz-dd-tools'><button type='button' class='link' data-a='aall'>Select all</button><button type='button' class='link' data-a='anone'>Clear</button></div>" + ASIDE_OPTS.map(function (o) {
           return "<label class='wz-row'><input type='checkbox' data-apick='" + h(o[0]) + "'" + (d.aside.indexOf(o[0]) >= 0 ? " checked" : "") + "> <span>" + h(o[1]) + "</span></label>";
         }).join("") + "</div>" : "") + "</div>" +
         "<div class='wz-btns'><button data-a='back4'>&larr; Back</button><button class='pri' data-a='finish'>Show me my RFQs</button></div></div>";
@@ -302,6 +302,10 @@
       else if (act === "jtoggle") openJ = !openJ;
       else if (act === "vtoggle") openV = !openV;
       else if (act === "atoggle") openA = !openA;
+      else if (act === "vall") d.value = VALUE_OPTS.map(function (o) { return o[0]; }).filter(function (k) { return k !== "custom"; });
+      else if (act === "vnone") d.value = [];
+      else if (act === "aall") d.aside = ASIDE_OPTS.map(function (o) { return o[0]; });
+      else if (act === "anone") d.aside = [];
       else if (act === "next4") { step = 4; openA = false; }
       else if (act === "back4") { step = 3; openV = false; }
       else if (act === "jall") d.where = J.map(function (o) { return o.v; });
