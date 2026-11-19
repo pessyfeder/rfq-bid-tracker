@@ -31,6 +31,7 @@
     ".hm-tag.Federal{background:#e3ecf7;color:#1e3a5f}.hm-tag.State{background:#eceaf5;color:#4a4a8a}.hm-tag.Local{background:#e1f0ee;color:#0f5f58}" +
     ".hm-tag.ok{background:#e6f2ea;color:#1d6b3e}.hm-tag.soon{background:#fbe9e7;color:#a12a1f}.hm-tag.mid{background:#fbf1de;color:#8a5a0b}.hm-tag.money{background:#eef1f5;color:#374151}.hm-tag.match{background:#e6f2ea;color:#1d6b3e}" +
     ".hm-go{display:inline-block;background:#1e3a5f;color:#fff;text-decoration:none;font-weight:500;border-radius:6px;padding:6px 14px}.hm-go:hover{background:#16304f}" +
+    ".hm-explore{display:inline-block;border:1px solid #1e3a5f;color:#1e3a5f;background:#fff;text-decoration:none;font-weight:500;border-radius:6px;padding:5px 14px}.hm-explore:hover{background:#eef3f9}" +
     ".hm-more{border:0;background:none;color:#1e3a5f;font-weight:500;text-decoration:underline;padding:6px}" +
     ".hm-scope{margin:8px 0 0;padding:10px 14px;background:#f7f9fb;border:1px solid #e5e9f0;border-radius:6px;font-size:14px}" +
     ".hm-empty{text-align:center;padding:40px 16px;background:#fff;border:1px solid #d9dfe7;border-radius:6px}" +
@@ -136,7 +137,8 @@
         regBlock(r) +
         (st.open[r.id] && r.scope ? '<div class="hm-scope">' + esc(r.scope) + "</div>" : "") +
         '<div class="hm-row">' + (r.url ? '<a class="hm-go" href="' + esc(r.url) + '" target="_blank" rel="noopener">View solicitation</a>' : "") +
-        (r.scope ? '<button class="hm-more" data-o="' + esc(r.id) + '">' + (st.open[r.id] ? "Hide summary" : "Show summary") + "</button>" : "") + "</div></div>";
+        (r.scope ? '<button class="hm-more" data-o="' + esc(r.id) + '">' + (st.open[r.id] ? "Hide summary" : "Show summary") + "</button>" : "") +
+        '<a class="hm-explore" href="/explore.html?id=' + encodeURIComponent(r.id) + '">Explore this request</a></div></div>';
     });
     h += "</div>";
     if (list.length > st.shown) h +='<button class="hm-showmore" data-a="more">Show more (' + (list.length - st.shown) + " left)</button>";
