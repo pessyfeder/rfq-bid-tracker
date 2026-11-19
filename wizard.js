@@ -216,11 +216,11 @@
         "<label>To $ <input type='text' inputmode='numeric' data-vmax placeholder='no maximum' value='" + h(d.vmax) + "'></label></div>" +
         "<div class='wz-btns'><button data-a='back3'>&larr; Back</button><button class='pri' data-a='next4'>Next &rarr;</button></div></div>";
     }
-    // Step 4: can you bid? Which set-aside / eligibility group the vendor belongs to.
+    // Step 4: which eligibility would you like to see? Which set-aside / eligibility group the vendor belongs to.
     var openA = false;
     function aLabel() { var o = ASIDE_OPTS.filter(function (x) { return x[0] === d.aside; })[0]; return o ? o[1] : "Anyone"; }
     function drawA() {
-      back.innerHTML = "<div class='wz' role='dialog' aria-modal='true' aria-label='Setup'><p class='wz-step'>Step 4</p><h2>Can you bid?</h2>" +
+      back.innerHTML = "<div class='wz' role='dialog' aria-modal='true' aria-label='Setup'><p class='wz-step'>Step 4</p><h2>Which eligibility would you like to see?</h2>" +
         "<p class='wz-note'>Some bids are reserved for certain businesses. Pick the eligibility you want to see. Change it any time.</p>" +
         "<div class='wz-dd'><button type='button' class='wz-dd-btn' data-a='atoggle' aria-expanded='" + openA + "'><span>" + h(aLabel()) + "</span><span>&#9662;</span></button>" +
         (openA ? "<div class='wz-dd-list'>" + ASIDE_OPTS.map(function (o) {
