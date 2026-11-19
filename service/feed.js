@@ -81,7 +81,8 @@ function normalize(r, source) {
     category: r.category,
     region: (r.details && r.details.region) || null,
     posted: r.posted,
-    due: r.due,                           // YYYY-MM-DD, Eastern
+    postedAt: r.postedAt || null,         // posted date and time when the source publishes one
+    due: r.due,                          // YYYY-MM-DD, Eastern
     dueTime: r.dueTime || null,           // as published, e.g. "3:30 PM EST"
     dueAt: dueInstant(r.due, r.dueTime),  // ISO UTC instant, or null if no usable time
     hasRealDeadline: !placeholder,

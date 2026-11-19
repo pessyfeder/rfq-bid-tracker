@@ -179,13 +179,12 @@
     tbody tr:not(.shall-row) td:nth-child(1)::before { content: "Request"; }
     tbody tr:not(.shall-row) td:nth-child(2)::before { content: "Category"; }
     tbody tr:not(.shall-row) td:nth-child(3)::before { content: "Who can bid"; }
-    tbody tr:not(.shall-row) td:nth-child(4)::before { content: "Posted"; }
-    tbody tr:not(.shall-row) td:nth-child(5)::before { content: "Due date"; }
-    tbody tr:not(.shall-row) td:nth-child(6)::before { content: "Days left"; }
-    tbody tr:not(.shall-row) td:nth-child(7)::before { content: "Level"; }
-    tbody tr:not(.shall-row) td:nth-child(8)::before { content: "Documents"; }
-    tbody tr:not(.shall-row) td:nth-child(9)::before { content: "Est. value"; }
-    tbody tr:not(.shall-row) td:nth-child(10)::before { content: "Details"; }
+    tbody tr:not(.shall-row) td:nth-child(4)::before { content: "Due date"; }
+    tbody tr:not(.shall-row) td:nth-child(5)::before { content: "Days left"; }
+    tbody tr:not(.shall-row) td:nth-child(6)::before { content: "Level"; }
+    tbody tr:not(.shall-row) td:nth-child(7)::before { content: "Documents"; }
+    tbody tr:not(.shall-row) td:nth-child(8)::before { content: "Est. value"; }
+    tbody tr:not(.shall-row) td:nth-child(9)::before { content: "Details"; }
     tbody tr:not(.shall-row) td:last-child { border-bottom: 0; }
     tr.shall-row td { display: block; padding-left: 12px; }
   }
@@ -332,7 +331,6 @@
     { key: "title",    label: "Request" },
     { key: "category", label: "Category" },
     { key: "eligRank", label: "Who can bid" },
-    { key: "posted",   label: "Posted" },
     { key: "dueSort",  label: "Due date" },
     { key: "daysLeft", label: "Days left", num: true },
     { key: "level",    label: "Level" },
@@ -443,9 +441,17 @@
   // "Old" = the fetchers tagged it as posted over a year ago (placeholder dates have their own warning and filter).
   function isOld(r) { return ((r.details && r.details.warnings) || []).indexOf("Posted over a year ago") !== -1; }
 
+  // "Newest" = newest fetched into the app: when this browser first saw each item (shared with the home screen).
+  var seenMap = {};
+  try { seenMap = JSON.parse(localStorage.getItem("bf-first-seen") || "{}") || {}; } catch (e) {}
+  var seenNow = new Date().toISOString(), seenChanged = false;
+  window.RFQS.forEach(function (r) { if (!seenMap[r.id]) { seenMap[r.id] = seenNow; seenChanged = true; } });
+  if (seenChanged) { try { localStorage.setItem("bf-first-seen", JSON.stringify(seenMap)); } catch (e) {} }
+
   var rows = window.RFQS.map(function (r) {
     var noDue = hasNoRealDue(r);
     return Object.assign({}, r, {
+      seen: seenMap[r.id],
       st: r.level === "Federal" ? "US" : String(r.id).split("-")[0].replace("TXDOT", "TX"), // state code from the id prefix (US = federal)
       noDue: noDue,
       dueSort: noDue ? null : r.due,
@@ -457,8 +463,8 @@
     });
   });
 
-  // Default sort: newest posted first (missing dates last).
-  var sort = { key: "posted", dir: -1 };
+  // Default sort: newest fetched into the app first (no visible column).
+  var sort = { key: "seen", dir: -1 };
   // The server sends rows without their long "shall" lists (r.shallCount says how many); a list is fetched when its row is opened.
   function shallN(r) { return r.shallCount != null ? r.shallCount : (r.shall || []).length; }
   var expanded = {}; // request id -> true when its "shall" list is open
@@ -595,7 +601,6 @@
     { key: "st",       label: "State",        type: "list", get: function (r) { return [r.st]; }, name: stName, into: "level" }, // lives inside the Level dropdown
     { key: "category", label: "Category",     type: "list", get: function (r) { return [catLabel(r)]; }, group: catGroup },
     { key: "elig",     label: "Who can bid", type: "list", get: eligValues, group: eligGroup, note: "Shows requests that list at least one checked requirement." },
-    { key: "posted",  label: "Posted",       type: "date" },
     { key: "due",      label: "Due date",     type: "date", flag: "noDueOk", flagLabel: "Include requests with no usable due date" },
     { key: "days",     label: "Days left",    type: "num", note: "Requests with no due date follow the Due date setting.",
       presets: [["Next 7 days", "0", "7"], ["Next 14 days", "0", "14"], ["Next 30 days", "0", "30"]] },
@@ -1200,8 +1205,6 @@
       for (var vi = 0; vi < vs.length; vi++) if (!hid[vs[vi]]) { anyShown = true; break; }
       if (!anyShown) return false;
     }
-    if (R.posted.a && r.posted < R.posted.a) return false;
-    if (R.posted.b && r.posted > R.posted.b) return false;
     if (r.noDue) { if (!R.noDueOk) return false; }
     else {
       if (R.due.a && r.due < R.due.a) return false;
@@ -1236,8 +1239,7 @@
   var FIELDS = [
     { field: "valueSort", names: "est\\.? ?value|estimated value|value|price|amount|cost|\\$" },
     { field: "daysLeft",  names: "days? left|days|left" },
-    { field: "dueSort",   names: "due(?: date)?|ends?(?: date)?|closes?|deadline", date: true },
-    { field: "posted",    names: "posted(?: date)?|date", date: true }
+    { field: "dueSort",   names: "due(?: date)?|ends?(?: date)?|closes?|deadline", date: true }
   ];
   // field [:] [operator] value. The operator is optional when a field name is given:
   // "days left: 22", "days left 22", "value 100k-500k" (range).
@@ -1297,7 +1299,7 @@
     // "no due date", values, days left) are handled in parseQuery against their own field.
     [r.title, r.agency, catLabel(r), r.details && r.details.region].forEach(function (v) { if (v) parts.push(String(v)); });
     eligList(r).forEach(function (d) { parts.push(d.label); });
-    ["posted", "due"].forEach(function (k) { if (r[k] && !(k === "due" && r.noDue)) parts.push(fmtDate(r[k])); });
+    ["due"].forEach(function (k) { if (r[k] && !(k === "due" && r.noDue)) parts.push(fmtDate(r[k])); });
     return parts.join(" ").toLowerCase();
   }
 
@@ -1378,8 +1380,6 @@
     var k = sort.key;
     list.sort(function (a, b) {
       var x = a[k], y = b[k];
-      // a posted date in the future is bad source data: treat as missing so it sorts last
-      if (k === "posted") { var today = new Date().toISOString().slice(0, 10); if (x > today) x = null; if (y > today) y = null; }
       // nulls always last
       if (x == null && y == null) return 0;
       if (x == null) return 1;
@@ -1399,7 +1399,6 @@
         '<td>' + titleHtml(r, !!titleOpen[r.id]) + agencyHtml(r) + "</td>" +
         "<td>" + esc(catLabel(r)).replace(/\//g, "/<wbr>") + "</td>" +
         eligCell(r) +
-        "<td>" + fmtDate(r.posted) + "</td>" +
         "<td>" + (r.noDue ? (/eMarketplace/.test(r.dueTime || "") ? esc(r.dueTime) : "No usable due date") : '<span style="white-space:nowrap">' + fmtDate(r.due).replace(/, (\d{4})$/, ",</span><br><span>$1") + '</span><div class="agency">' + esc(r.dueTime) + "</div>") + "</td>" +
         leftCell(r) +
         '<td><span class="badge ' + esc(r.level) + '">' + esc(r.level) + "</span></td>" +
@@ -1450,7 +1449,7 @@
   $("head").addEventListener("click", function (e) {
     var th = e.target.closest("th"); if (!th || th.classList.contains("nosort")) return;
     var key = th.dataset.key;
-    sort = sort.key === key ? { key: key, dir: -sort.dir } : { key: key, dir: key === "valueSort" || key === "posted" ? -1 : 1 };
+    sort = sort.key === key ? { key: key, dir: -sort.dir } : { key: key, dir: key === "valueSort" ? -1 : 1 };
     render();
   });
   function syncProfileUi() { var has = !!(window.RFQProfile && window.RFQProfile.get()); $("matchLbl").hidden = !has; if (!has) $("matchOnly").checked = false; }

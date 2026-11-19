@@ -80,6 +80,14 @@ Bid factors (box at the top of Details)
    amber = cost / effort: bonds, insurance minimums, prevailing / living wage, mandatory
            site visit / pre-bid, 24/7 or after-hours, proposal / bid guarantee
    blue  = info: local / in-state preference, past performance / references, multi-year term
+ Also amber: domestic-content (Buy America / TAA), retainage / slow payment, liquidated damages,
+ FOB / inside delivery, escorted site access, drug testing, certified payroll, permits on the
+ contractor, hazardous materials, fixed price / no escalation. Blue: warranty, brand-name / "or
+ equal", termination for convenience, submittals. Rules marked note: true in facts.js show as
+ written; the others read "Must provide ...".
+ Hidden bid factors are NOT part of the setup wizard (decided). They belong on the "Explore this
+ request" page (design to come): when Israel is interested in a bid he clicks "Explore this request",
+ and that page shows each hidden bid factor as a colored chip (amber / blue by the sev in facts.js).
  Bonds, pre-bid meetings and background checks are chips, not dedicated fields (decided).
  SPLIT (decided): Eligibility = things that disqualify a bid if he lacks them (gates); Bid factors
  in Details = cost / effort / attractiveness. Gate factors (TSA-checked workers, security
@@ -262,7 +270,7 @@ and is flagged on the page and in /api/status.
      plus NV NJ OR IL MA via the shared Periscope adapter (states/bso.js).
    Each notice needs a title, https link and due date, else it is dropped. Then USAspending
    value estimates and the AI read of the notice page and attachments (needs
-   ANTHROPIC_API_KEY; capped at STATE_MAX_READS = 60 new reads per run, soonest deadline
+   ANTHROPIC_API_KEY; capped at STATE_MAX_READS = 150 new reads per run, soonest deadline
    first; earlier reads are reused; a notice whose listing changed, i.e. an amendment, is re-read). Portals that forbid reads or need a login are marked
    noPageReads and show a "Not read" note. Run: node fetch-states.js [DE NV ...]
    Per-state status and the reasons for parked states: state-sources-survey.md,
@@ -339,7 +347,7 @@ Docs and notes
  state-fetch-status.pdf  Per-state fetch status report.
 
 Other settings (environment or .env): PORT, HOST, REFRESH_TOKEN, REFRESH_MORNING_HOUR, WAKE_DELAY_SEC (45),
-FETCH_TIMEOUT_MIN (60), RETRY_AFTER_MIN, RETRY_MAX, SAM_DAILY_BUDGET, STATE_MAX_READS (60),
+FETCH_TIMEOUT_MIN (120), RETRY_AFTER_MIN, RETRY_MAX, SAM_DAILY_BUDGET, STATE_MAX_READS (150),
 STATE_RETRY_WAIT_SEC (60), STATE_REREAD_ONLY, BSO_DEBUG, SAM_BASE (offline testing only).
 
 Generated at run time (git-ignored): live-*.js, data/ (state.json, feed.json, service.log,

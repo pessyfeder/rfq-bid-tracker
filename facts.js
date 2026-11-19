@@ -16,6 +16,21 @@
     { label: "Prevailing / living wage",   sev: "cost", re: /prevailing wage|living wage|service contract (labor )?standards|\bSCA\b|davis[- ]bacon|wage determination|\bunions?\b(?!\s+(station|square|city|county|pacific|street|avenue))|collective bargaining/i },
     { label: "Mandatory site visit / pre-bid", sev: "cost", re: /(mandatory|required)[^.]{0,60}(pre-?bid|site (visit|walk)|walk-?through|conference)|pre-?bid[^.]{0,40}mandatory/i },
     { label: "24/7 or after-hours",        sev: "cost", re: /24\s*\/\s*7|24[- ]hour|after[- ]hours|overnight|night shift|on-?call|emergency response/i },
+    // note: true = the chip shows as written (a condition of the job), not as "Must provide ...".
+    { label: "Domestic-content rule (Buy America / TAA)", sev: "cost", re: /buy america|buy american|\bBABA\b|trade agreements act|\bTAA\b|domestic (content|preference|product)|made in (the )?(usa|u\.s\.)|country of origin/i },
+    { label: "Retainage or slow payment terms", sev: "cost", note: true, re: /\bretainage\b|\bretention (of|\d)|\bnet[- ]?(45|60|90)\b|payment (within|in) (45|60|90)|paid (within|in) (45|60|90)/i },
+    { label: "Liquidated damages for late work", sev: "cost", note: true, re: /liquidated damages/i },
+    { label: "Delivery terms (FOB / inside delivery)", sev: "cost", note: true, re: /\bF\.?O\.?B\.?\b|inside delivery|white[- ]glove|lift-?gate|delivery appointment|delivery window|place of delivery|unload(ing)? and (stag|unpack)/i },
+    { label: "Escorted or restricted site access", sev: "cost", note: true, re: /\bescort(ed|s)?\b|restricted (area|access)|secure (facility|area|site)|\bSIDA\b|airport security|access badge/i },
+    { label: "Drug testing of workers", sev: "cost", re: /drug[- ](test|screen)|drug-free workplace/i },
+    { label: "Certified payroll / compliance reporting", sev: "cost", re: /certified payroll|utilization report|payroll report|compliance report|\bLCPtracker\b|\bB2Gnow\b|\bCompliance Wire\b/i },
+    { label: "Permits and fees on the contractor", sev: "cost", note: true, re: /(contractor|vendor|bidder)[^.]{0,40}\b(obtain|pay for|secure|responsible for)[^.]{0,30}\bpermits?\b|\bpermits?\b[^.]{0,40}(at|by) (the )?(contractor|vendor)/i },
+    { label: "Hazardous materials handling", sev: "cost", note: true, re: /asbestos|lead[- ]based paint|hazardous (material|waste)|\bSWPPP\b|abatement/i },
+    { label: "Fixed price, no escalation", sev: "cost", note: true, re: /no (price )?escalation|firm[- ]fixed[- ]price|prices? (shall |must |will )?(remain|be held) (fixed|firm)|price adjustments? (is|are) not (permitted|allowed)/i },
+    { label: "Warranty requirement", sev: "info", note: true, re: /warrant(y|ies)\b[^.]{0,50}\b(year|month|extended|period)|\b(one|two|three|five|\d+)[- ]year warranty/i },
+    { label: "Brand-name / \"or equal\" spec", sev: "info", note: true, re: /brand[- ]name|\bor (approved )?equal\b(?! (to|in|or))|salient characteristics/i },
+    { label: "Owner can terminate for convenience", sev: "info", note: true, re: /terminat\w+ for (the )?(convenience|government.s convenience)/i },
+    { label: "Submittals / samples for approval", sev: "info", note: true, re: /\bsubmittals?\b|samples? (for|must be) (approval|submitted)/i },
     { label: "Local / in-state preference", sev: "info", re: /\b(local|in-state|resident) (vendor|bidder|business|preference)\b/i },
     { label: "Past performance / references", sev: "info", re: /past performance|references|\bCPARS\b|years of experience|similar (projects|contracts)/i },
     { label: "Multi-year / renewal term",  sev: "info", re: /option (year|period)|base (year|period)|\b\d+[- ]year (contract|term)|renewal/i }
@@ -53,7 +68,7 @@
     FACT_RULES.forEach(function (rule) {
       for (var i = 0; i < src.length; i++) {
         var m = rule.re.exec(src[i]);
-        if (m) { var f = { label: rule.label, sev: rule.sev, why: excerpt(src[i], m) }; if (rule.gate) f.gate = true; if (kw) f.kw = true; out.push(f); return; }
+        if (m) { var f = { label: rule.label, sev: rule.sev, why: excerpt(src[i], m) }; if (rule.gate) f.gate = true; if (rule.note) f.note = true; if (kw) f.kw = true; out.push(f); return; }
       }
     });
     return out;

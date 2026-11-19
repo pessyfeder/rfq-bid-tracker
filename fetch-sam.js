@@ -80,7 +80,8 @@ function toRfq(o) {
     shall: [],
     title: o.title || "(untitled)",
     category: o.naicsCode ? "NAICS " + o.naicsCode : "No data",
-    posted: String(o.postedDate || "").slice(0, 10) || dp.due,
+    posted: String(o.postedDate || "").slice(0, 10) || null,
+    postedAt: o.postedDate && String(o.postedDate).length > 10 ? String(o.postedDate) : undefined, // with time, when the feed gives one
     due: dp.due,
     dueTime: dp.dueTime,
     level: "Federal",

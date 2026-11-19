@@ -31,7 +31,7 @@ function toRfq(n, a) {
     shall: [],
     title: clean(n.title) || "(untitled)",
     category: clean(n.category) || "No data",
-    posted: isDate(n.posted) ? n.posted : n.due,
+    posted: isDate(n.posted) ? n.posted : null, // unknown stays unknown; never stand in the due date
     due: n.due,
     dueTime: n.dueTime || "No data",
     level: "State",
@@ -52,7 +52,7 @@ function dropNaicsHint(list) { for (const r of list) delete r.naics; }
 // AI read of each notice's page and PDF attachments: fills eligibility (requires), a one-line scope and key
 // "shall" points, the same as the NYC/SAM feeds. Needs ANTHROPIC_API_KEY; without it rows stay "Not checked".
 // Notices already read on an earlier run are reused (no fetch, no cost); MAX_READS caps new reads per run.
-const MAX_READS = Number(process.env.STATE_MAX_READS) || 60;
+const MAX_READS = Number(process.env.STATE_MAX_READS) || 150;
 // Bump DOCS_VERSION when states/docs.js learns to reach more documents; rows read before that with no restriction found are read again.
 // Version 2: Periscope attachment downloads, Word (.docx) files, Indiana per-event zips.
 // Version 3: Mississippi attachments on srm.magic.ms.gov (earlier reads saw only the page header).
@@ -170,8 +170,8 @@ function readPrevious() {
   // STATE_TIMEOUT_MIN; the run as a whole stops starting states at STATE_RUN_BUDGET_MIN, so it always finishes and writes
   // the states that did succeed. States cut off by either limit are marked failed, keep last run's notices, and are retried
   // on their own by the service's follow-up (which runs only the failed states, so it fits well inside the budget).
-  const STATE_TIMEOUT_MS = Number(process.env.STATE_TIMEOUT_MIN || 12) * 60000;
-  const RUN_DEADLINE = Date.now() + Number(process.env.STATE_RUN_BUDGET_MIN || 50) * 60000;
+  const STATE_TIMEOUT_MS = Number(process.env.STATE_TIMEOUT_MIN || 30) * 60000;
+  const RUN_DEADLINE = Date.now() + Number(process.env.STATE_RUN_BUDGET_MIN || 100) * 60000;
   async function runAdapter(a) {
     const left = RUN_DEADLINE - Date.now();
     if (left <= 0) {
