@@ -243,6 +243,7 @@
   }
   // The setup wizard lists these too (everything except the product types, which it already knows).
   window.RFQExtraCats = function () { if (!rows) prep(); return catOpts().filter(function (o) { return o.group !== "My products"; }); };
+  window.RFQJurisdictions = function () { if (!rows) prep(); return whereOpts(); }; // the setup wizard's step 2 lists these
   function whereOpts() {
     var n = {}; rows.forEach(function (r) { n[r.code] = (n[r.code] || 0) + 1; });
     var out = [];
@@ -265,7 +266,9 @@
   function shell() {
     var prof = P();
     $app.innerHTML = '<div class="hm"><div class="hm-nav"><div class="hm-in"><span class="hm-logo">Bid<i>.</i>Finder</span>' +
-      '<button class="hm-btn" data-a="profile">' + (prof ? "Edit my profile" : "Set up my profile") + '</button><button class="hm-btn" data-a="refresh">Refresh</button></div></div>' +
+      '<button class="hm-btn" data-a="selection" title="Change which categories you see">&larr; Back to selection</button>' +
+      // Profile button hidden for now: '<button class="hm-btn" data-a="profile">' + (prof ? "Edit my profile" : "Set up my profile") + '</button>' +
+      '<button class="hm-btn" data-a="refresh">Refresh</button></div></div>' +
       '<div class="hm-in"><div class="hm-title"><h1>View Open Bids &amp; RFQs</h1><p id="hm-stats"></p></div>' +
       '<form class="hm-bar" data-form><label class="hm-kw"><input type="search" data-kw placeholder="Search by keyword or bid title" aria-label="Keyword" value="' + esc(st.kw) + '">' + ICON_SEARCH + '</label><div class="hm-fields" id="hm-fields"></div></form>' +
       '<div id="hm-more"></div><div id="hm-res"></div></div></div>';
@@ -282,6 +285,7 @@
   }
 
   function regBlock(r) {
+    return ""; // banner hidden by request
     var RP = window.RFQProfile, info = RP && RP.regInfo && RP.regInfo(RP.sourceFor(r.level, r.code));
     if (!info || info.registered || !RP.get()) return ""; // no saved profile yet: we can't know their status
     var open = st.regOpen[info.id];
@@ -355,6 +359,7 @@
     }
     var b = e.target.closest("button"); if (!b) return;
     var d = b.dataset;
+    if (d.a === "selection") { if (window.RFQProfile) window.RFQProfile.open(); return; }
     if (d.a === "profile") { window.location.href = "/profile.html"; return; }
     if (d.a === "refresh") { var rb = document.getElementById("refreshBtn"); if (rb) rb.click(); b.textContent = "Refreshing…"; return; }
     if (d.a === "clear") { resetFilters(false); clearKw(); return refreshAll(); }
@@ -383,7 +388,9 @@
   var kwTimer = null;
   $app.addEventListener("input", function (e) { if (e.target.dataset.kw != null) { st.kw = e.target.value; st.shown = PAGE; clearTimeout(kwTimer); kwTimer = setTimeout(results, 150); } });
   $app.addEventListener("submit", function (e) { e.preventDefault(); st.dd = null; syncOpen(); results(); });
-  window.addEventListener("rfqprofilechange", function () { render(); });
+  function profWhere() { var p = P(); return p && p.where && p.where.length ? p.where.slice() : []; } // [] = every jurisdiction
+  st.where = profWhere();
+  window.addEventListener("rfqprofilechange", function () { st.where = profWhere(); render(); });
   window.addEventListener("rfqwizardclose", render);
   render();
 })();

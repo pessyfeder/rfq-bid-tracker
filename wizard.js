@@ -102,9 +102,11 @@
     ".wz button.link{border:0;background:none!important;font-weight:400;color:#64748b;text-decoration:underline;margin-right:auto;padding:8px 0}" +
     ".wz .wz-src{border-radius:6px;padding:12px 16px;margin:12px 0;background:#f7f9fb;border:1px solid #d9dfe7;border-left:3px solid #b45309}.wz .wz-src b{display:block;margin-bottom:4px}" +
     ".wz .wz-src ol{margin:6px 0 0;padding-left:22px;color:#374151;font-size:14px}.wz .wz-seg{display:flex;gap:8px;flex-wrap:wrap}.wz .wz-seg label{flex:1;min-width:140px;display:flex;gap:8px;align-items:center;padding:9px 12px;border:1px solid #d9dfe7;border-radius:6px;cursor:pointer}.wz .wz-seg label:has(input:checked){border-color:#1e3a5f;background:#f0f4f9}" +
+    ".wz .wz-step{margin:0 0 6px;font-size:12px;font-weight:600;color:#64748b}" +
     ".wz .wz-note{color:#64748b;font-size:13px}.wz .wz-sum{list-style:none;padding:0}.wz .wz-sum li{margin:8px 0;padding:10px 14px;border-radius:6px;background:#f7f9fb;border:1px solid #e5e9f0}" +
     ".wz a{color:#1e3a5f;font-weight:600}" +
     ".wz-dd{position:relative;margin-top:14px}.wz-dd-btn{display:flex!important;justify-content:space-between;width:100%;text-align:left}" +
+    ".wz-dd:has(.wz-dd-list){margin-bottom:320px}" +
     ".wz-dd-list{position:absolute;left:0;right:0;top:100%;margin-top:4px;background:#fff;border:1px solid #b8c2cf;border-radius:6px;padding:6px 10px;max-height:300px;overflow:auto;box-shadow:0 4px 12px rgba(15,23,42,.15);z-index:5}" +
     ".wz-gh{display:flex;align-items:center;gap:8px;margin:2px 0;padding:5px 2px;border-bottom:1px solid #eef1f5}.wz-gt{flex:1;cursor:pointer;font-weight:600;font-size:14px;color:#1f2937}.wz-gt em{font-style:normal;font-weight:400;font-size:12px;color:#64748b;margin-left:6px}.wz-arr{display:inline-block;width:14px;color:#64748b}.wz-kids{padding:2px 0 6px 24px}" +
     ".wz-grp{position:sticky;top:-6px;background:#fff;margin:8px 0 2px;padding:4px 2px;font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#64748b}" +
@@ -162,9 +164,35 @@
         gb.parentNode.querySelector("em").textContent = n + "/" + g.items.length;
       });
     }
+    // Step 2: which jurisdictions. Everything is ticked by default; all ticked is saved as "no restriction".
+    var step = 1, J = [];
+    function loadJ() { try { J = window.RFQJurisdictions ? window.RFQJurisdictions() : []; } catch (e) { J = []; } }
+    var openJ = false;
+    function jLabel() { return d.where.length ? d.where.length + " of " + J.length + " selected" : "Nothing selected"; }
+    function drawJ() {
+      if (!openJ) loadJ();
+      if (!d.where) d.where = (cur.where && cur.where.length ? cur.where : J.map(function (o) { return o.v; })).slice();
+      var gs = [], idx = {};
+      J.forEach(function (o) { if (!(o.group in idx)) { idx[o.group] = gs.length; gs.push({ name: o.group, items: [] }); } gs[idx[o.group]].items.push(o); });
+      back.innerHTML = "<div class='wz' role='dialog' aria-modal='true' aria-label='Setup'><p class='wz-step'>Step 2</p><h2>Which Jurisdiction would you like to see?</h2>" +
+        "<p class='wz-note'>Federal, city and state bids. Change them any time.</p>" +
+        "<div class='wz-dd'><button type='button' class='wz-dd-btn' data-a='jtoggle' aria-expanded='" + openJ + "'><span>" + jLabel() + "</span><span>&#9662;</span></button>" +
+        (openJ ? "<div class='wz-dd-list'><div class='wz-dd-tools'><button type='button' class='link' data-a='jall'>Select all</button><button type='button' class='link' data-a='jnone'>Clear</button></div>" +
+          gs.map(function (g) {
+            return "<div class='wz-grp'>" + h(g.name) + "</div>" + g.items.map(function (o) {
+              return "<label class='wz-row'><input type='checkbox' data-jur='" + h(o.v) + "'" + (d.where.indexOf(o.v) >= 0 ? " checked" : "") + "> <span>" + h(o.label) + " <em class='wz-note'>(" + o.n + ")</em></span></label>";
+            }).join("");
+          }).join("") + "</div>" : "") + "</div>" +
+        "<div class='wz-btns'><button data-a='back'>&larr; Back</button><button class='pri' data-a='finish'" + (d.where.length ? "" : " disabled") + ">Done</button></div></div>";
+    }
+    function collectJ() {
+      var boxes = back.querySelectorAll("[data-jur]");
+      if (boxes.length) { d.where = []; Array.prototype.forEach.call(boxes, function (el) { if (el.checked) d.where.push(el.dataset.jur); }); }
+    }
     function draw() {
+      if (step === 2) return drawJ();
       if (!openDd) loadAll(); // pick up bid categories that arrived after the page loaded (live data)
-      back.innerHTML = "<div class='wz' role='dialog' aria-modal='true' aria-label='Setup'><h2>Which request categories would you like to see?</h2>" +
+      back.innerHTML = "<div class='wz' role='dialog' aria-modal='true' aria-label='Setup'><p class='wz-step'>Step 1</p><h2>Which request categories would you like to see?</h2>" +
         "<p class='wz-note'>Pre-selected from discovergroup.net. Change them any time.</p>" +
         "<div class='wz-dd'><button type='button' class='wz-dd-btn' data-a='toggle' aria-expanded='" + openDd + "'><span>" + label() + "</span><span>&#9662;</span></button>" +
         (openDd ? "<div class='wz-dd-list'><div class='wz-dd-tools'><button type='button' class='link' data-a='all'>Select all</button><button type='button' class='link' data-a='none'>Clear</button></div>" +
@@ -181,6 +209,7 @@
         Array.prototype.forEach.call(back.querySelectorAll("[data-kids='" + t.dataset.grp + "'] [data-cat]"), function (el) { el.checked = t.checked; });
         collect(); sync();
       } else if (t.dataset.cat) { collect(); sync(); }
+      else if (t.dataset.jur) { collectJ(); var f = back.querySelector("[data-a=finish]"); if (f) f.disabled = !d.where.length; var jl = back.querySelector(".wz-dd-btn span"); if (jl) jl.textContent = jLabel(); }
     });
     back.addEventListener("click", function (e) {
       var g = e.target.closest("[data-g]"); if (!g) return;
@@ -191,13 +220,22 @@
     back.addEventListener("click", function (e) {
       var a = e.target.closest("[data-a]"); if (!a) return;
       var act = a.dataset.a;
-      collect();
+      if (step === 2) collectJ(); else collect();
       if (act === "toggle") openDd = !openDd;
       else if (act === "all") d.cats = ALL.map(function (c) { return c.v; });
       else if (act === "none") d.cats = [];
+      else if (act === "jtoggle") openJ = !openJ;
+      else if (act === "jall") d.where = J.map(function (o) { return o.v; });
+      else if (act === "jnone") d.where = [];
+      else if (act === "back") { step = 1; openJ = false; }
       else if (act === "done") {
         if (!d.cats.length) return;
-        save({ cats: d.cats, extra: d.extra.trim(), src: d.src, reg: d.reg, saved: new Date().toISOString() });
+        step = 2; openJ = false;
+      }
+      else if (act === "finish") {
+        if (!d.where.length) return;
+        var every = J.length && J.every(function (o) { return d.where.indexOf(o.v) >= 0; });
+        save({ cats: d.cats, where: every ? [] : d.where, extra: d.extra.trim(), src: d.src, reg: d.reg, saved: new Date().toISOString() });
         try { localStorage.removeItem(SKIP); } catch (x) {}
         close(); window.dispatchEvent(new Event("rfqprofilechange")); return;
       }
