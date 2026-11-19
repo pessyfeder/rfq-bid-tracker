@@ -48,7 +48,7 @@
     ".hm-resbar select{height:30px;min-width:190px;max-width:100%;border:0;border-radius:4px;background:#fff url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%232d4256' stroke-width='2.5' stroke-linecap='round'%3E%3Cpath d='M5 9l7 7 7-7'/%3E%3C/svg%3E\") no-repeat right 10px center;color:#555f6b;padding:0 30px 0 10px;font-size:13px;appearance:none;-webkit-appearance:none}" +
     ".hm-list{border:1px solid #e1e5ea;border-top:0;margin-bottom:12px}.hm-item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:3px 14px;align-items:center;padding:6px 16px 6px 14px;min-height:56px;border-bottom:1px solid #dfe3e8;background:#fff}.hm-item:nth-child(even){background:#f8faf9}.hm-item:last-child{border-bottom:0}" +
     ".hm-ic{width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:#6b7683;color:#fff}.hm-ic svg{width:15px;height:15px}" +
-    ".hm-item h3{margin:0;font-size:13.5px;font-weight:500;line-height:1.3}.hm-item h3 a{color:#1d2b3a;text-decoration:none}.hm-item h3 a:hover{text-decoration:underline}.hm-val{color:#1b7a34;font-weight:700;margin-left:6px;white-space:nowrap}.hm-val.none{font-weight:400;font-style:italic}.hm-sub{color:#6b7280;font-size:12px;margin-top:1px}" +
+    ".hm-item h3{margin:0;font-size:13.5px;font-weight:500;line-height:1.3}.hm-item h3 a{color:#1d2b3a;text-decoration:none}.hm-item h3 a:hover{text-decoration:underline}.hm-val{color:#1b7a34;font-weight:700;margin-left:6px;white-space:nowrap}.hm-val.none{font-weight:400}.hm-sub{color:#6b7280;font-size:12px;margin-top:1px}" +
     ".hm-dates{display:grid;grid-template-columns:auto auto;gap:2px 12px;font-size:12px;align-content:center;min-width:170px;color:#2a3644}.hm-dates div{display:flex;align-items:center;gap:7px}.hm-dates svg{color:#7b8794;flex:none;width:15px;height:15px}.hm-dates b{font-weight:600}.hm-dates .hm-left{color:#c62828;font-weight:600;white-space:nowrap}" +
     ".hm-reg{grid-column:1 / -1;margin:4px 0 0;padding:8px 12px;background:#fdf6e9;border:1px solid #ecd9b0;border-left:3px solid #b45309;border-radius:6px;font-size:13px}.hm-reg ol{margin:6px 0;padding-left:20px}.hm-reg a{color:#3730a3;font-weight:600}" +
     ".hm-more{border:0;background:none;color:#4338ca;font-weight:500;text-decoration:underline;padding:2px 8px}" +
@@ -384,7 +384,7 @@
   // Bid value in green after the title: the amount, "Not specified" (notice read, none given) or "Couldn't determine" (notice not read).
   function valueTag(r) {
     if (r.value != null) return ' <span class="hm-val">' + esc(money(r.value)) + "</span>";
-    return ' <span class="hm-val none">' + (r.raw && r.raw.aiRead ? "Not specified" : "Couldn't determine") + "</span>";
+    return ' <span class="hm-val none">' + (r.raw && r.raw.aiRead ? "Value not specified" : "Couldn't determine value") + "</span>";
   }
 
   function stats() {

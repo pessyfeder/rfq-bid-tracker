@@ -91,7 +91,7 @@
   td.num, th.num { text-align: left; font-variant-numeric: tabular-nums; }
   .req-title { font-weight: 600; font-size: 15px; }
   .value-inline { color: #1b7a34; font-weight: 700; white-space: nowrap; margin-left: 6px; }
-  .value-inline.none { font-weight: 400; font-style: italic; }
+  .value-inline.none { font-weight: 400; }
   .agency { color: var(--muted); font-size: 12px; }
   .buyer { font-weight: 600; font-size: 13px; margin-top: 4px; }
   .lead { margin: 2px 0 6px; line-height: 1.35; }
@@ -1064,7 +1064,7 @@
     var badge = pm.length ? '<span class="match-chip" title="' + esc("Mentions: " + pm.join(", ")) + '">Matches</span>' : "";
     // Bid value chip: only an amount the agency published or the notice itself states. Never an estimate from past awards.
     var amt = r.value != null ? r.value : r.valueEst && r.valueEst.kind === "stated" ? r.valueEst.amount : null;
-    var vchip = amt != null ? ' <span class="value-inline" title="' + esc(r.value != null ? (r.valueLabel || "Published by the agency") : "Stated in the notice: " + (r.valueEst.quote || "")) + '">' + esc(money(amt)) + "</span>" : ' <span class="value-inline none">' + (r.aiRead ? "Not specified" : "Couldn't determine") + "</span>";
+    var vchip = amt != null ? ' <span class="value-inline" title="' + esc(r.value != null ? (r.valueLabel || "Published by the agency") : "Stated in the notice: " + (r.valueEst.quote || "")) + '">' + esc(money(amt)) + "</span>" : ' <span class="value-inline none">' + (r.aiRead ? "Value not specified" : "Couldn't determine value") + "</span>";
     return '<div class="req-title"' + (orig ? ' title="' + esc("Agency's wording: " + t) + '"' : "") + ">" + badge + esc(shown) + vchip + "</div>" +
       (long ? '<button class="toggle title-toggle" data-id="' + esc(r.id) + '" aria-expanded="' + open + '">' + (open ? "Show less" : "Show more") + "</button>" : "");
   }
