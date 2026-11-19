@@ -104,6 +104,9 @@
     ".wz .wz-src ol{margin:6px 0 0;padding-left:22px;color:#374151;font-size:14px}.wz .wz-seg{display:flex;gap:8px;flex-wrap:wrap}.wz .wz-seg label{flex:1;min-width:140px;display:flex;gap:8px;align-items:center;padding:9px 12px;border:1px solid #d9dfe7;border-radius:6px;cursor:pointer}.wz .wz-seg label:has(input:checked){border-color:#1e3a5f;background:#f0f4f9}" +
     ".wz .wz-note{color:#64748b;font-size:13px}.wz .wz-sum{list-style:none;padding:0}.wz .wz-sum li{margin:8px 0;padding:10px 14px;border-radius:6px;background:#f7f9fb;border:1px solid #e5e9f0}" +
     ".wz a{color:#1e3a5f;font-weight:600}" +
+    ".wz-dd{position:relative;margin-top:14px}.wz-dd-btn{display:flex!important;justify-content:space-between;width:100%;text-align:left}" +
+    ".wz-dd-list{position:absolute;left:0;right:0;top:100%;margin-top:4px;background:#fff;border:1px solid #b8c2cf;border-radius:6px;padding:6px 10px;max-height:300px;overflow:auto;box-shadow:0 4px 12px rgba(15,23,42,.15);z-index:5}" +
+    ".wz-dd-tools{display:flex;gap:14px;padding:4px 2px}.wz .wz-dd-tools .link{margin:0;padding:2px 0}" +
     ".match-chip{display:inline-block;background:#e3f4ea;color:#1d7a46;border-radius:4px;padding:1px 6px;margin:0 6px 0 0;font-size:12px;font-weight:600;cursor:help}";
   document.head.appendChild(css);
 
@@ -115,54 +118,34 @@
     var cur = load() || {};
     var d = { cats: (cur.cats || CATS.map(function (c) { return c.id; })).slice(), extra: cur.extra || "",
       src: (cur.src || SOURCES.map(function (s) { return s.id; })).slice(), reg: Object.assign({}, cur.reg || {}) };
-    var step = 0;
     close();
     back = document.createElement("div"); back.className = "wz-back";
     document.body.insertBefore(back, document.body.firstChild); document.body.classList.add("wz-open"); window.scrollTo(0, 0);
 
-    function skip() { try { if (!load()) localStorage.setItem(SKIP, "1"); } catch (e) {} close(); }
-    function srcList() { return SOURCES.filter(function (s) { return d.src.indexOf(s.id) >= 0; }); }
-    function steps() { return 3; } // welcome, products, review
-
-    function body() {
-      var h2, html = "";
-      if (step === 0) {
-        h2 = "Welcome";
-        html = "<p>This tracker lists government bids from many sources. A two-minute setup lets it point out the bids that look like what you sell, and shows what registration each bid needs.</p>" +
-          "<p class='wz-note'>Your answers stay in this browser. They never hide or rule out a bid; they only add a green &ldquo;Matches&rdquo; mark.</p>";
-      } else if (step === 1) {
-        h2 = "What do you sell?";
-        html = "<p>Tick everything that applies (pre-filled from discovergroup.net).</p>" + CATS.map(function (c) {
-          return "<label class='wz-row'><input type='checkbox' data-cat='" + c.id + "'" + (d.cats.indexOf(c.id) >= 0 ? " checked" : "") + "> <span>" + h(c.label) + "<br><span class='wz-note'>" + h(c.kw.slice(0, 4).join(", ")) + "&hellip;</span></span></label>";
-        }).join("") + "<p>Anything else? Extra keywords, separated by commas:</p><textarea rows='2' id='wzExtra' placeholder='e.g. lanyards, batteries'>" + h(d.extra) + "</textarea>";
-      } else {
-        h2 = "Review your setup";
-        html = "<ul class='wz-sum'><li><b>Selling:</b> " + h(keywords({ cats: d.cats, extra: d.extra }).length ? d.cats.map(function (id) { return CATS.filter(function (c) { return c.id === id; })[0].label; }).concat(d.extra.trim() ? [d.extra.trim()] : []).join("; ") : "nothing selected") + "</li>" +
-          "<li><b>Bidding in:</b> " + h(srcList().map(function (s) { return s.label; }).join(", ") || "none") + "</li>" +
-          "</ul><p class='wz-note'>Registration requirements are shown on each bid.</p>" +
-          "<p class='wz-note'>You can change these answers any time with &ldquo;Edit my profile&rdquo;.</p>";
-      }
-      return { h2: h2, html: html };
-    }
-
+    var openDd = false;
+    function label() { return d.cats.length ? d.cats.length + " of " + CATS.length + " selected" : "Nothing selected"; }
     function draw() {
-      var b = body(), total = steps(), last = step === total - 1;
-      back.innerHTML = "<div class='wz' role='dialog' aria-modal='true' aria-label='Setup'><div class='wz-step'>Step " + (step + 1) + " of " + total + "</div><div class='wz-bar'><i style='width:" + Math.round((step + 1) / total * 100) + "%'></i></div><h2>" + b.h2 + "</h2>" + b.html +
-        "<div class='wz-btns'><button class='link' data-a='skip'>" + (load() ? "Cancel" : "Skip, just show me everything") + "</button>" + "<button data-a='back'" + (step ? "" : " disabled") + ">&larr; Back</button>" +
-        "<button class='pri' data-a='" + (last ? "done" : "next") + "'>" + (last ? "Show my bids" : "Next &rarr;") + "</button></div></div>";
+      back.innerHTML = "<div class='wz' role='dialog' aria-modal='true' aria-label='Setup'><h2>Which request categories would you like to see?</h2>" +
+        "<p class='wz-note'>Pre-selected from discovergroup.net. Change them any time.</p>" +
+        "<div class='wz-dd'><button type='button' class='wz-dd-btn' data-a='toggle' aria-expanded='" + openDd + "'><span>" + label() + "</span><span>&#9662;</span></button>" +
+        (openDd ? "<div class='wz-dd-list'><div class='wz-dd-tools'><button type='button' class='link' data-a='all'>Select all</button><button type='button' class='link' data-a='none'>Clear</button></div>" +
+          CATS.map(function (c) { return "<label class='wz-row'><input type='checkbox' data-cat='" + c.id + "'" + (d.cats.indexOf(c.id) >= 0 ? " checked" : "") + "> <span>" + h(c.label) + "</span></label>"; }).join("") + "</div>" : "") + "</div>" +
+        "<div class='wz-btns'><button class='pri' data-a='done'" + (d.cats.length ? "" : " disabled") + ">Next &rarr;</button></div></div>";
     }
     function collect() {
-      Array.prototype.forEach.call(back.querySelectorAll("[data-cat]"), function (el, _i, all) { if (el === all[0]) d.cats = []; if (el.checked) d.cats.push(el.dataset.cat); });
-      var ex = back.querySelector("#wzExtra"); if (ex) d.extra = ex.value;
+      var boxes = back.querySelectorAll("[data-cat]");
+      if (boxes.length) { d.cats = []; Array.prototype.forEach.call(boxes, function (el) { if (el.checked) d.cats.push(el.dataset.cat); }); }
     }
+    back.addEventListener("change", function (e) { if (e.target.dataset.cat) { collect(); var l = back.querySelector(".wz-dd-btn span"); l.textContent = label(); back.querySelector("[data-a=done]").disabled = !d.cats.length; } });
     back.addEventListener("click", function (e) {
       var a = e.target.closest("[data-a]"); if (!a) return;
       var act = a.dataset.a;
-      if (act === "skip") return skip();
       collect();
-      if (act === "back") step--;
-      else if (act === "next") step++;
+      if (act === "toggle") openDd = !openDd;
+      else if (act === "all") d.cats = CATS.map(function (c) { return c.id; });
+      else if (act === "none") d.cats = [];
       else if (act === "done") {
+        if (!d.cats.length) return;
         save({ cats: d.cats, extra: d.extra.trim(), src: d.src, reg: d.reg, saved: new Date().toISOString() });
         try { localStorage.removeItem(SKIP); } catch (x) {}
         close(); window.dispatchEvent(new Event("rfqprofilechange")); return;
@@ -187,9 +170,5 @@
   }
   window.RFQProfile = { get: load, match: match, categories: categories, catHits: catHits, open: open, sourceFor: sourceFor, regInfo: regInfo, setReg: setReg };
   // First visit: offer the setup once. (Skipping is remembered; the toolbar button reopens it.)
-  // DISABLED for now: go straight to the main page. Re-enable by uncommenting.
-  // window.addEventListener("load", function () {
-  //   var skipped = false; try { skipped = !!localStorage.getItem(SKIP); } catch (e) {}
-  //   if (!load() && !skipped) open();
-  // });
+  window.addEventListener("load", function () { if (!load()) open(); });
 })();
