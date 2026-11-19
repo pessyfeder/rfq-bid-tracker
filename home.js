@@ -6,7 +6,7 @@
   var $app = document.getElementById("app");
   if (!$app) return;
   var DAY = 86400000, PAGE = 25;
-  var st = { kw: "", cats: [], where: [], close: "any", posted: "any", value: "any", vmin: "", vmax: "", aside: "any", reg: "any", sort: "new", shown: PAGE, dd: null, more: false, regOpen: {}, openG: { "My products": true } };
+  var st = { kw: "", cats: [], where: [], close: [], posted: [], value: [], vmin: "", vmax: "", aside: [], reg: "any", sort: "new", shown: PAGE, dd: null, more: false, regOpen: {}, openG: { "My products": true } };
 
   var css = document.createElement("style");
   css.textContent =
@@ -151,10 +151,10 @@
   function selCats() { return st.cats === null ? defaultCats() : st.cats; }
   function hits(r) { return window.RFQProfile ? window.RFQProfile.catHits(r.raw) : {}; }
 
-  var CLOSE_OPT = [["any", "Any"], ["7", "Closing in 7 days"], ["14", "Closing in 14 days"], ["30", "Closing in 30 days"], ["60", "Closing in 60 days"], ["none", "No firm deadline"]];
-  var POSTED_OPT = [["any", "Any"], ["3", "Last 3 days"], ["7", "Last 7 days"], ["30", "Last 30 days"]];
-  var VALUE_OPT = window.RFQProfile ? window.RFQProfile.valueOpts.map(function (o) { return o[0] === "any" ? ["any", "Any"] : o; }) : [["any", "Any"]];
-  var ASIDE_OPT = [["any", "Anyone"], ["open", "Open to all (no set-aside found)"], ["small", "Small business set-aside"], ["vet", "Veteran-owned (SDVOSB)"], ["women", "Women-owned (WOSB)"], ["other", "HUBZone, 8(a), minority-owned"]];
+  var CLOSE_OPT = [["7", "Closing in 7 days"], ["14", "Closing in 14 days"], ["30", "Closing in 30 days"], ["60", "Closing in 60 days"], ["none", "No firm deadline"]];
+  var POSTED_OPT = [["3", "Last 3 days"], ["7", "Last 7 days"], ["30", "Last 30 days"]];
+  var VALUE_OPT = window.RFQProfile ? window.RFQProfile.valueOpts.slice() : [];
+  var ASIDE_OPT = [["open", "Open to all (no set-aside found)"], ["small", "Small business set-aside"], ["vet", "Veteran-owned (SDVOSB)"], ["women", "Women-owned (WOSB)"], ["other", "HUBZone, 8(a), minority-owned"]];
   var REG_OPT = [["any", "Any"], ["yes", "Only where I'm registered"]];
   var SORT_OPT = [["new", "Newest first"], ["soon", "Closing date (soonest first)"], ["value", "Value (biggest first)"]];
   var SELECTS = { close: "Status", posted: "Published", value: "Bid value", aside: "Who can bid", reg: "Registration" };
@@ -165,18 +165,18 @@
     for (i = 0; i < ctx.words.length; i++) if (r.hay.indexOf(ctx.words[i]) < 0) return false;
     if (ctx.cats.length) { var h = hits(r), ok = ctx.cats.indexOf(r.ck) >= 0; for (i = 0; !ok && i < ctx.cats.length; i++) if (h[ctx.cats[i]]) ok = true; if (!ok) return false; }
     if (st.where.length && st.where.indexOf(r.code) < 0) return false;
-    if (st.close === "none") { if (r.days != null) return false; }
-    else if (st.close !== "any" && (r.days == null || r.days > +st.close)) return false;
-    if (st.posted !== "any" && (!r.posted || (today - new Date(r.posted.slice(0, 10) + "T00:00:00")) / DAY > +st.posted)) return false;
-    if (st.value !== "any" && window.RFQProfile && !window.RFQProfile.valueOk({ value: st.value, vmin: st.vmin, vmax: st.vmax }, r.value)) return false;
-    if (st.aside === "open" ? r.aside.any : st.aside !== "any" && !r.aside[st.aside]) return false;
+    // Within one dropdown the ticked choices are alternatives (any one may match); nothing ticked = no filter.
+    if (st.close.length && !st.close.some(function (k) { return k === "none" ? r.days == null : r.days != null && r.days <= +k; })) return false;
+    if (st.posted.length) { var age = r.posted ? (today - new Date(r.posted.slice(0, 10) + "T00:00:00")) / DAY : null; if (age == null || !st.posted.some(function (k) { return age <= +k; })) return false; }
+    if (st.value.length && window.RFQProfile && !window.RFQProfile.valueOk({ value: st.value, vmin: st.vmin, vmax: st.vmax }, r.value)) return false;
+    if (st.aside.length && !st.aside.some(function (k) { return k === "open" ? r.aside.any : r.aside[k]; })) return false;
     if (st.reg === "yes") { var info = window.RFQProfile && window.RFQProfile.regInfo(window.RFQProfile.sourceFor(r.level, r.code)); if (!info || !info.registered) return false; }
     return true;
   }
   function ctxNow() { return { words: st.kw.toLowerCase().split(/\s+/).filter(Boolean), cats: selCats() }; }
 
-  function resetFilters(keepCats) { st.kw = ""; st.cats = []; st.where = []; st.close = "any"; st.posted = "any"; st.value = "any"; st.vmin = ""; st.vmax = ""; st.aside = "any"; st.reg = "any"; st.shown = PAGE; }
-  function lab(key, v) { return OPTS[key].filter(function (o) { return o[0] === v; })[0][1]; }
+  function resetFilters(keepCats) { st.kw = ""; st.cats = []; st.where = []; st.close = []; st.posted = []; st.value = []; st.vmin = ""; st.vmax = ""; st.aside = []; st.reg = "any"; st.shown = PAGE; }
+  function lab(key, v) { var o = OPTS[key].filter(function (o) { return o[0] === v; })[0]; return o ? o[1] : v; }
   function money(x) { x = +x; return x >= 1e6 ? "$" + +(x / 1e6).toFixed(2) + "M" : x >= 1e3 ? "$" + +(x / 1e3).toFixed(1) + "K" : "$" + x; }
   function customLabel() {
     var lo = parseFloat(String(st.vmin).replace(/[$,\s]/g, "")), hi = parseFloat(String(st.vmax).replace(/[$,\s]/g, ""));
@@ -187,7 +187,12 @@
     if (st.kw.trim()) out.push(["kw", "“" + st.kw.trim() + "”"]);
     if (cats.length) out.push(["cats", "Category: " + (cats.length === 1 ? (cl.filter(function (c) { return c.v === cats[0]; })[0] || {}).label : st.cats === null ? "my products (" + cats.length + ")" : cats.length + " selected")]);
     if (st.where.length) out.push(["where", st.where.length === 1 ? stateName(st.where[0]) : st.where.length + " jurisdictions"]);
-    ["close", "posted", "value", "aside", "reg"].forEach(function (k) { if (st[k] !== "any") out.push([k, (k === "close" ? "" : SELECTS[k] + ": ") + (k === "value" && st.value === "custom" ? customLabel() : lab(k, st[k]))]); });
+    ["close", "posted", "value", "aside"].forEach(function (k) {
+      if (!st[k].length) return;
+      var names = st[k].map(function (v) { return k === "value" && v === "custom" ? customLabel() : lab(k, v); });
+      out.push([k, SELECTS[k] + ": " + (names.length <= 2 ? names.join(", ") : names.length + " selected")]);
+    });
+    if (st.reg !== "any") out.push(["reg", SELECTS.reg + ": " + lab("reg", st.reg)]);
     return out;
   }
 
@@ -210,11 +215,12 @@
   var ICON_CAL = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M8 3v4M16 3v4M8 14h2M12 14h2M16 14h.01"/></svg>';
   var ICON_CLOCK = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
 
+  // The simple filters are multi-select dropdowns too: tick as many as you like (any one may match).
   function selectHtml(key) {
-    var cust = key === "value" && st.value === "custom" ? '<span class="hm-cust"><input type="text" inputmode="numeric" data-vc="vmin" placeholder="Min $" aria-label="Minimum value" value="' + esc(st.vmin) + '"><input type="text" inputmode="numeric" data-vc="vmax" placeholder="Max $" aria-label="Maximum value" value="' + esc(st.vmax) + '"></span>' : "";
-    return '<div class="hm-field"><span class="hm-lb">' + SELECTS[key] + '</span><span class="hm-face">' + SELECTS[key] + '</span><select data-sel="' + key + '" aria-label="' + SELECTS[key] + '" class="' + (st[key] !== "any" ? "on" : "") + '">' +
-      OPTS[key].map(function (o) { return '<option value="' + o[0] + '"' + (st[key] === o[0] ? " selected" : "") + ">" + esc(o[0] === "any" ? SELECTS[key] : o[1]) + "</option>"; }).join("") + "</select></div>" + cust;
+    var cust = key === "value" && st.value.indexOf("custom") >= 0 ? '<span class="hm-cust"><input type="text" inputmode="numeric" data-vc="vmin" placeholder="Min $" aria-label="Minimum value" value="' + esc(st.vmin) + '"><input type="text" inputmode="numeric" data-vc="vmax" placeholder="Max $" aria-label="Maximum value" value="' + esc(st.vmax) + '"></span>' : "";
+    return ddHtml(key, SELECTS[key], simpleOpts(key), st[key], '<button type="button" data-a="' + key + '-none">Clear</button>', "") + cust;
   }
+  function simpleOpts(key) { return OPTS[key].map(function (o) { return { v: o[0], label: o[1] }; }); }
   function ddText(label, opts, sel) {
     return label; // the label never changes; a set filter is shown by the outline (and the chip below) only
   }
@@ -280,7 +286,7 @@
       .forEach(function (c) { out.push({ v: c, label: stateName(c), n: n[c], group: "States" }); });
     return out;
   }
-  var MORE_KEYS = ["value", "aside"];
+  var MORE_KEYS = ["value", "aside"], SIMPLE = ["close", "posted", "value", "aside"];
   function fieldsHtml() {
     return ddHtml("cats", "Category", catOpts(), selCats(), '<button type="button" data-a="cats-all">Select all</button><button type="button" data-a="cats-none">Clear</button>', "", true) +
       ddHtml("where", "Jurisdiction", whereOpts(), st.where, '<button type="button" data-a="where-none">Clear</button>', "") +
@@ -387,7 +393,7 @@
     var x = e.target.closest("[data-x]");
     if (x) {
       var k = x.dataset.x;
-      if (k === "kw") { st.kw = ""; clearKw(); } else if (k === "cats") st.cats = []; else if (k === "where") st[k] = []; else st[k] = "any";
+      if (k === "kw") { st.kw = ""; clearKw(); } else if (k === "cats") st.cats = []; else if (k === "reg") st.reg = "any"; else st[k] = [];
       st.shown = PAGE; return refreshAll();
     }
     var b = e.target.closest("button"); if (!b) return;
@@ -396,10 +402,11 @@
     if (d.a === "profile") { window.location.href = "/profile.html"; return; }
     if (d.a === "refresh") { var rb = document.getElementById("refreshBtn"); if (rb) rb.click(); b.textContent = "Refreshing…"; return; }
     if (d.a === "clear") { resetFilters(false); clearKw(); return refreshAll(); }
-    if (d.a === "more-filters") { st.more = !(st.more || MORE_KEYS.some(function (k) { return st[k] !== "any"; })); if (!st.more) { MORE_KEYS.forEach(function (k) { st[k] = "any"; }); } return refreshAll(); }
+    if (d.a === "more-filters") { st.more = !(st.more || MORE_KEYS.some(function (k) { return st[k].length; })); if (!st.more) { MORE_KEYS.forEach(function (k) { st[k] = []; }); } return refreshAll(); }
     if (d.a === "cats-all") st.cats = catOpts().map(function (c) { return c.v; });
     else if (d.a === "cats-none") st.cats = [];
     else if (d.a === "where-none") st.where = [];
+    else if (d.a && d.a.slice(-5) === "-none" && SIMPLE.indexOf(d.a.slice(0, -5)) >= 0) { st[d.a.slice(0, -5)] = []; if (d.a === "value-none") { st.vmin = ""; st.vmax = ""; } }
     else if (d.a === "more") { st.shown += PAGE; return results(); }
     else if (d.ro) { st.regOpen[d.ro] = !st.regOpen[d.ro]; return results(); }
     else if (d.r) { window.RFQProfile.setReg(d.r, d.v === "1"); return results(); }
@@ -412,13 +419,13 @@
       Array.prototype.forEach.call(t.parentNode.nextElementSibling.querySelectorAll("input[data-ms]"), function (i) { i.checked = t.checked; });
       t = t.parentNode.nextElementSibling.querySelector("input[data-ms]"); if (!t) return;
     }
-    if (t.dataset.sel === "value" && (t.value === "custom" || st.value === "custom")) { st.value = t.value; st.shown = PAGE; return refreshAll(); }
-    if (t.dataset.sel) { st[t.dataset.sel] = t.value; st.shown = PAGE; t.classList.toggle("on", t.value !== "any" && t.dataset.sel !== "sort"); return results(); }
+    if (t.dataset.sel) { st[t.dataset.sel] = t.value; st.shown = PAGE; return results(); } // the sort order stays a single choice
     if (t.dataset.ms) {
       var key = t.dataset.ms, ids = Array.prototype.slice.call($app.querySelectorAll('input[data-ms="' + key + '"]')).filter(function (i) { return i.checked; }).map(function (i) { return i.value; });
       if (key === "cats") st.cats = ids; else st[key] = ids;
-      var cfg = { cats: ["Category", catOpts], where: ["Jurisdiction", whereOpts] }[key], lbl = $app.querySelector('.hm-field[data-k="' + key + '"] [data-lbl]');
-      if (lbl) { lbl.textContent = ddText(cfg[0], cfg[1](), ids); lbl.parentNode.classList.toggle("on", ids.length > 0); }
+      var lbl = $app.querySelector('.hm-field[data-k="' + key + '"] [data-lbl]');
+      if (lbl) lbl.parentNode.classList.toggle("on", ids.length > 0);
+      if (key === "value" && (ids.indexOf("custom") >= 0) !== !!$app.querySelector("[data-vc]")) { st.shown = PAGE; return refreshAll(); } // show / hide the custom amount boxes
       if (key === "cats") syncGroups();
       st.shown = PAGE; results();
     }
@@ -427,13 +434,14 @@
   $app.addEventListener("input", function (e) { if (e.target.dataset.vc) { st[e.target.dataset.vc] = e.target.value; st.shown = PAGE; clearTimeout(kwTimer); kwTimer = setTimeout(results, 250); return; } if (e.target.dataset.kw != null) { st.kw = e.target.value; st.shown = PAGE; clearTimeout(kwTimer); kwTimer = setTimeout(results, 150); } });
   $app.addEventListener("submit", function (e) { e.preventDefault(); st.dd = null; syncOpen(); results(); });
   function profWhere() { var p = P(); return p && p.where && p.where.length ? p.where.slice() : []; } // [] = every jurisdiction
-  function profValue() { var p = P(); return p && p.value && VALUE_OPT.some(function (o) { return o[0] === p.value; }) ? p.value : "any"; }
-  function profAside() { var p = P(); return p && p.aside && ASIDE_OPT.some(function (o) { return o[0] === p.aside; }) ? p.aside : "any"; }
-  function profRange() { var p = P() || {}; st.vmin = st.value === "custom" ? p.vmin || "" : ""; st.vmax = st.value === "custom" ? p.vmax || "" : ""; }
+  function profList(v, opts) { return (Array.isArray(v) ? v : v && v !== "any" ? [v] : []).filter(function (x) { return opts.some(function (o) { return o[0] === x; }); }); } // older saves held one string
+  function profValue() { var p = P(); return p ? profList(p.value, VALUE_OPT) : []; }
+  function profAside() { var p = P(); return p ? profList(p.aside, ASIDE_OPT) : []; }
+  function profRange() { var p = P() || {}; st.vmin = st.value.indexOf("custom") >= 0 ? p.vmin || "" : ""; st.vmax = st.value.indexOf("custom") >= 0 ? p.vmax || "" : ""; }
   // Apply every wizard choice to the page's filters. st.cats = null means "the categories saved in the wizard".
   function applyProfile() {
     st.cats = P() ? null : []; st.where = profWhere(); st.value = profValue(); st.aside = profAside(); profRange();
-    st.kw = ""; st.close = "any"; st.posted = "any"; st.reg = "any"; st.shown = PAGE;
+    st.kw = ""; st.close = []; st.posted = []; st.reg = "any"; st.shown = PAGE;
   }
   applyProfile();
   window.addEventListener("rfqprofilechange", function () { applyProfile(); render(); });

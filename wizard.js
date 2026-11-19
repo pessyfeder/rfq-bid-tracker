@@ -35,16 +35,22 @@
   ];
 
   // Bid value choices, shared with the main page's "Bid value" filter. [min, max] in dollars (null = open-ended).
-  var VALUE_OPTS = [["any", "Any value"], ["under50", "Under $50K"], ["mid", "$50K to $500K"], ["over500", "Over $500K"], ["over1m", "Over $1M"], ["over5m", "Over $5M"],
+  var VALUE_OPTS = [["under50", "Under $50K"], ["mid", "$50K to $500K"], ["over500", "Over $500K"], ["over1m", "Over $1M"], ["over5m", "Over $5M"],
     ["over10m", "Over $10M"], ["over50m", "Over $50M"], ["over100m", "Over $100M"], ["none", "No stated value"], ["custom", "Custom amount…"]];
-  // Eligibility choices (step 4), shared with the main page's set-aside filter. "any" = no restriction.
-  var ASIDE_OPTS = [["any", "Anyone"], ["open", "Open to all (no set-aside found)"], ["small", "Small business set-aside"], ["vet", "Veteran-owned (SDVOSB)"], ["women", "Women-owned (WOSB)"], ["other", "HUBZone, 8(a), minority-owned"]];
+  // Eligibility choices (step 4), shared with the main page's set-aside filter. nothing ticked = no restriction.
+  var ASIDE_OPTS = [["open", "Open to all (no set-aside found)"], ["small", "Small business set-aside"], ["vet", "Veteran-owned (SDVOSB)"], ["women", "Women-owned (WOSB)"], ["other", "HUBZone, 8(a), minority-owned"]];
   var RANGES = { under50: [null, 49999.99], mid: [50000, 500000], over500: [500000.01, null], over1m: [1000000, null], over5m: [5000000, null], over10m: [10000000, null], over50m: [50000000, null], over100m: [100000000, null] };
   function num(x) { x = parseFloat(String(x == null ? "" : x).replace(/[$,\s]/g, "")); return isFinite(x) && x >= 0 ? x : null; }
   // Does a bid with value v (number or null) pass the filter f = { value, vmin, vmax }?
   function valueOk(f, v) {
-    var k = f && f.value || "any";
-    if (k === "any") return true;
+    var ks = toArr(f && f.value);
+    if (!ks.length) return true;
+    for (var i = 0; i < ks.length; i++) if (oneValueOk(ks[i], f, v)) return true; // any ticked range matches
+    return false;
+  }
+  // Saved choices are lists; older saves held one string ("any" = nothing ticked).
+  function toArr(x) { return Array.isArray(x) ? x.slice() : x && x !== "any" ? [x] : []; }
+  function oneValueOk(k, f, v) {
     if (k === "none") return v == null;
     var lo, hi;
     if (k === "custom") { lo = num(f.vmin); hi = num(f.vmax); if (lo == null && hi == null) return true; }
@@ -139,7 +145,7 @@
   function open() {
     var cur = load() || {};
     var d = { cats: (cur.cats || CATS.map(function (c) { return c.id; })).slice(), extra: cur.extra || "",
-      src: (cur.src || SOURCES.map(function (s) { return s.id; })).slice(), reg: Object.assign({}, cur.reg || {}), value: cur.value || "any", aside: cur.aside || "any", vmin: cur.vmin || "", vmax: cur.vmax || "" };
+      src: (cur.src || SOURCES.map(function (s) { return s.id; })).slice(), reg: Object.assign({}, cur.reg || {}), value: toArr(cur.value), aside: toArr(cur.aside), vmin: cur.vmin || "", vmax: cur.vmax || "" };
     close();
     back = document.createElement("div"); back.className = "wz-back";
     document.body.insertBefore(back, document.body.firstChild); document.body.classList.add("wz-open"); window.scrollTo(0, 0);
@@ -205,27 +211,28 @@
     }
     // Step 3: which bid value. Stored as the same keys the main page's "Bid value" filter uses ("any" = no restriction).
     var openV = false;
-    function vLabel() { var o = VALUE_OPTS.filter(function (x) { return x[0] === d.value; })[0]; return o ? o[1] : "Any value"; }
+    function multiLabel(opts, sel, none) { var o = opts.filter(function (x) { return sel.indexOf(x[0]) >= 0; }); return !o.length ? none : o.length === 1 ? o[0][1] : o.length + " selected"; }
+    function vLabel() { return multiLabel(VALUE_OPTS, d.value, "Any value"); }
     function drawV() {
       back.innerHTML = "<div class='wz' role='dialog' aria-modal='true' aria-label='Setup'><p class='wz-step'>Step 3</p><h2>Which value would you like to see?</h2>" +
         "<p class='wz-note'>Many bids do not state a value; choosing a range hides those. Change it any time.</p>" +
         "<div class='wz-dd'><button type='button' class='wz-dd-btn' data-a='vtoggle' aria-expanded='" + openV + "'><span>" + h(vLabel()) + "</span><span>&#9662;</span></button>" +
         (openV ? "<div class='wz-dd-list'>" + VALUE_OPTS.map(function (o) {
-          return "<label class='wz-row'><input type='radio' name='wz-value' data-vpick='" + h(o[0]) + "'" + (d.value === o[0] ? " checked" : "") + "> <span>" + h(o[1]) + "</span></label>";
+          return "<label class='wz-row'><input type='checkbox' data-vpick='" + h(o[0]) + "'" + (d.value.indexOf(o[0]) >= 0 ? " checked" : "") + "> <span>" + h(o[1]) + "</span></label>";
         }).join("") + "</div>" : "") + "</div>" +
-        "<div class='wz-cust' data-cust" + (d.value === "custom" ? "" : " hidden") + "><label>From $ <input type='text' inputmode='numeric' data-vmin placeholder='no minimum' value='" + h(d.vmin) + "'></label>" +
+        "<div class='wz-cust' data-cust" + (d.value.indexOf("custom") >= 0 ? "" : " hidden") + "><label>From $ <input type='text' inputmode='numeric' data-vmin placeholder='no minimum' value='" + h(d.vmin) + "'></label>" +
         "<label>To $ <input type='text' inputmode='numeric' data-vmax placeholder='no maximum' value='" + h(d.vmax) + "'></label></div>" +
         "<div class='wz-btns'><button data-a='back3'>&larr; Back</button><button class='pri' data-a='next4'>Next &rarr;</button></div></div>";
     }
     // Step 4: which eligibility would you like to see? Which set-aside / eligibility group the vendor belongs to.
     var openA = false;
-    function aLabel() { var o = ASIDE_OPTS.filter(function (x) { return x[0] === d.aside; })[0]; return o ? o[1] : "Anyone"; }
+    function aLabel() { return multiLabel(ASIDE_OPTS, d.aside, "Anyone"); }
     function drawA() {
       back.innerHTML = "<div class='wz' role='dialog' aria-modal='true' aria-label='Setup'><p class='wz-step'>Step 4</p><h2>Eligibility criteria</h2>" +
         "<p class='wz-note'>Some bids are reserved for certain businesses. Pick the eligibility you want to see. Change it any time.</p>" +
         "<div class='wz-dd'><button type='button' class='wz-dd-btn' data-a='atoggle' aria-expanded='" + openA + "'><span>" + h(aLabel()) + "</span><span>&#9662;</span></button>" +
         (openA ? "<div class='wz-dd-list'>" + ASIDE_OPTS.map(function (o) {
-          return "<label class='wz-row'><input type='radio' name='wz-aside' data-apick='" + h(o[0]) + "'" + (d.aside === o[0] ? " checked" : "") + "> <span>" + h(o[1]) + "</span></label>";
+          return "<label class='wz-row'><input type='checkbox' data-apick='" + h(o[0]) + "'" + (d.aside.indexOf(o[0]) >= 0 ? " checked" : "") + "> <span>" + h(o[1]) + "</span></label>";
         }).join("") + "</div>" : "") + "</div>" +
         "<div class='wz-btns'><button data-a='back4'>&larr; Back</button><button class='pri' data-a='finish'>Show me my RFQs</button></div></div>";
     }
@@ -255,8 +262,15 @@
         Array.prototype.forEach.call(back.querySelectorAll("[data-kids='" + t.dataset.grp + "'] [data-cat]"), function (el) { el.checked = t.checked; });
         collect(); sync();
       } else if (t.dataset.cat) { collect(); sync(); }
-      else if (t.dataset.vpick != null) { d.value = t.dataset.vpick; openV = false; drawV(); }
-      else if (t.dataset.apick != null) { d.aside = t.dataset.apick; openA = false; drawA(); }
+      else if (t.dataset.vpick != null) {
+        d.value = Array.prototype.map.call(back.querySelectorAll("[data-vpick]:checked"), function (el) { return el.dataset.vpick; });
+        var vb = back.querySelector(".wz-dd-btn span"); if (vb) vb.textContent = vLabel();
+        var vc = back.querySelector("[data-cust]"); if (vc) vc.hidden = d.value.indexOf("custom") < 0;
+      }
+      else if (t.dataset.apick != null) {
+        d.aside = Array.prototype.map.call(back.querySelectorAll("[data-apick]:checked"), function (el) { return el.dataset.apick; });
+        var ab = back.querySelector(".wz-dd-btn span"); if (ab) ab.textContent = aLabel();
+      }
       else if (t.dataset.jur) { collectJ(); var f = back.querySelector("[data-a=finish]"); if (f) f.disabled = !d.where.length; var jl = back.querySelector(".wz-dd-btn span"); if (jl) jl.textContent = jLabel(); }
     });
     back.addEventListener("input", function (e) { var t = e.target; if (t.dataset.vmin != null) d.vmin = t.value; else if (t.dataset.vmax != null) d.vmax = t.value; });
