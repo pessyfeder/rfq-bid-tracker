@@ -165,7 +165,7 @@
       try { ALL = ALL.concat((window.RFQExtraCats ? window.RFQExtraCats() : []).map(function (o) { return { v: o.v, label: o.label, group: o.group }; })); } catch (e) {}
     }
     loadAll();
-    function label() { return d.cats.length ? d.cats.length + " of " + ALL.length + " selected" : "Nothing selected (all)"; }
+    function label() { return d.cats.length ? d.cats.length + " of " + ALL.length + " selected" : "All categories"; }
     // Collapsible groups: a group checkbox ticks every category inside it; the arrow expands it. My products start open.
     var openG = { "My products": true };
     function groups() {
@@ -199,7 +199,7 @@
     if (saved && saved.step >= 1 && saved.step <= 4 && saved.d) { Object.keys(saved.d).forEach(function (k) { d[k] = saved.d[k]; }); step = saved.step; }
     function loadJ() { try { J = window.RFQJurisdictions ? window.RFQJurisdictions() : []; } catch (e) { J = []; } }
     var openJ = false;
-    function jLabel() { return d.where.length ? d.where.length + " of " + J.length + " selected" : "Nothing selected (all)"; }
+    function jLabel() { return d.where.length ? d.where.length + " of " + J.length + " selected" : "All locations"; }
     function drawJ() {
       if (!openJ) loadJ();
       if (!d.where) d.where = (cur.where || []).slice();
