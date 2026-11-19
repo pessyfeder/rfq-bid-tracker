@@ -150,7 +150,7 @@
     var saved = null;
     if (restore === true) { try { saved = JSON.parse(sessionStorage.getItem(WZKEY) || "null"); } catch (e) {} }
     var cur = load() || {};
-    var d = { cats: (cur.cats || CATS.map(function (c) { return c.id; })).slice(), extra: cur.extra || "",
+    var d = { cats: (cur.cats || []).slice(), extra: cur.extra || "",
       src: (cur.src || SOURCES.map(function (s) { return s.id; })).slice(), reg: Object.assign({}, cur.reg || {}), value: toArr(cur.value), aside: toArr(cur.aside), vmin: cur.vmin || "", vmax: cur.vmax || "" };
     close();
     back = document.createElement("div"); back.className = "wz-back";
@@ -165,7 +165,7 @@
       try { ALL = ALL.concat((window.RFQExtraCats ? window.RFQExtraCats() : []).map(function (o) { return { v: o.v, label: o.label, group: o.group }; })); } catch (e) {}
     }
     loadAll();
-    function label() { return d.cats.length ? d.cats.length + " of " + ALL.length + " selected" : "Nothing selected"; }
+    function label() { return d.cats.length ? d.cats.length + " of " + ALL.length + " selected" : "Nothing selected (all)"; }
     // Collapsible groups: a group checkbox ticks every category inside it; the arrow expands it. My products start open.
     var openG = { "My products": true };
     function groups() {
@@ -186,7 +186,7 @@
     // Refresh group tick boxes / counts and the button label without redrawing (keeps the scroll position).
     function sync() {
       var l = back.querySelector(".wz-dd-btn span"); if (l) l.textContent = label();
-      var done = back.querySelector("[data-a=done]"); if (done) done.disabled = !d.cats.length;
+      
       groups().forEach(function (g, i) {
         var n = g.items.filter(function (c) { return d.cats.indexOf(c.v) >= 0; }).length;
         var gb = back.querySelector("[data-grp='" + i + "']"); if (!gb) return;
@@ -199,22 +199,22 @@
     if (saved && saved.step >= 1 && saved.step <= 4 && saved.d) { Object.keys(saved.d).forEach(function (k) { d[k] = saved.d[k]; }); step = saved.step; }
     function loadJ() { try { J = window.RFQJurisdictions ? window.RFQJurisdictions() : []; } catch (e) { J = []; } }
     var openJ = false;
-    function jLabel() { return d.where.length ? d.where.length + " of " + J.length + " selected" : "Nothing selected"; }
+    function jLabel() { return d.where.length ? d.where.length + " of " + J.length + " selected" : "Nothing selected (all)"; }
     function drawJ() {
       if (!openJ) loadJ();
-      if (!d.where) d.where = (cur.where && cur.where.length ? cur.where : J.map(function (o) { return o.v; })).slice();
+      if (!d.where) d.where = (cur.where || []).slice();
       var gs = [], idx = {};
       J.forEach(function (o) { if (!(o.group in idx)) { idx[o.group] = gs.length; gs.push({ name: o.group, items: [] }); } gs[idx[o.group]].items.push(o); });
       back.innerHTML = "<div class='wz' role='dialog' aria-modal='true' aria-label='Setup'><p class='wz-step'>Step 2</p><h2>Which jurisdiction would you like to see?</h2>" +
         "<p class='wz-note'>Federal, city and state bids. Change them any time.</p>" +
         "<div class='wz-dd'><button type='button' class='wz-dd-btn' data-a='jtoggle' aria-expanded='" + openJ + "'><span>" + jLabel() + "</span><span>&#9662;</span></button>" +
-        (openJ ? "<div class='wz-dd-list'><div class='wz-dd-tools'><button type='button' class='link' data-a='jall'>Select all</button><button type='button' class='link' data-a='jnone'>Clear</button></div>" +
+        (openJ ? "<div class='wz-dd-list'><div class='wz-dd-tools'><button type='button' class='link' data-a='jnone'>Clear</button></div>" +
           gs.map(function (g) {
             return "<div class='wz-grp'>" + h(g.name) + "</div>" + g.items.map(function (o) {
               return "<label class='wz-row'><input type='checkbox' data-jur='" + h(o.v) + "'" + (d.where.indexOf(o.v) >= 0 ? " checked" : "") + "> <span>" + h(o.label) + " <em class='wz-note'>(" + o.n + ")</em></span></label>";
             }).join("");
           }).join("") + "</div>" : "") + "</div>" +
-        "<div class='wz-btns'><button data-a='back'>&larr; Back</button><button class='pri' data-a='next3'" + (d.where.length ? "" : " disabled") + ">Next &rarr;</button></div></div>";
+        "<div class='wz-btns'><button data-a='back'>&larr; Back</button><button class='pri' data-a='next3'>Next &rarr;</button></div></div>";
     }
     // Step 3: which bid value. Stored as the same keys the main page's "Bid value" filter uses ("any" = no restriction).
     var openV = false;
@@ -224,7 +224,7 @@
       back.innerHTML = "<div class='wz' role='dialog' aria-modal='true' aria-label='Setup'><p class='wz-step'>Step 3</p><h2>Which value would you like to see?</h2>" +
         "<p class='wz-note'>Many bids do not state a value; choosing a range hides those. Change it any time.</p>" +
         "<div class='wz-dd'><button type='button' class='wz-dd-btn' data-a='vtoggle' aria-expanded='" + openV + "'><span>" + h(vLabel()) + "</span><span>&#9662;</span></button>" +
-        (openV ? "<div class='wz-dd-list'><div class='wz-dd-tools'><button type='button' class='link' data-a='vall'>Select all</button><button type='button' class='link' data-a='vnone'>Clear</button></div>" + VALUE_OPTS.map(function (o) {
+        (openV ? "<div class='wz-dd-list'><div class='wz-dd-tools'><button type='button' class='link' data-a='vnone'>Clear</button></div>" + VALUE_OPTS.map(function (o) {
           return "<label class='wz-row'><input type='checkbox' data-vpick='" + h(o[0]) + "'" + (d.value.indexOf(o[0]) >= 0 ? " checked" : "") + "> <span>" + h(o[1]) + "</span></label>";
         }).join("") + "</div>" : "") + "</div>" +
         "<div class='wz-cust' data-cust" + (d.value.indexOf("custom") >= 0 ? "" : " hidden") + "><label>From $ <input type='text' inputmode='numeric' data-vmin placeholder='no minimum' value='" + h(d.vmin) + "'></label>" +
@@ -238,7 +238,7 @@
       back.innerHTML = "<div class='wz' role='dialog' aria-modal='true' aria-label='Setup'><p class='wz-step'>Step 4</p><h2>Which eligibility criteria would you like to see?</h2>" +
         "<p class='wz-note'>Some bids are reserved for certain businesses. Pick the eligibility you want to see. Change it any time.</p>" +
         "<div class='wz-dd'><button type='button' class='wz-dd-btn' data-a='atoggle' aria-expanded='" + openA + "'><span>" + h(aLabel()) + "</span><span>&#9662;</span></button>" +
-        (openA ? "<div class='wz-dd-list'><div class='wz-dd-tools'><button type='button' class='link' data-a='aall'>Select all</button><button type='button' class='link' data-a='anone'>Clear</button></div>" + ASIDE_OPTS.map(function (o) {
+        (openA ? "<div class='wz-dd-list'><div class='wz-dd-tools'><button type='button' class='link' data-a='anone'>Clear</button></div>" + ASIDE_OPTS.map(function (o) {
           return "<label class='wz-row'><input type='checkbox' data-apick='" + h(o[0]) + "'" + (d.aside.indexOf(o[0]) >= 0 ? " checked" : "") + "> <span>" + h(o[1]) + "</span></label>";
         }).join("") + "</div>" : "") + "</div>" +
         "<div class='wz-btns'><button data-a='back4'>&larr; Back</button><button class='pri' data-a='finish'>Show me my RFQs</button></div></div>";
@@ -259,9 +259,9 @@
       back.innerHTML = "<div class='wz' role='dialog' aria-modal='true' aria-label='Setup'><p class='wz-step'>Step 1</p><h2>Which request categories would you like to see?</h2>" +
         "<p class='wz-note'>Pre-selected from discovergroup.net. Change them any time.</p>" +
         "<div class='wz-dd'><button type='button' class='wz-dd-btn' data-a='toggle' aria-expanded='" + openDd + "'><span>" + label() + "</span><span>&#9662;</span></button>" +
-        (openDd ? "<div class='wz-dd-list'><div class='wz-dd-tools'><button type='button' class='link' data-a='all'>Select all</button><button type='button' class='link' data-a='none'>Clear</button></div>" +
+        (openDd ? "<div class='wz-dd-list'><div class='wz-dd-tools'><button type='button' class='link' data-a='none'>Clear</button></div>" +
           listHtml() + "</div>" : "") + "</div>" +
-        "<div class='wz-btns'><button class='pri' data-a='done'" + (d.cats.length ? "" : " disabled") + ">Next &rarr;</button></div></div>";
+        "<div class='wz-btns'><button class='pri' data-a='done'>Next &rarr;</button></div></div>";
     }
     function collect() {
       var boxes = back.querySelectorAll("[data-cat]");
@@ -282,7 +282,7 @@
         d.aside = Array.prototype.map.call(back.querySelectorAll("[data-apick]:checked"), function (el) { return el.dataset.apick; });
         var ab = back.querySelector(".wz-dd-btn span"); if (ab) ab.textContent = aLabel();
       }
-      else if (t.dataset.jur) { collectJ(); var f = back.querySelector("[data-a=finish]"); if (f) f.disabled = !d.where.length; var jl = back.querySelector(".wz-dd-btn span"); if (jl) jl.textContent = jLabel(); }
+      else if (t.dataset.jur) { collectJ(); var jl = back.querySelector(".wz-dd-btn span"); if (jl) jl.textContent = jLabel(); }
     });
     back.addEventListener("input", function (e) { var t = e.target; if (t.dataset.vmin != null) d.vmin = t.value; else if (t.dataset.vmax != null) d.vmax = t.value; });
     back.addEventListener("click", function (e) {
@@ -306,34 +306,28 @@
       if (pushed && (act === "back" || act === "back3" || act === "back4")) { history.back(); return; }
       var before = step;
       if (act === "toggle") openDd = !openDd;
-      else if (act === "all") d.cats = ALL.map(function (c) { return c.v; });
       else if (act === "none") d.cats = [];
       else if (act === "jtoggle") openJ = !openJ;
       else if (act === "vtoggle") openV = !openV;
       else if (act === "atoggle") openA = !openA;
-      else if (act === "vall") d.value = VALUE_OPTS.map(function (o) { return o[0]; }).filter(function (k) { return k !== "custom"; });
       else if (act === "vnone") d.value = [];
-      else if (act === "aall") d.aside = ASIDE_OPTS.map(function (o) { return o[0]; });
       else if (act === "anone") d.aside = [];
       else if (act === "next4") { step = 4; openA = false; }
       else if (act === "back4") { step = 3; openV = false; }
-      else if (act === "jall") d.where = J.map(function (o) { return o.v; });
       else if (act === "jnone") d.where = [];
       else if (act === "back") { step = 1; openJ = false; }
       else if (act === "back3") { step = 2; openJ = false; }
-      else if (act === "next3") { if (!d.where.length) return; step = 3; openV = false; }
+      else if (act === "next3") { step = 3; openV = false; }
       else if (act === "done") {
-        if (!d.cats.length) return;
         step = 2; openJ = false;
       }
       else if (act === "finish") {
-        if (!d.where.length) return;
-        var every = J.length && J.every(function (o) { return d.where.indexOf(o.v) >= 0; });
+        var every = !d.where.length || (J.length && J.every(function (o) { return d.where.indexOf(o.v) >= 0; }));
         save({ cats: d.cats, where: every ? [] : d.where, value: d.value, aside: d.aside, vmin: d.vmin, vmax: d.vmax, extra: d.extra.trim(), src: d.src, reg: d.reg, saved: new Date().toISOString() });
         try { localStorage.removeItem(SKIP); } catch (x) {}
         // Show a "working" message, let it paint, then do the (possibly slow) list compile.
         back.innerHTML = "<div class='wz' role='status' aria-live='polite' style='text-align:center'><div class='wz-spin'></div><h2>Compiling your RFQ list&hellip;</h2><p class='wz-note'>Matching bids to your choices. This can take a moment.</p></div>";
-        unhook(); if (pushed) { var n = pushed; pushed = 0; history.go(-n); } // drop the wizard's history entries
+        unhook(); if (pushed) { var n = step; pushed = 0; history.go(-n); } // drop the wizard's history entries
         setTimeout(function () { close(); window.dispatchEvent(new Event("rfqprofilechange")); }, 60);
         return;
       }
@@ -363,11 +357,16 @@
   // A fresh visit starts at wizard step 1; a refresh (reload) restores the current step — except the page's own reload right after a data refresh.
   var autoReload = false;
   try { autoReload = !!sessionStorage.getItem("rfqAutoReload"); } catch (e) {}
-  var isReload = false;
-  try { var nav = performance.getEntriesByType("navigation")[0]; isReload = !!nav && nav.type === "reload"; } catch (e) {}
-  if (!isReload) wzClear();
-  if (!autoReload) {
+  // The wizard opens at step 1 only on the first load of this tab session. Any later load (refresh) reopens the wizard
+  // only if it was open, at its current step; otherwise the main page just refreshes in place.
+  var firstLoad = true;
+  try { firstLoad = !sessionStorage.getItem("rfqStarted"); sessionStorage.setItem("rfqStarted", "1"); } catch (e) {}
+  var hadState = false;
+  try { hadState = !!sessionStorage.getItem(WZKEY); } catch (e) {}
+  if (firstLoad) wzClear();
+  if (!autoReload && (firstLoad || hadState)) {
     document.body.classList.add("wz-open");
-    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", function () { open(isReload); }); else open(isReload);
+    var restore = !firstLoad;
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", function () { open(restore); }); else open(restore);
   }
 })();
