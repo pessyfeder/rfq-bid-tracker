@@ -279,7 +279,7 @@
   }
   var MORE_KEYS = ["value", "aside"];
   function fieldsHtml() {
-    return ddHtml("cats", "Category", catOpts(), selCats(), '<button type="button" data-a="cats-all">Select all</button><button type="button" data-a="cats-none">Clear</button><button type="button" data-a="cats-mine">Reset to my products</button>', "", true) +
+    return ddHtml("cats", "Category", catOpts(), selCats(), '<button type="button" data-a="cats-all">Select all</button><button type="button" data-a="cats-none">Clear</button>', "", true) +
       ddHtml("where", "Jurisdiction", whereOpts(), st.where, '<button type="button" data-a="where-none">Clear</button>', "") +
       selectHtml("posted") + selectHtml("close") + selectHtml("value") + selectHtml("aside");
   }
@@ -396,7 +396,6 @@
     if (d.a === "more-filters") { st.more = !(st.more || MORE_KEYS.some(function (k) { return st[k] !== "any"; })); if (!st.more) { MORE_KEYS.forEach(function (k) { st[k] = "any"; }); } return refreshAll(); }
     if (d.a === "cats-all") st.cats = catOpts().map(function (c) { return c.v; });
     else if (d.a === "cats-none") st.cats = [];
-    else if (d.a === "cats-mine") st.cats = null;
     else if (d.a === "where-none") st.where = [];
     else if (d.a === "more") { st.shown += PAGE; return results(); }
     else if (d.ro) { st.regOpen[d.ro] = !st.regOpen[d.ro]; return results(); }
