@@ -452,6 +452,8 @@
     var noDue = hasNoRealDue(r);
     return Object.assign({}, r, {
       seen: seenMap[r.id],
+      // "Newest" sort key: real posted date (missing/future = unknown, sorted last), first-seen time breaks ties
+      newSort: r.posted && String(r.posted).slice(0, 10) <= new Date().toISOString().slice(0, 10) ? String(r.posted).slice(0, 10) + "|" + (seenMap[r.id] || "") : null,
       st: r.level === "Federal" ? "US" : String(r.id).split("-")[0].replace("TXDOT", "TX"), // state code from the id prefix (US = federal)
       noDue: noDue,
       dueSort: noDue ? null : r.due,
@@ -463,8 +465,8 @@
     });
   });
 
-  // Default sort: newest fetched into the app first (no visible column).
-  var sort = { key: "seen", dir: -1 };
+  // Default sort: newest posted first (no visible column).
+  var sort = { key: "newSort", dir: -1 };
   // The server sends rows without their long "shall" lists (r.shallCount says how many); a list is fetched when its row is opened.
   function shallN(r) { return r.shallCount != null ? r.shallCount : (r.shall || []).length; }
   var expanded = {}; // request id -> true when its "shall" list is open
