@@ -27,7 +27,7 @@
   .fwrap { position: relative; }
   .fbtn { font: inherit; padding: 6px 10px; border: 1px solid var(--line); border-radius: 6px; background: #fff; color: var(--ink); cursor: pointer; white-space: nowrap; }
   .fbtn:hover { border-color: #c4ccd8; }
-  .fbtn.on { background: #e8eef8; color: var(--accent); border-color: var(--accent); font-weight: 600; }
+  .fbtn.on { border-color: #12306b; } /* only the border changes: no label text, weight or background change */
   .fbtn .caret { font-size: 10px; margin-left: 4px; }
   .fpanel { position: absolute; z-index: 30; top: calc(100% + 4px); left: 0; width: 280px; max-width: calc(100vw - 24px); background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; box-shadow: 0 6px 20px rgba(28, 36, 48, .15); }
   .fpanel[hidden] { display: none; }
@@ -737,7 +737,7 @@
       if (sub) fwraps[sub.key].panel.hidden = !!H[f.key].State; // unchecking "State" removes the State list
       x.btn.classList.toggle("on", on || !!(sub && isActive(sub)));
       function shownOf(g) { var t = listValues(g).length; return (t - hiddenN(g)) + " of " + t + " shown"; }
-      x.btn.innerHTML = esc(f.label) + (nb ? " (" + (n ? shownOf(f) : "") + (sub && hiddenN(sub) ? (n ? "; " : "") + esc(sub.label) + " " + shownOf(sub) : "") + ")" : "") + ' <span class="caret">&#9662;</span>';
+      x.btn.innerHTML = esc(f.label) + ' <span class="caret">&#9662;</span>';
       if (f.type === "list") {
         // Only this panel's own controls: a nested sub-panel (State inside Level) has its own [data-all]/[data-v].
         var all = x.panel.querySelector(":scope > .frow.all [data-all]"), tot = listValues(f).length;
