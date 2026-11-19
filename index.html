@@ -550,25 +550,39 @@
     "53": "Business & administrative", "54": "Engineering & professional", "55": "Business & administrative", "56": "Maintenance & facilities",
     "61": "Education & recreation", "62": "Health & human services", "71": "Education & recreation", "72": "Goods & equipment",
     "81": "Maintenance & facilities", "92": "Government & safety" };
+  // Manufacturing / wholesale / hospitality codes split further (by 3-digit NAICS) so "Goods" isn't one 140-item list.
+  // All start with "Goods - " so the sub-groups sit together in the dropdown.
+  var NAICS3_GROUP = { "311": "Goods - Food & beverage", "312": "Goods - Food & beverage", "313": "Goods - Apparel & textiles", "314": "Goods - Apparel & textiles",
+    "315": "Goods - Apparel & textiles", "316": "Goods - Apparel & textiles", "321": "Goods - Wood, paper & chemicals", "322": "Goods - Wood, paper & chemicals",
+    "324": "Goods - Wood, paper & chemicals", "325": "Goods - Wood, paper & chemicals", "326": "Goods - Plastics & materials", "327": "Goods - Plastics & materials",
+    "331": "Goods - Metals & machinery", "332": "Goods - Metals & machinery", "333": "Goods - Metals & machinery", "334": "Goods - Electronics & electrical",
+    "335": "Goods - Electronics & electrical", "336": "Transportation & vehicles", "337": "Goods - Furniture & misc", "339": "Goods - Furniture & misc",
+    "423": "Goods - Wholesale & supplies", "424": "Goods - Wholesale & supplies", "721": "Goods - Food & beverage", "722": "Goods - Food & beverage" };
   var GROUP_RULES = [
+    ["Goods - Furniture & misc", /chair|furniture|leased space|minivan|vans?/],
     ["General / procurement type", /^(rfp|rfq|rfi|rfx|ifb|invitation|request for|single feasible|hybrid|grant|committee|no data|miscellaneous|misc\b|goods( and| &|&|$)|services$|commodities|service - misc|equipment$|municipality|quasi|reques)/],
     ["Construction", /construct|highway|bridge|roadway|structures|sidewalk|seal coat|overlay|building and/],
     ["Agriculture", /agricultur|farming|forestry|wildlife|live plant|landscap|feed, bedding/],
     ["Environmental", /environment|air quality/],
     ["IT & telecom", /^(?!.*non-it).*(information technology|\bit\b|info technology|telecom|software|internet|database|broadcast)/],
     ["Maintenance & facilities", /maintenance|facilit|janitor|industrial cleaning|pest|repair/],
-    ["Health & human services", /health|medical|human services|case management|drug|pharma|podiatr|client services/],
-    ["Education & recreation", /educat|training|recreation|sports|music|toys/],
+    ["Health & human services", /health|medical|human services|case management|drug|pharma|podiatr|client services|nursing/],
+    ["Education & recreation", /educat|training|recreation|sports|music|toys|editorial|graphic/],
     ["Utilities & energy", /utilit|power gen|energy|fuel|lubricant/],
     ["Transportation & vehicles", /transport|freight|moving|warehous|vehicle|aviation/],
     ["Government & safety", /politic|civic|defense|public order|security|safety|judicial|law enforcement/],
     ["Engineering & professional", /engineer|architect|survey|professional|prof\b|research|legal|investigat/],
     ["Business & administrative", /management|mngmnt|business|administrative|personnel|personal|advertis|marketing|photograph|printing|financ|insurance|real property|land,|travel/],
-    ["Goods & equipment", /equipment|supplies|machinery|mach\.|components|products|materials|chemicals|apparel|food|furniture|chair|illuminator|manufactur|distribution|laboratory|electrical|electronic|published/]
+    ["Goods - Food & beverage", /^(food|published products)|beverage|commissary/],
+    ["Goods - Apparel & textiles", /apparel|textile/],
+    ["Goods - Wood, paper & chemicals", /chemical|paper|mineral/],
+    ["Goods - Electronics & electrical", /electrical|electronic|laboratory|illuminator/],
+    ["Goods - Metals & machinery", /machinery|mach\.|manufactur|components|cleaning equipment|distribution and conditioning/],
+    ["Goods - Wholesale & supplies", /equipment|supplies|products|materials|distribution|bldg equip/]
   ];
   function catGroup(label) {
     var m = /^NAICS (\d{2})/.exec(label);
-    if (m) return NAICS_GROUP[m[1]] || "Other";
+    if (m) return NAICS3_GROUP[label.slice(6, 9)] || NAICS_GROUP[m[1]] || "Other";
     var s = label.split(";")[0].toLowerCase().trim();
     for (var i = 0; i < GROUP_RULES.length; i++) if (GROUP_RULES[i][1].test(s)) return GROUP_RULES[i][0];
     return "Other";

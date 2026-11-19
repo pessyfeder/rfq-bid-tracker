@@ -228,10 +228,10 @@
   // Category dropdown: the vendor's product types first, then every category the bids themselves carry (grouped).
   // Only the product types that match the vendor's profile start ticked; everything else starts unticked.
   function catOpts() {
-    var out = allCats().map(function (c) { return { v: c.id, label: c.label, n: rows.filter(function (r) { return hits(r)[c.id]; }).length, group: "Product types" }; });
+    var out = allCats().map(function (c) { return { v: c.id, label: c.label, n: rows.filter(function (r) { return hits(r)[c.id]; }).length, group: "My products" }; });
     var by = {};
     rows.forEach(function (r) { by[r.ck] = (by[r.ck] || 0) + 1; });
-    var C = window.RFQCat, more = Object.keys(by).map(function (k) {
+    var C = window.RFQCat, more = Object.keys(by).filter(function (k) { var l = k.slice(2).trim(); return l && !/^no data\b/i.test(l); }).map(function (k) {
       var l = k.slice(2);
       return { v: k, label: l || "No category listed", n: by[k], group: l && C ? C.group(l) : "Other" };
     });
@@ -242,7 +242,7 @@
     return out.concat(more);
   }
   // The setup wizard lists these too (everything except the product types, which it already knows).
-  window.RFQExtraCats = function () { if (!rows) prep(); return catOpts().filter(function (o) { return o.group !== "Product types"; }); };
+  window.RFQExtraCats = function () { if (!rows) prep(); return catOpts().filter(function (o) { return o.group !== "My products"; }); };
   function whereOpts() {
     var n = {}; rows.forEach(function (r) { n[r.code] = (n[r.code] || 0) + 1; });
     var out = [];

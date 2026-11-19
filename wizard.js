@@ -106,6 +106,7 @@
     ".wz a{color:#1e3a5f;font-weight:600}" +
     ".wz-dd{position:relative;margin-top:14px}.wz-dd-btn{display:flex!important;justify-content:space-between;width:100%;text-align:left}" +
     ".wz-dd-list{position:absolute;left:0;right:0;top:100%;margin-top:4px;background:#fff;border:1px solid #b8c2cf;border-radius:6px;padding:6px 10px;max-height:300px;overflow:auto;box-shadow:0 4px 12px rgba(15,23,42,.15);z-index:5}" +
+    ".wz-gh{display:flex;align-items:center;gap:8px;margin:2px 0;padding:5px 2px;border-bottom:1px solid #eef1f5}.wz-gt{flex:1;cursor:pointer;font-weight:600;font-size:14px;color:#1f2937}.wz-gt em{font-style:normal;font-weight:400;font-size:12px;color:#64748b;margin-left:6px}.wz-arr{display:inline-block;width:14px;color:#64748b}.wz-kids{padding:2px 0 6px 24px}" +
     ".wz-grp{position:sticky;top:-6px;background:#fff;margin:8px 0 2px;padding:4px 2px;font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#64748b}" +
     ".wz-dd-tools{display:flex;gap:14px;padding:4px 2px}.wz .wz-dd-tools .link{margin:0;padding:2px 0}" +
     ".match-chip{display:inline-block;background:#e3f4ea;color:#1d7a46;border-radius:4px;padding:1px 6px;margin:0 6px 0 0;font-size:12px;font-weight:600;cursor:help}";
@@ -127,18 +128,38 @@
     // Every category: the product types (pre-selected) plus every category the bids themselves carry (not pre-selected).
     var ALL = [];
     function loadAll() {
-      ALL = CATS.map(function (c) { return { v: c.id, label: c.label, group: "Product types" }; });
-      try { ALL = ALL.concat((window.RFQExtraCats ? window.RFQExtraCats() : []).map(function (o) { return { v: o.v, label: o.label, group: o.group }; })); } catch (e) {}
+      ALL = CATS.map(function (c) { return { v: c.id, label: c.label, group: "My products" }; });
+      // Only the product types: the long list of raw bid categories made the dropdown unusable.
     }
     loadAll();
     function label() { return d.cats.length ? d.cats.length + " of " + ALL.length + " selected" : "Nothing selected"; }
+    // Collapsible groups: a group checkbox ticks every category inside it; the arrow expands it. My products start open.
+    var openG = { "My products": true };
+    function groups() {
+      var gs = [], idx = {};
+      ALL.forEach(function (c) { if (!(c.group in idx)) { idx[c.group] = gs.length; gs.push({ name: c.group, items: [] }); } gs[idx[c.group]].items.push(c); });
+      return gs;
+    }
     function listHtml() {
-      var grp = null, out = "";
-      ALL.forEach(function (c) {
-        if (c.group !== grp) { grp = c.group; out += "<div class='wz-grp'>" + h(grp) + "</div>"; }
-        out += "<label class='wz-row'><input type='checkbox' data-cat='" + h(c.v) + "'" + (d.cats.indexOf(c.v) >= 0 ? " checked" : "") + "> <span>" + h(c.label) + "</span></label>";
+      return groups().map(function (g, i) {
+        var n = g.items.filter(function (c) { return d.cats.indexOf(c.v) >= 0; }).length, op = !!openG[g.name];
+        return "<div class='wz-gh' data-gi='" + i + "'><input type='checkbox' data-grp='" + i + "' aria-label='Select all in " + h(g.name) + "'" + (n === g.items.length ? " checked" : "") + ">" +
+          "<div class='wz-gt' data-g='" + i + "' role='button' aria-expanded='" + op + "'><span class='wz-arr'>" + (op ? "&#9662;" : "&#9656;") + "</span> " + h(g.name) + " <em>" + n + "/" + g.items.length + "</em></div></div>" +
+          "<div class='wz-kids' data-kids='" + i + "'" + (op ? "" : " hidden") + ">" + g.items.map(function (c) {
+            return "<label class='wz-row'><input type='checkbox' data-cat='" + h(c.v) + "'" + (d.cats.indexOf(c.v) >= 0 ? " checked" : "") + "> <span>" + h(c.label) + "</span></label>";
+          }).join("") + "</div>";
+      }).join("");
+    }
+    // Refresh group tick boxes / counts and the button label without redrawing (keeps the scroll position).
+    function sync() {
+      var l = back.querySelector(".wz-dd-btn span"); if (l) l.textContent = label();
+      var done = back.querySelector("[data-a=done]"); if (done) done.disabled = !d.cats.length;
+      groups().forEach(function (g, i) {
+        var n = g.items.filter(function (c) { return d.cats.indexOf(c.v) >= 0; }).length;
+        var gb = back.querySelector("[data-grp='" + i + "']"); if (!gb) return;
+        gb.checked = n === g.items.length; gb.indeterminate = n > 0 && n < g.items.length;
+        gb.parentNode.querySelector("em").textContent = n + "/" + g.items.length;
       });
-      return out;
     }
     function draw() {
       if (!openDd) loadAll(); // pick up bid categories that arrived after the page loaded (live data)
@@ -153,7 +174,19 @@
       var boxes = back.querySelectorAll("[data-cat]");
       if (boxes.length) { d.cats = []; Array.prototype.forEach.call(boxes, function (el) { if (el.checked) d.cats.push(el.dataset.cat); }); }
     }
-    back.addEventListener("change", function (e) { if (e.target.dataset.cat) { collect(); var l = back.querySelector(".wz-dd-btn span"); l.textContent = label(); back.querySelector("[data-a=done]").disabled = !d.cats.length; } });
+    back.addEventListener("change", function (e) {
+      var t = e.target;
+      if (t.dataset.grp != null) {
+        Array.prototype.forEach.call(back.querySelectorAll("[data-kids='" + t.dataset.grp + "'] [data-cat]"), function (el) { el.checked = t.checked; });
+        collect(); sync();
+      } else if (t.dataset.cat) { collect(); sync(); }
+    });
+    back.addEventListener("click", function (e) {
+      var g = e.target.closest("[data-g]"); if (!g) return;
+      var gr = groups()[+g.dataset.g], kids = back.querySelector("[data-kids='" + g.dataset.g + "']");
+      openG[gr.name] = kids.hidden; kids.hidden = !kids.hidden;
+      g.setAttribute("aria-expanded", String(!kids.hidden)); g.querySelector(".wz-arr").innerHTML = kids.hidden ? "&#9656;" : "&#9662;";
+    });
     back.addEventListener("click", function (e) {
       var a = e.target.closest("[data-a]"); if (!a) return;
       var act = a.dataset.a;
