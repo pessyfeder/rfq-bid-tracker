@@ -153,27 +153,34 @@
     t = t.replace(/^not clear from the listing:\s*/i, "").replace(/^\*?\s*re-?bid\s*\*?[\s:–-]*/i, "")
       .replace(/^(bid extension|correction|addendum( no\.? ?\d+)?|amendment|open-ended|cancell?ed|re-?issued?)\s*[-:–]\s*/i, "")
       .replace(/^(?:[A-Z\/&]+\s+)*(?:opportunity)\s*[-–]\s*/i, function (x) { return /m\/?wbe|sdvob|mwbe/i.test(x) ? "" : x; });
-    var dash = /^(.{3,45}?)\s+[-–:]\s+(?=\S)/.exec(t);
-    if (dash && /[\d_#]/.test(dash[1]) && t.length - dash[0].length >= 8) t = t.slice(dash[0].length);
+    var dash = /^(.{3,45}?)\s*[-–:]\s+(?=\S)/.exec(t);
+    // a label made only of codes and solicitation words ("IFB 26-083 -", "Smd_a&cm_ rfq's 523158 -"), never real words ("FY 27 Tree Removal -")
+    if (dash && /[A-Za-z]/.test(dash[1]) && /[\d_#]/.test(dash[1]) && t.length - dash[0].length >= 8 &&
+        dash[1].split(/\s+/).every(function (w) { return /[\d_#]/.test(w) || /^(bid|rfp|rfq|rfb|ifb|itb|rfi|project|no\.?|number|pin|fy|[A-Z&\/]{2,6}|&)('?s)?$/.test(w); })) t = t.slice(dash[0].length);
+    t = t.replace(/^(RFP|RFQ|IFB|ITB|RFB|RFI|ITN)-(?=[A-Za-z])/i, "").replace(/\s*[-–]\s*addendum\s*\d*\s*$/i, "");
     t = t.replace(/^(?:RFP|RFQ|IFB|ITB|RFB|RFI|ITN|ARFQ|CRFQ|PB)\b[\s#:.-]*[A-Za-z0-9][\w\/.-]*\d[\w\/.-]*[\s:–-]+(?=[A-Za-z])/i, "");
     t = t.replace(/^(?=[A-Z0-9-]*\d)[A-Z0-9][A-Z0-9-]{4,}\s*[-:–]?\s+(?=[A-Za-z])/, "");
     var words = (t.match(/\b[A-Za-z]{3,}\b/g) || []).length;
     var boiler = /^(notice\b|submit to\b|email\b|sealed (bids|proposals)\b|written sealed\b|the .{3,70}?\b(will receive|requests|invites|anticipates|is (hereby )?seeking)\b)/i.test(t);
     var codey = /\d/.test(t) && words < 2 && t.length < 40;
-    if ((boiler || codey) && r) { var sh = scopeHeadline(r.scope); if (sh) t = sh; }
+    t = t.replace(/^\d{4}\s*[-–]\s*\d{4}\s+(?=[A-Za-z])/, "");
+    if ((boiler || codey) && r) { var sh = scopeHeadline(r.scope); if (sh) t = sh; else if (boiler) t = "Bid notice (no description given)"; }
     if (r && r.level !== "Federal" && code) {
       var N = window.STATE_NAMES || {}, S = N[code];
+      var tail = "(?=\\s*[,;(:]|\\s*$)", lead = "\\s*(?:,|\\b(?:in|for|at|across|within|statewide in))\\s+(?:the\\s+)?";
       if (code === "NYC") {
-        t = t.replace(/\s*(?:,|\b(?:in|for|at|across|within))\s+(?:the\s+)?(?:City of )?(?:New York City|NYC)(?:\s+(?:city )?government)?\s*$/i, "")
+        t = t.replace(new RegExp(lead + "(?:City of )?(?:New York City|NYC|Five Boroughs of New York City)(?:\\s+(?:city )?government)?" + tail, "gi"), "")
+          .replace(new RegExp("\\s*,\\s*New York" + tail, "gi"), "")
           .replace(/\b(?:the\s+)?(?:City of New York|New York City|NYC)(?:'s)?\s+(?=\S)/gi, "");
       } else if (code === "NY") {
-        t = t.replace(/\s*(?:,|\b(?:in|for|at|across|within))\s+(?:the\s+)?(?:State of )?New York(?: State)?\s*$/i, "").replace(/\b(?:the\s+)?(?:State of )?New York State(?:'s)?\s+(?=\S)/gi, "");
+        t = t.replace(new RegExp(lead + "(?:State of )?New York(?: State)?" + tail, "gi"), "").replace(/\b(?:the\s+)?(?:State of )?New York State(?:'s)?\s+(?=\S)/gi, "");
       } else if (S && S !== "New York") {
         var q = S.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-        t = t.replace(new RegExp("\\s*(?:,|\\b(?:in|for|at|across|within|statewide in))\\s+(?:the\\s+)?(?:State of )?" + q + "\\s*$", "i"), "")
+        t = t.replace(new RegExp(lead + "(?:State of )?" + q + tail, "gi"), "").replace(new RegExp("\\s*\\(" + q + "\\)", "gi"), "")
           .replace(new RegExp("\\b(?:the\\s+)?State of " + q + "(?:'s)?\\s+", "gi"), "state ")
           .replace(new RegExp("\\b" + q + "'s\\s+", "gi"), "")
-          .replace(new RegExp("(?<!\\bof )(?<!\\bState of )\\b" + q + "\\s+(?=[A-Za-z])", "gi"), "");
+          .replace(new RegExp("\\b" + q + "\\s+(?=state (?:government|agenc|employee))", "gi"), "")
+          .replace(new RegExp("(?<!\\bof )(?<!\\bState of )\\b" + q + "\\s+(?!State\\b)(?=[A-Za-z])", "gi"), "");
       }
       // a city or town named only as the buyer: ", City of Lowell" / "for City of Salem" / "the City of Medford's ordinances"
       t = t.replace(/\s*,\s*(?:City|Town) of [A-Z][\w.' -]*?$/, "").replace(/\s+for\s+(?:the\s+)?(?:City|Town) of [A-Z][\w.' -]*?$/, "")
@@ -181,7 +188,7 @@
       t = t.replace(/\b(for|at|by|with|from) (Department|Dept|Division|Office|Commission|Board|Bureau|Agency|Authority)\b/g, "$1 the $2");
     }
     t = t.replace(/\s+([,.;:])/g, "$1").replace(/(^|\s)[,;:]+\s*/g, "$1").replace(/\s{2,}/g, " ").replace(/(?:\s+(?:for|in|at|of|the|and|to|by|with|-|–))+\s*$/i, "").replace(/[,;:\s-]+$/, "").trim();
-    if (t.length < 8) return orig;
+    if (t.length < 8) t = orig.replace(/^not clear from the listing:\s*/i, "");
     return t.charAt(0).toUpperCase() + t.slice(1);
   }
   window.cleanBidTitle = function (t, raw) { return cleanTitle(t, raw, raw && raw.level === "Federal" ? "US" : String((raw && raw.id) || "").split("-")[0].replace("TXDOT", "TX")); };
