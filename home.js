@@ -118,6 +118,24 @@
     return code === "US" ? "Federal (SAM.gov)" : code === "NYC" ? "New York City" : code === "NY" ? "New York State" : N[code] || code;
   }
 
+  // Keyless fallback for rows with no AI headline: agencies paste whole notices into the title field. Drop the
+  // deadline / contact tail, turn "X invites vendors to submit bids for Y" into "Y", and cut long text at a word.
+  function shortTitle(orig, scope) {
+    var t = String(orig || "").replace(/\s+/g, " ").trim();
+    // a title cut off with "..." is completed from the scope text when that starts with the same words
+    if (/(\.\.\.|…)$/.test(t) && scope) {
+      var sc = String(scope).replace(/^[A-Z]{2,6} - RFx\.\s*/, "").replace(/\s+/g, " ").trim();
+      if (sc.length > t.length && sc.toLowerCase().indexOf(t.slice(0, 40).toLowerCase()) === 0) t = sc.replace(/\s+\S*$/, "");
+    }
+    t = t.replace(/[\s\-:;,.(]*\b(quote deadline|bid deadline|proposals? (are )?due|bids? (are )?due|deadline|due date|submit (your )?(quotes?|bids?|proposals?)? ?to|contact|questions? (should be )?(directed )?to|e-?mail)\b[\s\S]*$/i, "");
+    t = t.replace(/\S+@\S+/g, "").replace(/\s+/g, " ").trim();
+    var m = /\b(?:bids?|quotes?|proposals?|responses?)\s+(?:for|on)\s+(?:the\s+)?(?:purchase and installation of|purchase of|provision of|supply of|installation of)?\s*(.{12,})$/i.exec(t);
+    if (m && /\b(invites?|requests?|seeks?|solicits?)\b/i.test(t.slice(0, m.index))) t = m[1].charAt(0).toUpperCase() + m[1].slice(1);
+    t = t.replace(/(\.\.\.|…)\s*$/, "").trim();
+    if (t.length > 110) t = t.slice(0, 110).replace(/\s+\S*$/, "").replace(/[,;:\s]+$/, "") + "…";
+    return t || String(orig || "");
+  }
+
   function prep() {
     var seen = loadSeen(), nowIso = new Date().toISOString(), changed = false, live = {};
     (window.RFQS || []).forEach(function (r) { live[r.id] = 1; if (!seen[r.id]) { seen[r.id] = nowIso; changed = true; } });
@@ -128,7 +146,7 @@
       var code = r.level === "Federal" ? "US" : String(r.id).split("-")[0].replace("TXDOT", "TX");
       var val = r.value != null ? r.value : r.valueEst && r.valueEst.kind === "stated" ? r.valueEst.amount : null;
       var w = (r.details && r.details.warnings) || [];
-      var title = nice(r.plainTitle || (r.level === "Federal" && window.fedItemTitle ? window.fedItemTitle(r.title, r.scope) : r.title));
+      var title = nice(r.plainTitle || (r.level === "Federal" && window.fedItemTitle ? window.fedItemTitle(r.title, r.scope) : shortTitle(r.title, r.scope)));
       var agency = nice(r.agency), region = (r.details && r.details.region) || "";
       return { raw: r, id: r.id, title: title, agency: agency, level: r.level, code: code, noDue: noDue,
         days: noDue ? null : Math.round((pDate(r.due) - today) / DAY), due: r.due, seen: seen[r.id], value: val,
