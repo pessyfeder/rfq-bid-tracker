@@ -125,8 +125,12 @@
 
     var openDd = false;
     // Every category: the product types (pre-selected) plus every category the bids themselves carry (not pre-selected).
-    var ALL = CATS.map(function (c) { return { v: c.id, label: c.label, group: "Product types" }; });
-    try { ALL = ALL.concat((window.RFQExtraCats ? window.RFQExtraCats() : []).map(function (o) { return { v: o.v, label: o.label, group: o.group }; })); } catch (e) {}
+    var ALL = [];
+    function loadAll() {
+      ALL = CATS.map(function (c) { return { v: c.id, label: c.label, group: "Product types" }; });
+      try { ALL = ALL.concat((window.RFQExtraCats ? window.RFQExtraCats() : []).map(function (o) { return { v: o.v, label: o.label, group: o.group }; })); } catch (e) {}
+    }
+    loadAll();
     function label() { return d.cats.length ? d.cats.length + " of " + ALL.length + " selected" : "Nothing selected"; }
     function listHtml() {
       var grp = null, out = "";
@@ -137,6 +141,7 @@
       return out;
     }
     function draw() {
+      if (!openDd) loadAll(); // pick up bid categories that arrived after the page loaded (live data)
       back.innerHTML = "<div class='wz' role='dialog' aria-modal='true' aria-label='Setup'><h2>Which request categories would you like to see?</h2>" +
         "<p class='wz-note'>Pre-selected from discovergroup.net. Change them any time.</p>" +
         "<div class='wz-dd'><button type='button' class='wz-dd-btn' data-a='toggle' aria-expanded='" + openDd + "'><span>" + label() + "</span><span>&#9662;</span></button>" +
@@ -183,5 +188,9 @@
   window.RFQProfile = { get: load, match: match, categories: categories, catHits: catHits, open: open, sourceFor: sourceFor, regInfo: regInfo, setReg: setReg };
   // First visit: offer the setup once. (Skipping is remembered; the toolbar button reopens it.)
   // Opened immediately (not on window "load") so the main page never paints before the wizard hides it.
-  if (!load()) open();
+  // The bid-category list comes from home.js, which loads after this file, so wait until every script has run.
+  if (!load()) {
+    document.body.classList.add("wz-open");
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", open); else open();
+  }
 })();
