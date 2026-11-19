@@ -430,8 +430,13 @@
   function profValue() { var p = P(); return p && p.value && VALUE_OPT.some(function (o) { return o[0] === p.value; }) ? p.value : "any"; }
   function profAside() { var p = P(); return p && p.aside && ASIDE_OPT.some(function (o) { return o[0] === p.aside; }) ? p.aside : "any"; }
   function profRange() { var p = P() || {}; st.vmin = st.value === "custom" ? p.vmin || "" : ""; st.vmax = st.value === "custom" ? p.vmax || "" : ""; }
-  st.where = profWhere(); st.value = profValue(); st.aside = profAside(); profRange();
-  window.addEventListener("rfqprofilechange", function () { st.where = profWhere(); st.value = profValue(); st.aside = profAside(); profRange(); render(); });
+  // Apply every wizard choice to the page's filters. st.cats = null means "the categories saved in the wizard".
+  function applyProfile() {
+    st.cats = P() ? null : []; st.where = profWhere(); st.value = profValue(); st.aside = profAside(); profRange();
+    st.kw = ""; st.close = "any"; st.posted = "any"; st.reg = "any"; st.shown = PAGE;
+  }
+  applyProfile();
+  window.addEventListener("rfqprofilechange", function () { applyProfile(); render(); });
   window.addEventListener("rfqwizardclose", render);
   render();
 })();
