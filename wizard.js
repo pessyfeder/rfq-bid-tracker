@@ -129,7 +129,8 @@
     var ALL = [];
     function loadAll() {
       ALL = CATS.map(function (c) { return { v: c.id, label: c.label, group: "My products" }; });
-      // Only the product types: the long list of raw bid categories made the dropdown unusable.
+      // Bid categories come in their own groups, collapsed by default so the long list stays usable.
+      try { ALL = ALL.concat((window.RFQExtraCats ? window.RFQExtraCats() : []).map(function (o) { return { v: o.v, label: o.label, group: o.group }; })); } catch (e) {}
     }
     loadAll();
     function label() { return d.cats.length ? d.cats.length + " of " + ALL.length + " selected" : "Nothing selected"; }
