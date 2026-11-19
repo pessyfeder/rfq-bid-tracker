@@ -141,10 +141,14 @@
   var back = null;
   var onPop = null, pushed = 0; // browser Back walks the wizard steps, then closes it
   function unhook() { if (onPop) { window.removeEventListener("popstate", onPop); onPop = null; } }
-  function close() { unhook(); if (back) { back.remove(); back = null; document.body.classList.remove("wz-open"); window.dispatchEvent(new Event("rfqwizardclose")); } }
+  function close() { unhook(); wzClear(); if (back) { back.remove(); back = null; document.body.classList.remove("wz-open"); window.dispatchEvent(new Event("rfqwizardclose")); } }
   function h(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
 
-  function open() {
+  var WZKEY = "rfqWzState";
+  function wzClear() { try { sessionStorage.removeItem(WZKEY); } catch (e) {} }
+  function open(restore) {
+    var saved = null;
+    if (restore === true) { try { saved = JSON.parse(sessionStorage.getItem(WZKEY) || "null"); } catch (e) {} }
     var cur = load() || {};
     var d = { cats: (cur.cats || CATS.map(function (c) { return c.id; })).slice(), extra: cur.extra || "",
       src: (cur.src || SOURCES.map(function (s) { return s.id; })).slice(), reg: Object.assign({}, cur.reg || {}), value: toArr(cur.value), aside: toArr(cur.aside), vmin: cur.vmin || "", vmax: cur.vmax || "" };
@@ -192,6 +196,7 @@
     }
     // Step 2: which jurisdictions. Everything is ticked by default; all ticked is saved as "no restriction".
     var step = 1, J = [];
+    if (saved && saved.step >= 1 && saved.step <= 4 && saved.d) { Object.keys(saved.d).forEach(function (k) { d[k] = saved.d[k]; }); step = saved.step; }
     function loadJ() { try { J = window.RFQJurisdictions ? window.RFQJurisdictions() : []; } catch (e) { J = []; } }
     var openJ = false;
     function jLabel() { return d.where.length ? d.where.length + " of " + J.length + " selected" : "Nothing selected"; }
@@ -243,6 +248,10 @@
       if (boxes.length) { d.where = []; Array.prototype.forEach.call(boxes, function (el) { if (el.checked) d.where.push(el.dataset.jur); }); }
     }
     function draw() {
+      try { sessionStorage.setItem(WZKEY, JSON.stringify({ step: step, d: d })); } catch (e) {}
+      drawStep();
+    }
+    function drawStep() {
       if (step === 4) return drawA();
       if (step === 3) return drawV();
       if (step === 2) return drawJ();
@@ -282,7 +291,7 @@
       openG[gr.name] = kids.hidden; kids.hidden = !kids.hidden;
       g.setAttribute("aria-expanded", String(!kids.hidden)); g.querySelector(".wz-arr").innerHTML = kids.hidden ? "&#9656;" : "&#9662;";
     });
-    try { history.pushState({ wz: 1 }, ""); pushed = 1; } catch (x) { pushed = 0; }
+    try { for (var k = 1; k <= step; k++) history.pushState({ wz: k }, ""); pushed = step; } catch (x) { pushed = 0; }
     onPop = function (ev) {
       var s = ev.state && ev.state.wz;
       if (!s) { close(); return; } // Back past step 1: leave the wizard
@@ -351,11 +360,14 @@
   // First visit: offer the setup once. (Skipping is remembered; the toolbar button reopens it.)
   // Opened immediately (not on window "load") so the main page never paints before the wizard hides it.
   // The bid-category list comes from home.js, which loads after this file, so wait until every script has run.
-  // Every page load or refresh starts at wizard step 1 — except the page's own reload right after a data refresh.
+  // A fresh visit starts at wizard step 1; a refresh (reload) restores the current step — except the page's own reload right after a data refresh.
   var autoReload = false;
   try { autoReload = !!sessionStorage.getItem("rfqAutoReload"); } catch (e) {}
+  var isReload = false;
+  try { var nav = performance.getEntriesByType("navigation")[0]; isReload = !!nav && nav.type === "reload"; } catch (e) {}
+  if (!isReload) wzClear();
   if (!autoReload) {
     document.body.classList.add("wz-open");
-    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", open); else open();
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", function () { open(isReload); }); else open(isReload);
   }
 })();
