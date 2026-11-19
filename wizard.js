@@ -37,6 +37,8 @@
   // Bid value choices, shared with the main page's "Bid value" filter. [min, max] in dollars (null = open-ended).
   var VALUE_OPTS = [["any", "Any value"], ["under50", "Under $50K"], ["mid", "$50K to $500K"], ["over500", "Over $500K"], ["over1m", "Over $1M"], ["over5m", "Over $5M"],
     ["over10m", "Over $10M"], ["over50m", "Over $50M"], ["over100m", "Over $100M"], ["none", "No stated value"], ["custom", "Custom amount…"]];
+  // Eligibility choices (step 4), shared with the main page's set-aside filter. "any" = no restriction.
+  var ASIDE_OPTS = [["any", "Anyone"], ["open", "Open to all (no set-aside found)"], ["small", "Small business set-aside"], ["vet", "Veteran-owned (SDVOSB)"], ["women", "Women-owned (WOSB)"], ["other", "HUBZone, 8(a), minority-owned"]];
   var RANGES = { under50: [null, 49999.99], mid: [50000, 500000], over500: [500000.01, null], over1m: [1000000, null], over5m: [5000000, null], over10m: [10000000, null], over50m: [50000000, null], over100m: [100000000, null] };
   function num(x) { x = parseFloat(String(x == null ? "" : x).replace(/[$,\s]/g, "")); return isFinite(x) && x >= 0 ? x : null; }
   // Does a bid with value v (number or null) pass the filter f = { value, vmin, vmax }?
@@ -136,7 +138,7 @@
   function open() {
     var cur = load() || {};
     var d = { cats: (cur.cats || CATS.map(function (c) { return c.id; })).slice(), extra: cur.extra || "",
-      src: (cur.src || SOURCES.map(function (s) { return s.id; })).slice(), reg: Object.assign({}, cur.reg || {}), value: cur.value || "any", vmin: cur.vmin || "", vmax: cur.vmax || "" };
+      src: (cur.src || SOURCES.map(function (s) { return s.id; })).slice(), reg: Object.assign({}, cur.reg || {}), value: cur.value || "any", aside: cur.aside || "any", vmin: cur.vmin || "", vmax: cur.vmax || "" };
     close();
     back = document.createElement("div"); back.className = "wz-back";
     document.body.insertBefore(back, document.body.firstChild); document.body.classList.add("wz-open"); window.scrollTo(0, 0);
@@ -189,7 +191,7 @@
       if (!d.where) d.where = (cur.where && cur.where.length ? cur.where : J.map(function (o) { return o.v; })).slice();
       var gs = [], idx = {};
       J.forEach(function (o) { if (!(o.group in idx)) { idx[o.group] = gs.length; gs.push({ name: o.group, items: [] }); } gs[idx[o.group]].items.push(o); });
-      back.innerHTML = "<div class='wz' role='dialog' aria-modal='true' aria-label='Setup'><p class='wz-step'>Step 2</p><h2>Which Jurisdiction would you like to see?</h2>" +
+      back.innerHTML = "<div class='wz' role='dialog' aria-modal='true' aria-label='Setup'><p class='wz-step'>Step 2</p><h2>Which jurisdiction would you like to see?</h2>" +
         "<p class='wz-note'>Federal, city and state bids. Change them any time.</p>" +
         "<div class='wz-dd'><button type='button' class='wz-dd-btn' data-a='jtoggle' aria-expanded='" + openJ + "'><span>" + jLabel() + "</span><span>&#9662;</span></button>" +
         (openJ ? "<div class='wz-dd-list'><div class='wz-dd-tools'><button type='button' class='link' data-a='jall'>Select all</button><button type='button' class='link' data-a='jnone'>Clear</button></div>" +
@@ -212,13 +214,26 @@
         }).join("") + "</div>" : "") + "</div>" +
         "<div class='wz-cust' data-cust" + (d.value === "custom" ? "" : " hidden") + "><label>From $ <input type='text' inputmode='numeric' data-vmin placeholder='no minimum' value='" + h(d.vmin) + "'></label>" +
         "<label>To $ <input type='text' inputmode='numeric' data-vmax placeholder='no maximum' value='" + h(d.vmax) + "'></label></div>" +
-        "<div class='wz-btns'><button data-a='back3'>&larr; Back</button><button class='pri' data-a='finish'>Show me my RFQs</button></div></div>";
+        "<div class='wz-btns'><button data-a='back3'>&larr; Back</button><button class='pri' data-a='next4'>Next &rarr;</button></div></div>";
+    }
+    // Step 4: can you bid? Which set-aside / eligibility group the vendor belongs to.
+    var openA = false;
+    function aLabel() { var o = ASIDE_OPTS.filter(function (x) { return x[0] === d.aside; })[0]; return o ? o[1] : "Anyone"; }
+    function drawA() {
+      back.innerHTML = "<div class='wz' role='dialog' aria-modal='true' aria-label='Setup'><p class='wz-step'>Step 4</p><h2>Can you bid?</h2>" +
+        "<p class='wz-note'>Some bids are reserved for certain businesses. Pick the eligibility you want to see. Change it any time.</p>" +
+        "<div class='wz-dd'><button type='button' class='wz-dd-btn' data-a='atoggle' aria-expanded='" + openA + "'><span>" + h(aLabel()) + "</span><span>&#9662;</span></button>" +
+        (openA ? "<div class='wz-dd-list'>" + ASIDE_OPTS.map(function (o) {
+          return "<label class='wz-row'><input type='radio' name='wz-aside' data-apick='" + h(o[0]) + "'" + (d.aside === o[0] ? " checked" : "") + "> <span>" + h(o[1]) + "</span></label>";
+        }).join("") + "</div>" : "") + "</div>" +
+        "<div class='wz-btns'><button data-a='back4'>&larr; Back</button><button class='pri' data-a='finish'>Show me my RFQs</button></div></div>";
     }
     function collectJ() {
       var boxes = back.querySelectorAll("[data-jur]");
       if (boxes.length) { d.where = []; Array.prototype.forEach.call(boxes, function (el) { if (el.checked) d.where.push(el.dataset.jur); }); }
     }
     function draw() {
+      if (step === 4) return drawA();
       if (step === 3) return drawV();
       if (step === 2) return drawJ();
       if (!openDd) loadAll(); // pick up bid categories that arrived after the page loaded (live data)
@@ -240,6 +255,7 @@
         collect(); sync();
       } else if (t.dataset.cat) { collect(); sync(); }
       else if (t.dataset.vpick != null) { d.value = t.dataset.vpick; openV = false; drawV(); }
+      else if (t.dataset.apick != null) { d.aside = t.dataset.apick; openA = false; drawA(); }
       else if (t.dataset.jur) { collectJ(); var f = back.querySelector("[data-a=finish]"); if (f) f.disabled = !d.where.length; var jl = back.querySelector(".wz-dd-btn span"); if (jl) jl.textContent = jLabel(); }
     });
     back.addEventListener("input", function (e) { var t = e.target; if (t.dataset.vmin != null) d.vmin = t.value; else if (t.dataset.vmax != null) d.vmax = t.value; });
@@ -258,6 +274,9 @@
       else if (act === "none") d.cats = [];
       else if (act === "jtoggle") openJ = !openJ;
       else if (act === "vtoggle") openV = !openV;
+      else if (act === "atoggle") openA = !openA;
+      else if (act === "next4") { step = 4; openA = false; }
+      else if (act === "back4") { step = 3; openV = false; }
       else if (act === "jall") d.where = J.map(function (o) { return o.v; });
       else if (act === "jnone") d.where = [];
       else if (act === "back") { step = 1; openJ = false; }
@@ -270,7 +289,7 @@
       else if (act === "finish") {
         if (!d.where.length) return;
         var every = J.length && J.every(function (o) { return d.where.indexOf(o.v) >= 0; });
-        save({ cats: d.cats, where: every ? [] : d.where, value: d.value, vmin: d.vmin, vmax: d.vmax, extra: d.extra.trim(), src: d.src, reg: d.reg, saved: new Date().toISOString() });
+        save({ cats: d.cats, where: every ? [] : d.where, value: d.value, aside: d.aside, vmin: d.vmin, vmax: d.vmax, extra: d.extra.trim(), src: d.src, reg: d.reg, saved: new Date().toISOString() });
         try { localStorage.removeItem(SKIP); } catch (x) {}
         close(); window.dispatchEvent(new Event("rfqprofilechange")); return;
       }
@@ -292,7 +311,7 @@
     p.reg = p.reg || {}; if (yes) p.reg[id] = "yes"; else delete p.reg[id];
     save(p);
   }
-  window.RFQProfile = { get: load, match: match, categories: categories, catHits: catHits, open: open, sourceFor: sourceFor, regInfo: regInfo, setReg: setReg, valueOpts: VALUE_OPTS, valueOk: valueOk };
+  window.RFQProfile = { get: load, match: match, categories: categories, catHits: catHits, open: open, sourceFor: sourceFor, regInfo: regInfo, setReg: setReg, valueOpts: VALUE_OPTS, asideOpts: ASIDE_OPTS, valueOk: valueOk };
   // First visit: offer the setup once. (Skipping is remembered; the toolbar button reopens it.)
   // Opened immediately (not on window "load") so the main page never paints before the wizard hides it.
   // The bid-category list comes from home.js, which loads after this file, so wait until every script has run.

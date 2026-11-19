@@ -428,9 +428,10 @@
   $app.addEventListener("submit", function (e) { e.preventDefault(); st.dd = null; syncOpen(); results(); });
   function profWhere() { var p = P(); return p && p.where && p.where.length ? p.where.slice() : []; } // [] = every jurisdiction
   function profValue() { var p = P(); return p && p.value && VALUE_OPT.some(function (o) { return o[0] === p.value; }) ? p.value : "any"; }
+  function profAside() { var p = P(); return p && p.aside && ASIDE_OPT.some(function (o) { return o[0] === p.aside; }) ? p.aside : "any"; }
   function profRange() { var p = P() || {}; st.vmin = st.value === "custom" ? p.vmin || "" : ""; st.vmax = st.value === "custom" ? p.vmax || "" : ""; }
-  st.where = profWhere(); st.value = profValue(); profRange();
-  window.addEventListener("rfqprofilechange", function () { st.where = profWhere(); st.value = profValue(); profRange(); render(); });
+  st.where = profWhere(); st.value = profValue(); st.aside = profAside(); profRange();
+  window.addEventListener("rfqprofilechange", function () { st.where = profWhere(); st.value = profValue(); st.aside = profAside(); profRange(); render(); });
   window.addEventListener("rfqwizardclose", render);
   render();
 })();
