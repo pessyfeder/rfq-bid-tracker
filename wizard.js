@@ -139,7 +139,9 @@
   document.head.appendChild(css);
 
   var back = null;
-  function close() { if (back) { back.remove(); back = null; document.body.classList.remove("wz-open"); window.dispatchEvent(new Event("rfqwizardclose")); } }
+  var onPop = null, pushed = 0; // browser Back walks the wizard steps, then closes it
+  function unhook() { if (onPop) { window.removeEventListener("popstate", onPop); onPop = null; } }
+  function close() { unhook(); if (back) { back.remove(); back = null; document.body.classList.remove("wz-open"); window.dispatchEvent(new Event("rfqwizardclose")); } }
   function h(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
 
   function open() {
@@ -280,10 +282,20 @@
       openG[gr.name] = kids.hidden; kids.hidden = !kids.hidden;
       g.setAttribute("aria-expanded", String(!kids.hidden)); g.querySelector(".wz-arr").innerHTML = kids.hidden ? "&#9656;" : "&#9662;";
     });
+    try { history.pushState({ wz: 1 }, ""); pushed = 1; } catch (x) { pushed = 0; }
+    onPop = function (ev) {
+      var s = ev.state && ev.state.wz;
+      if (!s) { close(); return; } // Back past step 1: leave the wizard
+      if (step === 2) collectJ(); else if (step === 1) collect();
+      step = s; openJ = openV = openA = false; draw();
+    };
+    window.addEventListener("popstate", onPop);
     back.addEventListener("click", function (e) {
       var a = e.target.closest("[data-a]"); if (!a) return;
       var act = a.dataset.a;
       if (step === 2) collectJ(); else if (step === 1) collect();
+      if (pushed && (act === "back" || act === "back3" || act === "back4")) { history.back(); return; }
+      var before = step;
       if (act === "toggle") openDd = !openDd;
       else if (act === "all") d.cats = ALL.map(function (c) { return c.v; });
       else if (act === "none") d.cats = [];
@@ -308,9 +320,11 @@
         try { localStorage.removeItem(SKIP); } catch (x) {}
         // Show a "working" message, let it paint, then do the (possibly slow) list compile.
         back.innerHTML = "<div class='wz' role='status' aria-live='polite' style='text-align:center'><div class='wz-spin'></div><h2>Compiling your RFQ list&hellip;</h2><p class='wz-note'>Matching bids to your choices. This can take a moment.</p></div>";
+        unhook(); if (pushed) { var n = pushed; pushed = 0; history.go(-n); } // drop the wizard's history entries
         setTimeout(function () { close(); window.dispatchEvent(new Event("rfqprofilechange")); }, 60);
         return;
       }
+      if (pushed && step > before) { try { history.pushState({ wz: step }, ""); pushed++; } catch (x) {} }
       draw();
     });
     draw();
