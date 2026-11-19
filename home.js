@@ -1,4 +1,4 @@
-// Main screen: a search page in the style of a bid portal. Title, one row of filters (keyword, Category, Location,
+// Main screen: a search page in the style of a bid portal. Title, one row of filters (keyword, Category, Jurisdiction,
 // Published, Status), "Filtered by" chips, then a results bar and a list of bids with Published / Closing dates.
 // Category starts out selected to the products from the setup wizard (pre-filled from the vendor's website).
 // The original full table still exists in index.html as a hidden data layer and is never shown.
@@ -77,7 +77,7 @@
     ".hm-face{position:absolute;left:8px;right:22px;top:0;bottom:0;display:flex;align-items:center;pointer-events:none;font-size:11.5px;font-weight:500;color:#4a5562;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}" +
     ".hm-field select[data-sel]{color:transparent}.hm-field select[data-sel] option{color:#1f3347}" +
     ".hm-dd-btn.on,.hm-field select.on{color:#4a5562;box-shadow:inset 0 0 0 1px #0e5a73}.hm-dd-btn.on span{color:#4a5562}" +
-    /* search box ends where the Location filter ends: 2 of the 6 equal filter columns */
+    /* search box ends where the Jurisdiction filter ends: 2 of the 6 equal filter columns */
     "@media(min-width:1101px){.hm-fields{grid-template-columns:repeat(6,minmax(0,1fr))}.hm-kw{width:calc((100% - 30px) / 3 + 6px)}}" +
     "@media(max-width:1100px){.hm-bar{flex-wrap:wrap}.hm-kw{flex:1 1 100%!important}.hm-fields{flex:1 1 100%!important;flex-wrap:wrap}.hm-field{flex:1 1 calc(25% - 6px)!important;min-width:110px}.hm-field.rt .hm-dd-panel{left:auto;right:0}.hm-item{grid-template-columns:minmax(0,1fr)}.hm-map{display:none}.hm-dates{grid-column:1;min-width:0;grid-template-columns:auto auto;justify-content:start}}" +
     "@media(max-width:620px){.hm-in{padding:0 14px}.hm-title h1{font-size:22px}.hm-fields{gap:6px}.hm-field{flex-basis:calc(50% - 6px)}.hm-dd-panel{width:92vw}.hm-field:nth-child(odd) .hm-dd-panel{left:0;right:auto}.hm-field:nth-child(even) .hm-dd-panel{left:auto;right:0}.hm-resbar select{min-width:0;width:100%}.hm-item{grid-template-columns:1fr;padding:9px 14px}.hm-ic{display:none}.hm-reg,.hm-dates{grid-column:1}}";
@@ -142,7 +142,9 @@
   function defaultCats() { // what the vendor sells: from the setup wizard (pre-filled from the website), or every product category
     var p = P(), ids = allCats().map(function (c) { return c.id; });
     if (!p) return ids.filter(function (i) { return i !== "extra"; });
-    return ids.filter(function (i) { return i === "extra" || (p.cats || []).indexOf(i) >= 0; });
+    var sel = ids.filter(function (i) { return i === "extra" || (p.cats || []).indexOf(i) >= 0; });
+    (p.cats || []).forEach(function (i) { if (i.slice(0, 2) === "c:" && sel.indexOf(i) < 0) sel.push(i); }); // bid categories picked in the wizard
+    return sel;
   }
   function selCats() { return st.cats === null ? defaultCats() : st.cats; }
   function hits(r) { return window.RFQProfile ? window.RFQProfile.catHits(r.raw) : {}; }
@@ -181,7 +183,7 @@
     var out = [], cats = selCats(), cl = catOpts();
     if (st.kw.trim()) out.push(["kw", "“" + st.kw.trim() + "”"]);
     if (cats.length) out.push(["cats", "Category: " + (cats.length === 1 ? (cl.filter(function (c) { return c.v === cats[0]; })[0] || {}).label : st.cats === null ? "my products (" + cats.length + ")" : cats.length + " selected")]);
-    if (st.where.length) out.push(["where", st.where.length === 1 ? stateName(st.where[0]) : st.where.length + " locations"]);
+    if (st.where.length) out.push(["where", st.where.length === 1 ? stateName(st.where[0]) : st.where.length + " jurisdictions"]);
     ["close", "posted", "value", "aside", "reg"].forEach(function (k) { if (st[k] !== "any") out.push([k, (k === "close" ? "" : SELECTS[k] + ": ") + lab(k, st[k])]); });
     return out;
   }
@@ -239,6 +241,8 @@
     });
     return out.concat(more);
   }
+  // The setup wizard lists these too (everything except the product types, which it already knows).
+  window.RFQExtraCats = function () { if (!rows) prep(); return catOpts().filter(function (o) { return o.group !== "Product types"; }); };
   function whereOpts() {
     var n = {}; rows.forEach(function (r) { n[r.code] = (n[r.code] || 0) + 1; });
     var out = [];
@@ -250,7 +254,7 @@
   var MORE_KEYS = ["value", "aside"];
   function fieldsHtml() {
     return ddHtml("cats", "Category", catOpts(), selCats(), '<button type="button" data-a="cats-all">Select all</button><button type="button" data-a="cats-none">Clear</button><button type="button" data-a="cats-mine">Reset to my products</button>') +
-      ddHtml("where", "Location", whereOpts(), st.where, '<button type="button" data-a="where-none">Clear</button>', "") +
+      ddHtml("where", "Jurisdiction", whereOpts(), st.where, '<button type="button" data-a="where-none">Clear</button>', "") +
       selectHtml("posted") + selectHtml("close") + selectHtml("value") + selectHtml("aside");
   }
   function moreHtml() {
@@ -279,7 +283,7 @@
 
   function regBlock(r) {
     var RP = window.RFQProfile, info = RP && RP.regInfo && RP.regInfo(RP.sourceFor(r.level, r.code));
-    if (!info || info.registered) return "";
+    if (!info || info.registered || !RP.get()) return ""; // no saved profile yet: we can't know their status
     var open = st.regOpen[info.id];
     return '<div class="hm-reg"><b>Registration needed:</b> ' + esc(info.reg) + ' <button class="hm-more" data-r="' + info.id + '" data-v="1">I am registered</button>' +
       '<button class="hm-more" data-ro="' + info.id + '">' + (open ? "Hide how" : "How to register") + "</button>" +
@@ -304,7 +308,7 @@
     var h = '<div class="hm-filt">' + (chips.length ? "<b>Filtered by</b>" + chips.map(function (c) { return '<button class="hm-chip" data-x="' + c[0] + '" title="Remove this filter">' + esc(c[1]) + ICON_X + "</button>"; }).join("") + '<button class="hm-clear" data-a="clear">Clear All</button>' : "") + "</div>";
     h += '<div class="hm-resbar"><span class="hm-cnt">' + list.length.toLocaleString() + (list.length === 1 ? " result" : " results") + '</span><label for="hm-sort">Order By</label><select id="hm-sort" data-sel="sort">' +
       SORT_OPT.map(function (o) { return '<option value="' + o[0] + '"' + (st.sort === o[0] ? " selected" : "") + ">" + esc(o[1]) + "</option>"; }).join("") + "</select></div>";
-    if (!list.length) h += '<div class="hm-empty"><h3>No bids match these filters</h3><p class="hm-sub">Try widening the category, location or deadline.</p><button class="hm-go" data-a="clear">Clear all filters</button></div>';
+    if (!list.length) h += '<div class="hm-empty"><h3>No bids match these filters</h3><p class="hm-sub">Try widening the category, jurisdiction or deadline.</p><button class="hm-go" data-a="clear">Clear all filters</button></div>';
     h += '<div class="hm-list">';
     list.slice(0, st.shown).forEach(function (r) {
       var hh = hits(r), ids = Object.keys(hh).filter(function (id) { return ctx.cats.length ? ctx.cats.indexOf(id) >= 0 : true; });
@@ -371,7 +375,7 @@
     if (t.dataset.ms) {
       var key = t.dataset.ms, ids = Array.prototype.slice.call($app.querySelectorAll('input[data-ms="' + key + '"]')).filter(function (i) { return i.checked; }).map(function (i) { return i.value; });
       if (key === "cats") st.cats = ids; else st[key] = ids;
-      var cfg = { cats: ["Category", catOpts], where: ["Location", whereOpts] }[key], lbl = $app.querySelector('.hm-field[data-k="' + key + '"] [data-lbl]');
+      var cfg = { cats: ["Category", catOpts], where: ["Jurisdiction", whereOpts] }[key], lbl = $app.querySelector('.hm-field[data-k="' + key + '"] [data-lbl]');
       if (lbl) { lbl.textContent = ddText(cfg[0], cfg[1](), ids); lbl.parentNode.classList.toggle("on", ids.length > 0); }
       st.shown = PAGE; results();
     }
