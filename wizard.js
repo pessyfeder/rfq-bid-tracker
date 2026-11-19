@@ -212,7 +212,7 @@
         }).join("") + "</div>" : "") + "</div>" +
         "<div class='wz-cust' data-cust" + (d.value === "custom" ? "" : " hidden") + "><label>From $ <input type='text' inputmode='numeric' data-vmin placeholder='no minimum' value='" + h(d.vmin) + "'></label>" +
         "<label>To $ <input type='text' inputmode='numeric' data-vmax placeholder='no maximum' value='" + h(d.vmax) + "'></label></div>" +
-        "<div class='wz-btns'><button data-a='back3'>&larr; Back</button><button class='pri' data-a='finish'>Done</button></div></div>";
+        "<div class='wz-btns'><button data-a='back3'>&larr; Back</button><button class='pri' data-a='finish'>Show me my RFQs</button></div></div>";
     }
     function collectJ() {
       var boxes = back.querySelectorAll("[data-jur]");
