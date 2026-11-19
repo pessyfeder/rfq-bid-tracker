@@ -6,7 +6,7 @@
   var $app = document.getElementById("app");
   if (!$app) return;
   var DAY = 86400000, PAGE = 25;
-  var st = { kw: "", cats: [], where: [], close: "any", posted: "any", value: "any", aside: "any", reg: "any", sort: "new", shown: PAGE, dd: null, more: false, regOpen: {} };
+  var st = { kw: "", cats: [], where: [], close: "any", posted: "any", value: "any", aside: "any", reg: "any", sort: "new", shown: PAGE, dd: null, more: false, regOpen: {}, openG: { "My products": true } };
 
   var css = document.createElement("style");
   css.textContent =
@@ -35,6 +35,7 @@
     ".hm-field.open .hm-dd-panel{display:block}.hm-field.rt .hm-dd-panel{left:auto;right:0}" +
     ".hm-dd-top{display:flex;gap:14px;flex-wrap:wrap;padding:7px 12px;border-bottom:1px solid #e5e9f0;font-size:12px}.hm-dd-top button{border:0;background:none;color:#4338ca;text-decoration:underline;font-weight:500;padding:0}" +
     ".hm-dd-list{max-height:320px;overflow:auto;padding:4px 0}.hm-grp{padding:6px 12px 2px;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#64748b}" +
+    ".hm-gh{display:flex;align-items:center;gap:8px;padding:5px 12px;border-bottom:1px solid #eef1f5}.hm-gh input{width:16px;height:16px;accent-color:#4338ca;flex:none;margin:0}.hm-gt{flex:1;cursor:pointer;font-weight:600;font-size:13px;color:#1f2937}.hm-gt em{font-style:normal;font-weight:400;font-size:12px;color:#64748b;margin-left:6px}.hm-arr{display:inline-block;width:14px;color:#64748b}.hm-kids{padding-left:16px}.hm-kids[hidden]{display:none}" +
     ".hm-opt{display:flex;gap:10px;align-items:center;padding:4px 12px;cursor:pointer;color:#1f3347;margin:0;font-size:13px}.hm-opt:hover{background:#eef0ff}.hm-opt input{width:16px;height:16px;accent-color:#4338ca;flex:none;margin:0}.hm-opt span{flex:1;min-width:0}.hm-opt em{font-style:normal;color:#94a3b8;font-size:12px}" +
     ".hm-morerow{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:12px}.hm-morerow .hm-field{flex:none}" +
     ".hm-tog{border:0;background:none;color:#4338ca;font-weight:600;text-decoration:underline;padding:10px 0 0}" +
@@ -215,11 +216,35 @@
     return label; // the label never changes; a set filter is shown by the outline (and the chip below) only
   }
   // Multi-select dropdown. Nothing ticked = no filter (any).
-  function ddHtml(key, label, opts, sel, topLinks, cls) {
+  function optHtml(key, o, sel) {
+    return '<label class="hm-opt"><input type="checkbox" data-ms="' + key + '" value="' + esc(o.v) + '"' + (sel.indexOf(o.v) >= 0 ? " checked" : "") + "><span>" + esc(o.label) + "</span>" + (o.n != null ? "<em>" + o.n + "</em>" : "") + "</label>";
+  }
+  // Same list as the setup wizard: collapsible groups with a tick-all box. "My products" starts open, the rest collapsed.
+  function groupedList(key, opts, sel) {
+    var gs = [], idx = {}, list = "";
+    opts.forEach(function (o) { var g = o.group || "Other"; if (!(g in idx)) { idx[g] = gs.length; gs.push({ name: g, items: [] }); } gs[idx[g]].items.push(o); });
+    gs.forEach(function (g, i) {
+      var n = g.items.filter(function (o) { return sel.indexOf(o.v) >= 0; }).length, op = !!st.openG[g.name];
+      list += '<div class="hm-gh"><input type="checkbox" data-mgrp="' + i + '" aria-label="Select all in ' + esc(g.name) + '"' + (n === g.items.length ? " checked" : "") + '>' +
+        '<div class="hm-gt" data-mg="' + i + '" data-gname="' + esc(g.name) + '" role="button" aria-expanded="' + op + '"><span class="hm-arr">' + (op ? "&#9662;" : "&#9656;") + "</span> " + esc(g.name) + " <em>" + n + "/" + g.items.length + "</em></div></div>" +
+        '<div class="hm-kids" data-kids="' + i + '"' + (op ? "" : " hidden") + ">" + g.items.map(function (o) { return optHtml(key, o, sel); }).join("") + "</div>";
+    });
+    return list;
+  }
+  function syncGroups() { // refresh group tick boxes / counts without redrawing (keeps scroll position)
+    Array.prototype.forEach.call($app.querySelectorAll('.hm-field[data-k="cats"] .hm-gh'), function (gh) {
+      var kids = gh.nextElementSibling.querySelectorAll("input[data-ms]"), n = 0;
+      Array.prototype.forEach.call(kids, function (i) { if (i.checked) n++; });
+      var gb = gh.querySelector("[data-mgrp]"); gb.checked = n === kids.length; gb.indeterminate = n > 0 && n < kids.length;
+      gh.querySelector("em").textContent = n + "/" + kids.length;
+    });
+  }
+  function ddHtml(key, label, opts, sel, topLinks, cls, grouped) {
     var list = "", grp = null;
-    opts.forEach(function (o) {
+    if (grouped) list = groupedList(key, opts, sel);
+    else opts.forEach(function (o) {
       if (o.group && o.group !== grp) { grp = o.group; list += '<div class="hm-grp">' + esc(grp) + "</div>"; }
-      list += '<label class="hm-opt"><input type="checkbox" data-ms="' + key + '" value="' + esc(o.v) + '"' + (sel.indexOf(o.v) >= 0 ? " checked" : "") + "><span>" + esc(o.label) + "</span>" + (o.n != null ? "<em>" + o.n + "</em>" : "") + "</label>";
+      list += optHtml(key, o, sel);
     });
     return '<div class="hm-field dd ' + (cls || "") + (st.dd === key ? " open" : "") + '" data-k="' + key + '"><span class="hm-lb">' + esc(label) + '</span>' +
       '<button type="button" class="hm-dd-btn' + (sel.length ? " on" : "") + '" data-dd="' + key + '" aria-haspopup="listbox"><span data-lbl>' + esc(ddText(label, opts, sel)) + "</span></button>" +
@@ -254,7 +279,7 @@
   }
   var MORE_KEYS = ["value", "aside"];
   function fieldsHtml() {
-    return ddHtml("cats", "Category", catOpts(), selCats(), '<button type="button" data-a="cats-all">Select all</button><button type="button" data-a="cats-none">Clear</button><button type="button" data-a="cats-mine">Reset to my products</button>') +
+    return ddHtml("cats", "Category", catOpts(), selCats(), '<button type="button" data-a="cats-all">Select all</button><button type="button" data-a="cats-none">Clear</button><button type="button" data-a="cats-mine">Reset to my products</button>', "", true) +
       ddHtml("where", "Jurisdiction", whereOpts(), st.where, '<button type="button" data-a="where-none">Clear</button>', "") +
       selectHtml("posted") + selectHtml("close") + selectHtml("value") + selectHtml("aside");
   }
@@ -351,6 +376,11 @@
   $app.addEventListener("click", function (e) {
     var dd = e.target.closest("[data-dd]");
     if (dd) { st.dd = st.dd === dd.dataset.dd ? null : dd.dataset.dd; return syncOpen(); }
+    var gt = e.target.closest("[data-mg]");
+    if (gt) {
+      var kids = gt.parentNode.nextElementSibling; kids.hidden = !kids.hidden; st.openG[gt.dataset.gname] = !kids.hidden;
+      gt.setAttribute("aria-expanded", String(!kids.hidden)); gt.querySelector(".hm-arr").innerHTML = kids.hidden ? "&#9656;" : "&#9662;"; return;
+    }
     var x = e.target.closest("[data-x]");
     if (x) {
       var k = x.dataset.x;
@@ -376,12 +406,17 @@
   });
   $app.addEventListener("change", function (e) {
     var t = e.target;
+    if (t.dataset.mgrp != null) { // group box ticks / unticks every category in the group
+      Array.prototype.forEach.call(t.parentNode.nextElementSibling.querySelectorAll("input[data-ms]"), function (i) { i.checked = t.checked; });
+      t = t.parentNode.nextElementSibling.querySelector("input[data-ms]"); if (!t) return;
+    }
     if (t.dataset.sel) { st[t.dataset.sel] = t.value; st.shown = PAGE; t.classList.toggle("on", t.value !== "any" && t.dataset.sel !== "sort"); return results(); }
     if (t.dataset.ms) {
       var key = t.dataset.ms, ids = Array.prototype.slice.call($app.querySelectorAll('input[data-ms="' + key + '"]')).filter(function (i) { return i.checked; }).map(function (i) { return i.value; });
       if (key === "cats") st.cats = ids; else st[key] = ids;
       var cfg = { cats: ["Category", catOpts], where: ["Jurisdiction", whereOpts] }[key], lbl = $app.querySelector('.hm-field[data-k="' + key + '"] [data-lbl]');
       if (lbl) { lbl.textContent = ddText(cfg[0], cfg[1](), ids); lbl.parentNode.classList.toggle("on", ids.length > 0); }
+      if (key === "cats") syncGroups();
       st.shown = PAGE; results();
     }
   });
