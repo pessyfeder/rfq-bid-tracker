@@ -293,7 +293,7 @@
   // ---------- page ----------
   function shell() {
     var prof = P();
-    $app.innerHTML = '<div class="hm"><div class="hm-nav"><div class="hm-in"><span class="hm-logo">Bid<i>.</i>Finder</span>' +
+    $app.innerHTML = '<div class="hm"><div class="hm-nav"><div class="hm-in"><span class="hm-logo">Bid<i>.</i>Finder <span style="white-space:nowrap">– Discover Group, Inc.</span></span>' +
       '<button class="hm-btn" data-a="selection" title="Change which categories you see">&larr; Back to selection</button>' +
       // Profile button hidden for now: '<button class="hm-btn" data-a="profile">' + (prof ? "Edit my profile" : "Set up my profile") + '</button>' +
       '<button class="hm-btn" data-a="refresh">Refresh</button></div></div>' +
