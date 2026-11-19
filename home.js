@@ -55,7 +55,7 @@
     ".hm-empty{text-align:center;padding:48px 16px;border:1px solid #d9dfe7;border-top:0}.hm-empty h3{margin:0 0 6px}" +
     ".hm-showmore{display:block;margin:14px auto 60px;border:1px solid #4338ca;background:#fff;color:#4338ca;border-radius:6px;padding:7px 22px;font-weight:600;font-size:13px}" +
     ".hm-resbar{border-radius:12px 12px 0 0;background:linear-gradient(90deg,#312e81,#4338ca)}.hm-list{border:0;background:transparent;padding:10px 0 0;display:flex;flex-direction:column;gap:8px}" +
-    ".hm-item{grid-template-columns:minmax(0,1fr) auto auto}.hm-map{display:flex;align-items:center;justify-content:center}.hm-item,.hm-item:nth-child(even){background:#fff;border:1px solid #e4e4f0;border-left:4px solid #4338ca;border-radius:10px;box-shadow:0 1px 2px rgba(49,46,129,.06);padding:10px 16px 10px 12px;min-height:60px}.hm-item:hover{box-shadow:0 4px 12px rgba(49,46,129,.12)}.hm-item:last-child{border-bottom:1px solid #e4e4f0}" +
+    ".hm-item{grid-template-columns:auto minmax(0,1fr) auto}.hm-map{display:flex;align-items:center;justify-content:center}.hm-item,.hm-item:nth-child(even){background:#fff;border:1px solid #e4e4f0;border-left:4px solid #4338ca;border-radius:10px;box-shadow:0 1px 2px rgba(49,46,129,.06);padding:10px 16px 10px 12px;min-height:60px}.hm-item:hover{box-shadow:0 4px 12px rgba(49,46,129,.12)}.hm-item:last-child{border-bottom:1px solid #e4e4f0}" +
     ".hm-ic{width:auto;height:auto;min-height:40px;padding:6px 8px;border-radius:8px;background:#eef0ff;color:#4338ca;font-size:11px;font-weight:600;line-height:1.2;text-align:center;overflow-wrap:anywhere}.hm-item h3{font-weight:600;font-size:14px}.hm-item h3 a{color:#27264f}" +
     ".hm-title h1{font-weight:700;letter-spacing:-.02em}.hm-showmore,.hm-btn,.hm-go{border-radius:999px}.hm-chip{background:#eef0ff;border-color:#c7caf5}" +
     /* portal layout: one flat row, wide search box with icon at right, then white bordered dropdowns; chips row below */
@@ -305,10 +305,10 @@
       var matchTag = ids.length ? '<span class="hm-tag match" title="' + esc(ids.map(function (id) { return hh[id].slice(0, 3).join(", "); }).join("; ")) + '">' + esc(ids.slice(0, 2).map(function (id) { return catLabel[id]; }).join(" · ")) + (ids.length > 2 ? " +" + (ids.length - 2) : "") + "</span>" : "";
       var asideTag = r.aside.any ? '<span class="hm-tag aside">' + esc(r.aside.small ? "Small business set-aside" : r.aside.vet ? "Veteran-owned set-aside" : r.aside.women ? "Women-owned set-aside" : "Set-aside") + "</span>" : "";
       var closing = r.days == null ? "No firm deadline" : mdy(r.due);
-      h += '<div class="hm-item"><div><h3><a href="/explore.html?id=' + encodeURIComponent(r.id) + '">' + esc(r.title) + "</a></h3>" +
+      h += '<div class="hm-item">' + mapIcon(r) + '<div><h3><a href="/explore.html?id=' + encodeURIComponent(r.id) + '">' + esc(r.title) + "</a></h3>" +
         '<div class="hm-sub">' + esc(stateName(r.code)) + " &middot; " + esc(r.ck ? r.ck.slice(2) || "No category" : "No category") + "</div></div>" +
         '<div class="hm-dates"><div>' + ICON_CAL + "<b>Published</b></div><div>" + esc(r.posted ? mdy(r.posted) : "Unknown") + "</div><div>" + ICON_CLOCK + "<b>Closing</b></div><div>" + esc(closing) + (r.days != null && r.days >= 0 ? ' <span class="hm-left">' + r.days + (r.days === 1 ? " day" : " days") + "</span>" : "") + "</div></div>" +
-        mapIcon(r) + regBlock(r) + "</div>";
+        regBlock(r) + "</div>";
     });
     h += "</div>";
     if (list.length > st.shown) h += '<button class="hm-showmore" data-a="more">Show more (' + (list.length - st.shown).toLocaleString() + " left)</button>";
