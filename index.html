@@ -21,6 +21,7 @@
   .toolbar select { field-sizing: content; } /* fit the selected text, not the longest option */
   .toolbar input[type=search] { min-width: 220px; }
   .toolbar label { color: var(--muted); display: flex; gap: 6px; align-items: center; }
+  .toolbar label[hidden] { display: none; }
   /* Per-column filters: a button per column opens a small panel; active filters show as chips below the toolbar */
   .filters { display: contents; }
   .fwrap { position: relative; }
@@ -211,6 +212,8 @@
   <span class="filters" id="filters"></span>
   <label title="Hides notices whos due dates have already passed."><input type="checkbox" id="hideClosed" checked> Hide closed</label>
   <label title="Hides notices that were posted more than a year ago."><input type="checkbox" id="hideOld" checked> Hide old</label>
+  <label title="Shows only bids whose title, summary or category mention something you sell (set up in My profile)." id="matchLbl" hidden><input type="checkbox" id="matchOnly"> Matches my products</label>
+  <button type="button" class="fbtn" id="profileBtn" title="Set up what you sell and where you are registered">My profile</button>
   <span class="sub" id="count"></span>
   <span class="refresh-ctl">
     <span class="seg" id="refreshMode" title="What the Refresh button fetches">
@@ -241,6 +244,7 @@
 <script src="data.js"></script>
 <script src="sample-data.js"></script>
 <script src="facts.js"></script>
+<script src="wizard.js"></script>
 <script src="live-sam.js" onerror="void 0"></script>
 <script src="live-nyc.js" onerror="void 0"></script>
 <script src="live-states.js" onerror="void 0"></script>
@@ -1015,7 +1019,9 @@
     // Only a headline that is the agency's own text (no AI rewrite) can be long enough to need Show more.
     var long = false; // headlines are never cut off
     var shown = long && !open ? head.slice(0, TITLE_MAX - 3).trim() + "..." : head;
-    return '<div class="req-title"' + (orig ? ' title="' + esc("Agency's wording: " + t) + '"' : "") + ">" + esc(shown) + "</div>" +
+    var pm = productMatch(r);
+    var badge = pm.length ? '<span class="match-chip" title="' + esc("Mentions: " + pm.join(", ")) + '">Matches</span>' : "";
+    return '<div class="req-title"' + (orig ? ' title="' + esc("Agency's wording: " + t) + '"' : "") + ">" + badge + esc(shown) + "</div>" +
       (long ? '<button class="toggle title-toggle" data-id="' + esc(r.id) + '" aria-expanded="' + open + '">' + (open ? "Show less" : "Show more") + "</button>" : "");
   }
   // Pulls the few useful facts out of the description as short labeled bullets. Left out: anything the other columns already
@@ -1161,10 +1167,12 @@
     return { lists: FILTERS.filter(function (x) { return x.type === "list" && hiddenN(x); }),
       days: [pnum(R.days.a), pnum(R.days.b)], value: [pnum(R.value.a), pnum(R.value.b)],
       detail: isActive(FILTERS.filter(function (x) { return x.key === "detail"; })[0]),
-      hideClosed: $("hideClosed").checked, hideOld: $("hideOld").checked, pq: q ? parseQuery(q) : null };
+      hideClosed: $("hideClosed").checked, hideOld: $("hideOld").checked, matchOnly: $("matchOnly").checked && !!(window.RFQProfile && window.RFQProfile.get()), pq: q ? parseQuery(q) : null };
   }
+  function productMatch(r) { return window.RFQProfile ? window.RFQProfile.match(r) : []; }
   function matches(r, f) {
     if (f.hideClosed && r.daysLeft < 0) return false;
+    if (f.matchOnly && !productMatch(r).length) return false;
     // column filters
     for (var li = 0; li < f.lists.length; li++) {
       var vs = f.lists[li].get(r), hid = H[f.lists[li].key];
@@ -1423,7 +1431,15 @@
     sort = sort.key === key ? { key: key, dir: -sort.dir } : { key: key, dir: key === "valueSort" ? -1 : 1 };
     render();
   });
-  ["hideClosed", "hideOld"].forEach(function (id) {
+  function syncProfileUi() { var has = !!(window.RFQProfile && window.RFQProfile.get()); $("matchLbl").hidden = !has; if (!has) $("matchOnly").checked = false; }
+  $("profileBtn").addEventListener("click", function () { if (window.RFQProfile) window.RFQProfile.open(); });
+  window.addEventListener("rfqprofilechange", function () {
+    syncProfileUi();
+    rows.forEach(function (r) { r._els = null; }); // rows are cached; redraw them with the new Matches marks
+    recount(); render();
+  });
+  syncProfileUi();
+  ["hideClosed", "hideOld", "matchOnly"].forEach(function (id) {
     function onFilter() { recount(); render(); }
     var timer;
     $(id).addEventListener("input", function () { clearTimeout(timer); timer = setTimeout(onFilter, 0); }); // coalesce events from one keystroke
