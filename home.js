@@ -136,6 +136,56 @@
     return t || String(orig || "");
   }
 
+  // Final tidy for every headline (AI-written or rule-built):
+  //  - never shows the buyer's own jurisdiction (state, "New York City", "City of X"): the row already has a location tag
+  //  - drops solicitation numbers, status labels ("Bid Extension:", "*REBID*") and the "Not clear from the listing:" hedge
+  //  - a notice / contact line or a bare code is replaced by what the description says is wanted, when it says
+  function scopeHeadline(scope) {
+    var s = String(scope || "").replace(/<[^>]+>/g, " ").replace(/^[A-Z]{2,6} - RFx\.\s*/, "").replace(/\s+/g, " ").trim();
+    var m = /\b(?:seeks?|seeking|requests?|invites?|solicits?|will receive|anticipates?)\s+(?:sealed\s+|competitive\s+)?(?:bids?|proposals?|quotes?|quotations?|qualifications|responses?|applications?|purchasing)\s+(?:for|to|from[^,]{0,60}\bto)\s+(?:the\s+)?(?:purchase of|provide|furnish(?:ing)?)?\s*(.{12,}?)(?:[.;]|$)/i.exec(s);
+    if (!m) return "";
+    var t = m[1].replace(/\s+(until|by|no later than)\b[\s\S]*$/i, "").trim();
+    if (t.length > 110) t = t.slice(0, 110).replace(/\s+\S*$/, "") + "…";
+    return t.length >= 12 ? t.charAt(0).toUpperCase() + t.slice(1) : "";
+  }
+  function cleanTitle(t, r, code) {
+    var orig = t = String(t || "").replace(/\s+/g, " ").trim(), m;
+    t = t.replace(/^not clear from the listing:\s*/i, "").replace(/^\*?\s*re-?bid\s*\*?[\s:–-]*/i, "")
+      .replace(/^(bid extension|correction|addendum( no\.? ?\d+)?|amendment|open-ended|cancell?ed|re-?issued?)\s*[-:–]\s*/i, "")
+      .replace(/^(?:[A-Z\/&]+\s+)*(?:opportunity)\s*[-–]\s*/i, function (x) { return /m\/?wbe|sdvob|mwbe/i.test(x) ? "" : x; });
+    var dash = /^(.{3,45}?)\s+[-–:]\s+(?=\S)/.exec(t);
+    if (dash && /[\d_#]/.test(dash[1]) && t.length - dash[0].length >= 8) t = t.slice(dash[0].length);
+    t = t.replace(/^(?:RFP|RFQ|IFB|ITB|RFB|RFI|ITN|ARFQ|CRFQ|PB)\b[\s#:.-]*[A-Za-z0-9][\w\/.-]*\d[\w\/.-]*[\s:–-]+(?=[A-Za-z])/i, "");
+    t = t.replace(/^(?=[A-Z0-9-]*\d)[A-Z0-9][A-Z0-9-]{4,}\s*[-:–]?\s+(?=[A-Za-z])/, "");
+    var words = (t.match(/\b[A-Za-z]{3,}\b/g) || []).length;
+    var boiler = /^(notice\b|submit to\b|email\b|sealed (bids|proposals)\b|written sealed\b|the .{3,70}?\b(will receive|requests|invites|anticipates|is (hereby )?seeking)\b)/i.test(t);
+    var codey = /\d/.test(t) && words < 2 && t.length < 40;
+    if ((boiler || codey) && r) { var sh = scopeHeadline(r.scope); if (sh) t = sh; }
+    if (r && r.level !== "Federal" && code) {
+      var N = window.STATE_NAMES || {}, S = N[code];
+      if (code === "NYC") {
+        t = t.replace(/\s*(?:,|\b(?:in|for|at|across|within))\s+(?:the\s+)?(?:City of )?(?:New York City|NYC)(?:\s+(?:city )?government)?\s*$/i, "")
+          .replace(/\b(?:the\s+)?(?:City of New York|New York City|NYC)(?:'s)?\s+(?=\S)/gi, "");
+      } else if (code === "NY") {
+        t = t.replace(/\s*(?:,|\b(?:in|for|at|across|within))\s+(?:the\s+)?(?:State of )?New York(?: State)?\s*$/i, "").replace(/\b(?:the\s+)?(?:State of )?New York State(?:'s)?\s+(?=\S)/gi, "");
+      } else if (S && S !== "New York") {
+        var q = S.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        t = t.replace(new RegExp("\\s*(?:,|\\b(?:in|for|at|across|within|statewide in))\\s+(?:the\\s+)?(?:State of )?" + q + "\\s*$", "i"), "")
+          .replace(new RegExp("\\b(?:the\\s+)?State of " + q + "(?:'s)?\\s+", "gi"), "state ")
+          .replace(new RegExp("\\b" + q + "'s\\s+", "gi"), "")
+          .replace(new RegExp("(?<!\\bof )(?<!\\bState of )\\b" + q + "\\s+(?=[A-Za-z])", "gi"), "");
+      }
+      // a city or town named only as the buyer: ", City of Lowell" / "for City of Salem" / "the City of Medford's ordinances"
+      t = t.replace(/\s*,\s*(?:City|Town) of [A-Z][\w.' -]*?$/, "").replace(/\s+for\s+(?:the\s+)?(?:City|Town) of [A-Z][\w.' -]*?$/, "")
+        .replace(/\b(?:the\s+)?(?:City|Town) of [A-Z][\w.-]*(?: [A-Z][\w.-]*)?'s\s+/g, "the city's ");
+      t = t.replace(/\b(for|at|by|with|from) (Department|Dept|Division|Office|Commission|Board|Bureau|Agency|Authority)\b/g, "$1 the $2");
+    }
+    t = t.replace(/\s+([,.;:])/g, "$1").replace(/(^|\s)[,;:]+\s*/g, "$1").replace(/\s{2,}/g, " ").replace(/(?:\s+(?:for|in|at|of|the|and|to|by|with|-|–))+\s*$/i, "").replace(/[,;:\s-]+$/, "").trim();
+    if (t.length < 8) return orig;
+    return t.charAt(0).toUpperCase() + t.slice(1);
+  }
+  window.cleanBidTitle = function (t, raw) { return cleanTitle(t, raw, raw && raw.level === "Federal" ? "US" : String((raw && raw.id) || "").split("-")[0].replace("TXDOT", "TX")); };
+
   function prep() {
     var seen = loadSeen(), nowIso = new Date().toISOString(), changed = false, live = {};
     (window.RFQS || []).forEach(function (r) { live[r.id] = 1; if (!seen[r.id]) { seen[r.id] = nowIso; changed = true; } });
@@ -147,6 +197,7 @@
       var val = r.value != null ? r.value : r.valueEst && r.valueEst.kind === "stated" ? r.valueEst.amount : null;
       var w = (r.details && r.details.warnings) || [];
       var title = nice(r.plainTitle || (r.level === "Federal" && window.fedItemTitle ? window.fedItemTitle(r.title, r.scope) : shortTitle(r.title, r.scope)));
+      title = cleanTitle(title, r, code);
       var agency = nice(r.agency), region = (r.details && r.details.region) || "";
       return { raw: r, id: r.id, title: title, agency: agency, level: r.level, code: code, noDue: noDue,
         days: noDue ? null : Math.round((pDate(r.due) - today) / DAY), due: r.due, seen: seen[r.id], value: val,
@@ -373,7 +424,7 @@
       var closing = r.days == null ? "No firm deadline" : mdy(r.due);
       h += '<div class="hm-item">' + mapIcon(r) + '<div><h3><a href="/explore.html?id=' + encodeURIComponent(r.id) + '">' + esc(r.title) + "</a>" + valueTag(r) + "</h3>" +
         '<div class="hm-sub">' + esc(stateName(r.code)) + " &middot; " + esc(r.ck ? r.ck.slice(2) || "No category" : "No category") + "</div></div>" +
-        '<div class="hm-dates"><div>' + ICON_CAL + "<b>Published</b></div><div>" + esc(r.posted ? mdy(r.posted) : "Unknown") + "</div><div>" + ICON_CLOCK + "<b>Closing</b></div><div>" + esc(closing) + (r.days != null && r.days >= 0 ? ' <span class="hm-left">' + r.days + (r.days === 1 ? " day" : " days") + "</span>" : "") + "</div></div>" +
+        '<div class="hm-dates"><div>' + ICON_CAL + "<b>Published</b></div><div>" + esc(r.posted ? mdy(r.posted) : "Unknown") + "</div><div>" + ICON_CLOCK + "<b>Closing</b></div><div>" + esc(closing) + (r.days != null && r.days >= 0 ? ' <span class="hm-left">' + (r.days === 0 ? "today" : r.days + (r.days === 1 ? " day" : " days")) + "</span>" : "") + "</div></div>" +
         regBlock(r) + "</div>";
     });
     h += "</div>";
