@@ -986,12 +986,11 @@
         var lastSeg = parts[parts.length - 1], ws = lastSeg.split(/\s+/), f = ws[ws.length - 1], fl = f.toLowerCase();
         var prev = ws.length > 1 ? ws[ws.length - 2] : (parts.length > 1 ? parts[parts.length - 2].split(/\s+/).pop() : "");
         var sc = " " + decodeText(scope || "").toLowerCase().replace(/[^a-z0-9]+/g, " ") + " ";
-        var whole = segVocab[f.toUpperCase()] || (fl.length > 2 && (sc.indexOf(" " + fl + " ") >= 0 || sc.indexOf(" " + fl + "s ") >= 0));
+        var whole = segVocab[f.toUpperCase()] || (fl.length > 2 && !/[iuvq]$/.test(fl) && (sc.indexOf(" " + fl + " ") >= 0 || sc.indexOf(" " + fl + "s ") >= 0));
         if (!whole) {
           var full = "", mm;
           if (prev && (mm = new RegExp(" " + prev.toLowerCase().replace(/[^a-z0-9]/g, "") + " (" + fl.replace(/[^a-z0-9]/g, "") + "[a-z]+)").exec(sc))) full = mm[1];
           if (!full && fl.length >= 3 && (mm = new RegExp(" (" + fl.replace(/[^a-z0-9]/g, "") + "[a-z]+) ").exec(sc))) full = mm[1].replace(/s$/, "");
-          if (!full && fl.length >= 3) full = Object.keys(segVocab).filter(function (w) { return w.length > fl.length && w.toLowerCase().indexOf(fl) === 0 && w.indexOf(" ") < 0; })[0] || "";
           if (full) { ws[ws.length - 1] = full; parts[parts.length - 1] = ws.join(" "); }
           else if (!(fl.length >= 4 && /(IVE|AL|ED|ING|ER|OR|ION|IC|ARY|OUS|ENT|ANT|LE|Y|S)$/i.test(f))) { ws.pop(); if (ws.length) parts[parts.length - 1] = ws.join(" "); else parts.pop(); }
         }

@@ -25,7 +25,7 @@
     ".hm-bar select{font:inherit;border:1px solid #c5cdd8;border-radius:6px;padding:5px 10px;background:#fff;color:#374151;margin-left:auto}" +
     ".hm-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:10px}@media(max-width:800px){.hm-grid{grid-template-columns:1fr}}" +
     ".hm-card{background:#fff;border:1px solid #d9dfe7;border-radius:6px;padding:14px 18px 10px;margin-bottom:0;min-width:0;border-left:4px solid var(--c,#1e3a5f)}" +
-    ".hm-card h3{margin:0 0 2px;font-size:16px;font-weight:600;line-height:1.35;color:#0f2742}.hm-sub{color:#64748b;font-size:13px}.hm-posted{color:#94a3b8;font-size:11px;margin-top:6px}" +
+    ".hm-card h3{margin:0 0 2px;font-size:16px;font-weight:600;line-height:1.35;color:#0f2742}.hm-sub{color:#64748b;font-size:13px}.hm-tag.posted{background:transparent;color:#94a3b8;font-size:11px;font-weight:400;padding:2px 0}" +
     ".hm-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:8px 0}" +
     ".hm-tag{border-radius:4px;padding:2px 8px;font-size:12px;font-weight:600;background:#eef1f5;color:#374151}" +
     ".hm-tag.Federal{background:#e3ecf7;color:#1e3a5f}.hm-tag.State{background:#eceaf5;color:#4a4a8a}.hm-tag.Local{background:#e1f0ee;color:#0f5f58}" +
@@ -41,7 +41,7 @@
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
   function safeUrl(u) { return /^https:\/\//i.test(String(u)) ? String(u) : ""; }
   function pDate(s) { var p = String(s).split("-"); return new Date(+p[0], p[1] - 1, +p[2]); }
-  function fmtPosted(s) { s = String(s || ""); if (!s) return "date unknown"; var d = new Date(s.length > 10 ? s : s + "T00:00:00"); if (isNaN(d)) return s; var t = s.length > 10 ? ", " + d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) : ""; return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) + t; }
+  function fmtPosted(s) { s = String(s || ""); if (!s) return "date unknown"; var d = new Date(s.length > 10 ? s : s + "T00:00:00"); if (isNaN(d)) return s; var t = s.length > 10 && (d.getHours() || d.getMinutes()) ?", " + d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) : ""; return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) + t; }
   function fmtDate(s) { return pDate(s).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }); }
   function money(n) { return n >= 1e6 ? "$" + +(n / 1e6).toFixed(1) + " million" : n >= 1e3 ? "$" + Math.round(n / 1e3) + "K" : "$" + n; }
   function nice(t) { // ALL-CAPS titles become readable
@@ -60,7 +60,7 @@
       var val = r.value != null ? r.value : r.valueEst && r.valueEst.kind === "stated" ? r.valueEst.amount : null;
       var w = (r.details && r.details.warnings) || [];
       return { raw: r, id: r.id, title: nice(r.plainTitle || (r.level === "Federal" && window.fedItemTitle ? window.fedItemTitle(r.title, r.scope) : r.title)), agency: nice(r.agency), level: r.level, code: code, noDue: noDue,
-        days: noDue ? null : Math.round((pDate(r.due) - today) / DAY), due: r.due, posted: r.posted, value: val, scope: r.scope || "",
+        days: noDue ? null : Math.round((pDate(r.due) - today) / DAY), due: r.due, posted: r.postedAt || r.posted, value: val, scope: r.scope || "",
         region: (r.details && r.details.region) || "", url: safeUrl(r.rfqUrl), old: w.indexOf("Posted over a year ago") !== -1 };
     }).filter(function (r) { return !(r.days != null && r.days < 0) && !r.old; });
   }
@@ -131,9 +131,9 @@
       h += '<div class="hm-card" style="--c:' + color + '"><h3>' + esc(r.title) + '</h3><div class="hm-sub">' + esc(r.agency) + (r.region ? " · " + esc(r.region) : "") + "</div>" +
         '<div class="hm-row"><span class="hm-tag ' + esc(r.level) + '">' + esc(r.level) + "</span>" + dTag +
         (r.value ? '<span class="hm-tag money">' + esc(money(r.value)) + "</span>" : "") +
-        (r.m && r.m.length ? '<span class="hm-tag match">Matches: ' + esc(r.m.slice(0, 3).join(", ")) + "</span>" : "") + "</div>" +
+        (r.m && r.m.length ? '<span class="hm-tag match">Matches: ' + esc(r.m.slice(0, 3).join(", ")) + "</span>" : "") +
+        '<span class="hm-tag posted">Posted ' + esc(fmtPosted(r.posted)) + "</span></div>" +
         regBlock(r) +
-        '<div class="hm-posted">Posted ' + esc(fmtPosted(r.posted)) + "</div>" +
         (st.open[r.id] && r.scope ? '<div class="hm-scope">' + esc(r.scope) + "</div>" : "") +
         '<div class="hm-row">' + (r.url ? '<a class="hm-go" href="' + esc(r.url) + '" target="_blank" rel="noopener">View solicitation</a>' : "") +
         (r.scope ? '<button class="hm-more" data-o="' + esc(r.id) + '">' + (st.open[r.id] ? "Hide summary" : "Show summary") + "</button>" : "") + "</div></div>";
