@@ -296,7 +296,10 @@
   // First visit: offer the setup once. (Skipping is remembered; the toolbar button reopens it.)
   // Opened immediately (not on window "load") so the main page never paints before the wizard hides it.
   // The bid-category list comes from home.js, which loads after this file, so wait until every script has run.
-  if (!load()) {
+  // Every page load or refresh starts at wizard step 1 — except the page's own reload right after a data refresh.
+  var autoReload = false;
+  try { autoReload = !!sessionStorage.getItem("rfqAutoReload"); } catch (e) {}
+  if (!autoReload) {
     document.body.classList.add("wz-open");
     if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", open); else open();
   }
