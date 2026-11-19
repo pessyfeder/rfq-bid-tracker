@@ -63,6 +63,25 @@
     return m;
   }
 
+  // Categories for the home screen's Category filter: the product categories, plus the vendor's own extra keywords (if any).
+  // catHits(r) -> { categoryId: [keywords found in the bid's title / summary / category] } for every category that matches.
+  function categories() {
+    var p = load(), out = CATS.map(function (c) { return { id: c.id, label: c.label, kw: c.kw }; });
+    var ex = keywords({ cats: [], extra: p && p.extra });
+    if (ex.length) out.push({ id: "extra", label: "My own keywords", kw: ex });
+    return out;
+  }
+  var hitCache = { key: "", defs: [] };
+  function catHits(r) {
+    var cats = categories(), key = cats.map(function (c) { return c.id + ":" + c.kw.length; }).join("|") + (load() || {}).extra;
+    if (hitCache.key !== key) hitCache = { key: key, defs: cats.map(function (c) { return { id: c.id, res: c.kw.map(function (k) { return { k: k, re: new RegExp("\\b" + esc(k).replace(/\s+/g, "\\s+") + "(?:s|es)?\\b", "i") }; }) }; }) };
+    if (r._ch && r._ch.k === key) return r._ch.m;
+    var text = [r.title, r.plainTitle, r.scope, r.category].filter(Boolean).join(" \n "), m = {};
+    hitCache.defs.forEach(function (d) { var hit = d.res.filter(function (x) { return x.re.test(text); }).map(function (x) { return x.k; }); if (hit.length) m[d.id] = hit; });
+    r._ch = { k: key, m: m };
+    return m;
+  }
+
   // ---------- UI ----------
   var css = document.createElement("style");
   css.textContent =
@@ -95,7 +114,7 @@
   function open() {
     var cur = load() || {};
     var d = { cats: (cur.cats || CATS.map(function (c) { return c.id; })).slice(), extra: cur.extra || "",
-      src: (cur.src || ["fed", "tx", "pa", "nyc"]).slice(), reg: Object.assign({}, cur.reg || {}) };
+      src: (cur.src || SOURCES.map(function (s) { return s.id; })).slice(), reg: Object.assign({}, cur.reg || {}) };
     var step = 0;
     close();
     back = document.createElement("div"); back.className = "wz-back";
@@ -103,35 +122,24 @@
 
     function skip() { try { if (!load()) localStorage.setItem(SKIP, "1"); } catch (e) {} close(); }
     function srcList() { return SOURCES.filter(function (s) { return d.src.indexOf(s.id) >= 0; }); }
-    function steps() { return 4 + srcList().length; } // welcome, products, sources, [one per source], review
+    function steps() { return 3; } // welcome, products, review
 
     function body() {
-      var n = srcList().length, h2, html = "", i;
+      var h2, html = "";
       if (step === 0) {
         h2 = "Welcome";
-        html = "<p>This tracker lists government bids from many sources. A two-minute setup lets it point out the bids that look like what you sell, and shows what you still need to register for.</p>" +
+        html = "<p>This tracker lists government bids from many sources. A two-minute setup lets it point out the bids that look like what you sell, and shows what registration each bid needs.</p>" +
           "<p class='wz-note'>Your answers stay in this browser. They never hide or rule out a bid; they only add a green &ldquo;Matches&rdquo; mark.</p>";
       } else if (step === 1) {
         h2 = "What do you sell?";
         html = "<p>Tick everything that applies (pre-filled from discovergroup.net).</p>" + CATS.map(function (c) {
           return "<label class='wz-row'><input type='checkbox' data-cat='" + c.id + "'" + (d.cats.indexOf(c.id) >= 0 ? " checked" : "") + "> <span>" + h(c.label) + "<br><span class='wz-note'>" + h(c.kw.slice(0, 4).join(", ")) + "&hellip;</span></span></label>";
         }).join("") + "<p>Anything else? Extra keywords, separated by commas:</p><textarea rows='2' id='wzExtra' placeholder='e.g. lanyards, batteries'>" + h(d.extra) + "</textarea>";
-      } else if (step === 2) {
-        h2 = "Where do you want to bid?";
-        html = SOURCES.map(function (s) { return "<label class='wz-row'><input type='checkbox' data-src='" + s.id + "'" + (d.src.indexOf(s.id) >= 0 ? " checked" : "") + "> " + h(s.label) + "</label>"; }).join("");
-      } else if (step >= 3 && step < 3 + n) {
-        var s = srcList()[step - 3], st = d.reg[s.id] || "";
-        h2 = h(s.label) + ": are you registered?";
-        html = "<p>" + h(s.reg) + "</p><div class='wz-seg'>" +
-          ["yes:Yes, already registered", "no:Not yet", "unsure:Not sure"].map(function (o) { var p = o.split(":"); return "<label><input type='radio' name='reg' value='" + p[0] + "'" + (st === p[0] ? " checked" : "") + "> " + p[1] + "</label>"; }).join("") + "</div>" +
-          (st === "no" || st === "unsure" ? "<div class='wz-src'><b>How to get registered</b><ol>" + s.steps.map(function (x) { return "<li>" + h(x) + "</li>"; }).join("") + "</ol>" +
-            (s.url ? "<p><a href='" + h(s.url) + "' target='_blank' rel='noopener'>Open the registration page &rarr;</a></p><p class='wz-note'>Links can change; if one fails, search the portal name.</p>" : "") + "</div>" : "");
       } else {
         h2 = "Review your setup";
-        var todo = srcList().filter(function (s) { return d.reg[s.id] !== "yes"; });
         html = "<ul class='wz-sum'><li><b>Selling:</b> " + h(keywords({ cats: d.cats, extra: d.extra }).length ? d.cats.map(function (id) { return CATS.filter(function (c) { return c.id === id; })[0].label; }).concat(d.extra.trim() ? [d.extra.trim()] : []).join("; ") : "nothing selected") + "</li>" +
           "<li><b>Bidding in:</b> " + h(srcList().map(function (s) { return s.label; }).join(", ") || "none") + "</li>" +
-          "<li><b>Still to register:</b> " + (todo.length ? h(todo.map(function (s) { return s.label + (d.reg[s.id] === "unsure" ? " (check)" : ""); }).join(", ")) : "nothing") + "</li></ul>" +
+          "</ul><p class='wz-note'>Registration requirements are shown on each bid.</p>" +
           "<p class='wz-note'>You can change these answers any time with &ldquo;Edit my profile&rdquo;.</p>";
       }
       return { h2: h2, html: html };
@@ -146,13 +154,7 @@
     function collect() {
       Array.prototype.forEach.call(back.querySelectorAll("[data-cat]"), function (el, _i, all) { if (el === all[0]) d.cats = []; if (el.checked) d.cats.push(el.dataset.cat); });
       var ex = back.querySelector("#wzExtra"); if (ex) d.extra = ex.value;
-      Array.prototype.forEach.call(back.querySelectorAll("[data-src]"), function (el, _i, all) { if (el === all[0]) d.src = []; if (el.checked) d.src.push(el.dataset.src); });
-      var r = back.querySelector("input[name=reg]:checked"), n = srcList().length;
-      if (r && step >= 3 && step < 3 + n) d.reg[srcList()[step - 3].id] = r.value;
     }
-    back.addEventListener("change", function (e) {
-      if (e.target.name === "reg") { collect(); draw(); } // show / hide the how-to for the chosen answer
-    });
     back.addEventListener("click", function (e) {
       var a = e.target.closest("[data-a]"); if (!a) return;
       var act = a.dataset.a;
@@ -170,12 +172,20 @@
     draw();
   }
 
-  function todo() {
-    var p = load(); if (!p) return [];
-    return SOURCES.filter(function (s) { return (p.src || []).indexOf(s.id) >= 0 && (p.reg || {})[s.id] !== "yes" && s.id !== "other"; })
-      .map(function (s) { return { label: s.label, url: s.url, unsure: (p.reg || {})[s.id] === "unsure" }; });
+  // Which source a bid belongs to, plus its registration info and the vendor's saved status for it.
+  function sourceFor(level, code) {
+    return level === "Federal" ? "fed" : code === "TX" ? "tx" : code === "PA" ? "pa" : code === "NYC" ? "nyc" : "other";
   }
-  window.RFQProfile = { get: load, match: match, open: open, todo: todo };
+  function regInfo(id) {
+    var p = load() || {}, s = SOURCES.filter(function (x) { return x.id === id; })[0];
+    return s ? { id: id, label: s.label, reg: s.reg, url: s.url, steps: s.steps, registered: (p.reg || {})[id] === "yes" } : null;
+  }
+  function setReg(id, yes) {
+    var p = load() || { cats: CATS.map(function (c) { return c.id; }), extra: "", src: ["fed", "tx", "pa", "nyc"], reg: {} };
+    p.reg = p.reg || {}; if (yes) p.reg[id] = "yes"; else delete p.reg[id];
+    save(p);
+  }
+  window.RFQProfile = { get: load, match: match, categories: categories, catHits: catHits, open: open, sourceFor: sourceFor, regInfo: regInfo, setReg: setReg };
   // First visit: offer the setup once. (Skipping is remembered; the toolbar button reopens it.)
   window.addEventListener("load", function () {
     var skipped = false; try { skipped = !!localStorage.getItem(SKIP); } catch (e) {}
