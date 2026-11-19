@@ -187,8 +187,9 @@
   }
   window.RFQProfile = { get: load, match: match, categories: categories, catHits: catHits, open: open, sourceFor: sourceFor, regInfo: regInfo, setReg: setReg };
   // First visit: offer the setup once. (Skipping is remembered; the toolbar button reopens it.)
-  window.addEventListener("load", function () {
-    var skipped = false; try { skipped = !!localStorage.getItem(SKIP); } catch (e) {}
-    if (!load() && !skipped) open();
-  });
+  // DISABLED for now: go straight to the main page. Re-enable by uncommenting.
+  // window.addEventListener("load", function () {
+  //   var skipped = false; try { skipped = !!localStorage.getItem(SKIP); } catch (e) {}
+  //   if (!load() && !skipped) open();
+  // });
 })();
