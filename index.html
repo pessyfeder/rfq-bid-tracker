@@ -112,6 +112,7 @@
   .left.soon { color: var(--warn); font-weight: 600; }
   .left.ok { color: var(--ok); }
   .na { color: var(--muted); }
+  .value-chip.none { background: #f4f5f7; color: #666; font-weight: 400; }
   .value-chip { display: inline-block; margin-top: 4px; padding: 2px 8px; border-radius: 4px; background: #e6f4ea; color: #1b5e20; font-size: 13px; font-weight: 700; }
   a { color: var(--accent); }
   .elig { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 12px; font-weight: 600; white-space: nowrap; }
@@ -1007,6 +1008,7 @@
     return stripBoilerplate(s, group);
   }
   // Drops contract-vehicle filler and bare IDs from a comma-separated title, keeping the part that says what work is wanted.
+  window.fedItemTitle = fedItemTitle;
   function stripBoilerplate(s, group) {
     var segs = s.split(/\s*,\s+/);
     if (segs.length > 1) {
@@ -1039,7 +1041,7 @@
     var badge = pm.length ? '<span class="match-chip" title="' + esc("Mentions: " + pm.join(", ")) + '">Matches</span>' : "";
     // Bid value chip: only an amount the agency published or the notice itself states. Never an estimate from past awards.
     var amt = r.value != null ? r.value : r.valueEst && r.valueEst.kind === "stated" ? r.valueEst.amount : null;
-    var vchip = amt != null ? '<div><span class="value-chip" title="' + esc(r.value != null ? (r.valueLabel || "Published by the agency") : "Stated in the notice: " + (r.valueEst.quote || "")) + '">Bid value ' + esc(money(amt)) + "</span></div>" : "";
+    var vchip = amt != null ? '<div><span class="value-chip" title="' + esc(r.value != null ? (r.valueLabel || "Published by the agency") : "Stated in the notice: " + (r.valueEst.quote || "")) + '">Bid value ' + esc(money(amt)) + "</span></div>" : '<div><span class="value-chip none">Bid value: ' + (r.aiRead ? "None stated" : "Not checked") + "</span></div>";
     return '<div class="req-title"' + (orig ? ' title="' + esc("Agency's wording: " + t) + '"' : "") + ">" + badge + esc(shown) + "</div>" + vchip +
       (long ? '<button class="toggle title-toggle" data-id="' + esc(r.id) + '" aria-expanded="' + open + '">' + (open ? "Show less" : "Show more") + "</button>" : "");
   }

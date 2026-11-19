@@ -4,7 +4,7 @@
   var $app = document.getElementById("app");
   if (!$app) return;
   var DAY = 86400000, PAGE = 12;
-  var st = { filter: "all", sort: "soon", all: false, shown: PAGE, open: {} };
+  var st = { filter: "all", sort: "new", all: false, shown: PAGE, open: {}, regOpen: {} };
 
   var css = document.createElement("style");
   css.textContent =
@@ -18,12 +18,14 @@
     ".hm-stat{background:#0f2742;padding:12px 16px}.hm-stat b{display:block;font-size:24px;font-weight:600;line-height:1.15}.hm-stat span{font-size:12px;color:#a9b8ca;text-transform:uppercase;letter-spacing:.05em}" +
     ".hm-todo{display:flex;flex-wrap:wrap;gap:10px;align-items:center;background:#fff;border:1px solid #d9dfe7;border-left:3px solid #b45309;border-radius:6px;padding:10px 16px;margin-bottom:16px}" +
     ".hm-todo a{color:#1e3a5f;text-decoration:underline;font-weight:500}" +
+    ".hm-reg{margin:8px 0;padding:8px 12px;background:#fdf6e9;border:1px solid #ecd9b0;border-left:3px solid #b45309;border-radius:6px;font-size:13px}.hm-reg.ok{background:#eef7f1;border-color:#cfe5d6;border-left-color:#1d6b3e;color:#1d6b3e}.hm-reg ol{margin:6px 0;padding-left:20px}.hm-reg a{color:#1e3a5f;font-weight:600}.hm-reg .hm-more{padding:2px 8px}" +
     ".hm-nudge{background:#fff;border:1px solid #d9dfe7;border-radius:6px;padding:16px;margin-bottom:16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}" +
     ".hm-bar{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:14px}" +
     ".hm-chip{border:1px solid #c5cdd8;background:#fff;color:#374151;border-radius:6px;padding:5px 14px;font-weight:500}.hm-chip:hover{background:#f7f9fb}.hm-chip.on{background:#1e3a5f;border-color:#1e3a5f;color:#fff}" +
     ".hm-bar select{font:inherit;border:1px solid #c5cdd8;border-radius:6px;padding:5px 10px;background:#fff;color:#374151;margin-left:auto}" +
-    ".hm-card{background:#fff;border:1px solid #d9dfe7;border-radius:6px;padding:14px 18px 10px;margin-bottom:10px;border-left:4px solid var(--c,#1e3a5f)}" +
-    ".hm-card h3{margin:0 0 2px;font-size:16px;font-weight:600;line-height:1.35;color:#0f2742}.hm-sub{color:#64748b;font-size:13px}" +
+    ".hm-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:10px}@media(max-width:800px){.hm-grid{grid-template-columns:1fr}}" +
+    ".hm-card{background:#fff;border:1px solid #d9dfe7;border-radius:6px;padding:14px 18px 10px;margin-bottom:0;min-width:0;border-left:4px solid var(--c,#1e3a5f)}" +
+    ".hm-card h3{margin:0 0 2px;font-size:16px;font-weight:600;line-height:1.35;color:#0f2742}.hm-sub{color:#64748b;font-size:13px}.hm-posted{color:#94a3b8;font-size:11px;margin-top:6px}" +
     ".hm-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:8px 0}" +
     ".hm-tag{border-radius:4px;padding:2px 8px;font-size:12px;font-weight:600;background:#eef1f5;color:#374151}" +
     ".hm-tag.Federal{background:#e3ecf7;color:#1e3a5f}.hm-tag.State{background:#eceaf5;color:#4a4a8a}.hm-tag.Local{background:#e1f0ee;color:#0f5f58}" +
@@ -39,6 +41,7 @@
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
   function safeUrl(u) { return /^https:\/\//i.test(String(u)) ? String(u) : ""; }
   function pDate(s) { var p = String(s).split("-"); return new Date(+p[0], p[1] - 1, +p[2]); }
+  function fmtPosted(s) { s = String(s || ""); if (!s) return "date unknown"; var d = new Date(s.length > 10 ? s : s + "T00:00:00"); if (isNaN(d)) return s; var t = s.length > 10 ? ", " + d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) : ""; return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) + t; }
   function fmtDate(s) { return pDate(s).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }); }
   function money(n) { return n >= 1e6 ? "$" + +(n / 1e6).toFixed(1) + " million" : n >= 1e3 ? "$" + Math.round(n / 1e3) + "K" : "$" + n; }
   function nice(t) { // ALL-CAPS titles become readable
@@ -56,10 +59,21 @@
       var code = r.level === "Federal" ? "US" : String(r.id).split("-")[0].replace("TXDOT", "TX");
       var val = r.value != null ? r.value : r.valueEst && r.valueEst.kind === "stated" ? r.valueEst.amount : null;
       var w = (r.details && r.details.warnings) || [];
-      return { raw: r, id: r.id, title: nice(r.plainTitle || r.title), agency: nice(r.agency), level: r.level, code: code, noDue: noDue,
+      return { raw: r, id: r.id, title: nice(r.plainTitle || (r.level === "Federal" && window.fedItemTitle ? window.fedItemTitle(r.title, r.scope) : r.title)), agency: nice(r.agency), level: r.level, code: code, noDue: noDue,
         days: noDue ? null : Math.round((pDate(r.due) - today) / DAY), due: r.due, posted: r.posted, value: val, scope: r.scope || "",
         region: (r.details && r.details.region) || "", url: safeUrl(r.rfqUrl), old: w.indexOf("Posted over a year ago") !== -1 };
     }).filter(function (r) { return !(r.days != null && r.days < 0) && !r.old; });
+  }
+
+  function regBlock(r) {
+    var P = window.RFQProfile, info = P && P.regInfo && P.regInfo(P.sourceFor(r.level, r.code));
+    if (!info) return "";
+    if (info.registered) return "";
+    var open = st.regOpen[info.id];
+    return '<div class="hm-reg"><b>Registration needed:</b> ' + esc(info.reg) + ' <button class="hm-more" data-r="' + info.id + '" data-v="1">I am registered</button>' +
+      '<button class="hm-more" data-ro="' + info.id + '">' + (open ? "Hide how" : "How to register") + "</button>" +
+      (open ? "<ol>" + info.steps.map(function (x) { return "<li>" + esc(x) + "</li>"; }).join("") + "</ol>" +
+        (info.url ? '<a href="' + esc(info.url) + '" target="_blank" rel="noopener">Open the registration page &rarr;</a>' : "") : "") + "</div>";
   }
 
   function inSources(r, p) {
@@ -97,10 +111,7 @@
       '<div class="hm-stat"><b>' + (total ? money(total) : "–") + "</b><span>total of published values</span></div>" +
       '<div class="hm-stat"><b>' + Object.keys(states).length + "</b><span>jurisdictions</span></div></div></div>";
 
-    if (P) {
-      var todo = (window.RFQProfile.todo ? window.RFQProfile.todo() : []);
-      if (todo.length) h += '<div class="hm-todo"><b>Still to register:</b>' + todo.map(function (t) { return t.url ? '<a href="' + esc(t.url) + '" target="_blank" rel="noopener">' + esc(t.label) + (t.unsure ? " (check)" : "") + "</a>" : "<span>" + esc(t.label) + "</span>"; }).join("") + "</div>";
-    } else {
+    if (!P) {
       h += '<div class="hm-nudge"><div style="flex:1;min-width:200px"><b>Set up your profile.</b><br><span class="hm-sub">Takes about two minutes.</span></div><button class="hm-go" style="border:0" data-a="profile">Start setup</button></div>';
     }
 
@@ -112,6 +123,7 @@
       h += '<div class="hm-empty"><h3>No bids to show right now</h3><p class="hm-sub">' + (P && !st.all && scoped.length ? "Nothing matches your products with these filters." : "Try a different filter.") + "</p>" +
         (P && !st.all && scoped.length ? '<button class="hm-go" style="border:0" data-a="all">Show all bids in my chosen places</button>' : "") + "</div>";
     }
+    h += '<div class="hm-grid">';
     list.slice(0, st.shown).forEach(function (r) {
       var color = r.level === "Federal" ? "#2563eb" : r.level === "Local" ? "#0d9488" : "#7c3aed";
       var dTag = r.days == null ? '<span class="hm-tag">No firm deadline</span>' : '<span class="hm-tag ' + (r.days <= 7 ? "soon" : r.days <= 21 ? "mid" : "ok") + '">' +
@@ -120,11 +132,14 @@
         '<div class="hm-row"><span class="hm-tag ' + esc(r.level) + '">' + esc(r.level) + "</span>" + dTag +
         (r.value ? '<span class="hm-tag money">' + esc(money(r.value)) + "</span>" : "") +
         (r.m && r.m.length ? '<span class="hm-tag match">Matches: ' + esc(r.m.slice(0, 3).join(", ")) + "</span>" : "") + "</div>" +
+        regBlock(r) +
+        '<div class="hm-posted">Posted ' + esc(fmtPosted(r.posted)) + "</div>" +
         (st.open[r.id] && r.scope ? '<div class="hm-scope">' + esc(r.scope) + "</div>" : "") +
         '<div class="hm-row">' + (r.url ? '<a class="hm-go" href="' + esc(r.url) + '" target="_blank" rel="noopener">View solicitation</a>' : "") +
         (r.scope ? '<button class="hm-more" data-o="' + esc(r.id) + '">' + (st.open[r.id] ? "Hide summary" : "Show summary") + "</button>" : "") + "</div></div>";
     });
-    if (list.length > st.shown) h += '<button class="hm-showmore" data-a="more">Show more (' + (list.length - st.shown) + " left)</button>";
+    h += "</div>";
+    if (list.length > st.shown) h +='<button class="hm-showmore" data-a="more">Show more (' + (list.length - st.shown) + " left)</button>";
     if (P && !st.all && scoped.length > matched.length && list.length) h += '<p style="text-align:center"><button class="hm-more" data-a="all">Also show the ' + (scoped.length - matched.length) + " other bids in my places</button></p>";
     if (P && st.all) h += '<p style="text-align:center"><button class="hm-more" data-a="matches">Show only bids that match my products</button></p>';
     h += "</div>";
@@ -140,6 +155,8 @@
     else if (d.a === "more") st.shown += PAGE;
     else if (d.f) { st.filter = d.f; st.shown = PAGE; }
     else if (d.o) st.open[d.o] = !st.open[d.o];
+    else if (d.ro) st.regOpen[d.ro] = !st.regOpen[d.ro];
+    else if (d.r) window.RFQProfile.setReg(d.r, d.v === "1");
     else return;
     render();
   });
