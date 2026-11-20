@@ -148,6 +148,39 @@
     if (t.length > 110) t = t.slice(0, 110).replace(/\s+\S*$/, "") + "…";
     return t.length >= 12 ? t.charAt(0).toUpperCase() + t.slice(1) : "";
   }
+  // Applies to every headline (AI or rule-built), any level of government: drop state names / postal codes, county
+  // names, solicitation / facility / project codes and fiscal-year tags, and turn leftover ALL-CAPS words into words.
+  var KEEP_CAPS = /^(SDVOSB|HUBZONE|MWBE|USAFA|USCG|NAVFAC|NASA|AMTRAK|FEMA|USDA|NOAA|HVAC|IDIQ|COVID|OSHA|USACE|UNICOR|DODEA|WOSB|NNSA)$/;
+  function stripNoise(t) {
+    var N = window.STATE_NAMES || {}, abbr = [], names = ["District of Columbia", "Washington,? D.?C.?"];
+    Object.keys(N).forEach(function (k) { if (/^[A-Z]{2}$/.test(k) && k !== "US") { abbr.push(k); names.push(String(N[k]).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")); } });
+    var nm = names.join("|"), ab = abbr.join("|");
+    function rx(re, f) { return new RegExp(re.source.replace("@NM@", nm).replace("@AB@", ab), f); }
+    t = t.replace(/\b\w+_(?:solicitation|notice|rfq|rfp|ifb)\w*?_/gi, "")                       // 36C25627R0012_solicitation_notice_
+      .replace(rx(/\s*(?:,|\bin\b|\bfor\b|\s[-–])\s*(?:the\s+)?(?:State of\s+)?(?:@NM@)\b(?=\s*[,;.)(]|\s*$)/, "gi"), "")
+      .replace(rx(/\s*,?\s*\(?\b(?:@AB@)\b\)?\.?\s*$/, ""), "")
+      .replace(rx(/,\s*(?:@AB@)\b(?=\s*[,;)])/, "g"), "")
+      .replace(/\b(?:(?:in|for|of|at)\s+)?(?:the\s+)?County of [A-Z][\w.'-]*(?: [A-Z][\w.'-]*)?/g, "")
+      .replace(/\b(?:[A-Z][\w.'-]*|[a-z]{3,})(?: [A-Z][\w.'-]*)?\s+County\b(?!\s+(?:Route|Road|Rd|Highway|Hwy|Line|Fair))/g, function (m) { return /^(?:the|in|for|of|at|and|a|an|by|to|each|every|any)\b/i.test(m) ? m : ""; })
+      .replace(/\bFY\s?'?\d{2,4}\b/gi, "").replace(/\bFiscal Year\s*\(FY\)\s*\d{2,4}\b/gi, "")
+      .replace(/\b(\d)(?:st|nd|rd|th)?\s*QTR\b\.?/gi, function (m, d) { return ({ 1: "1st", 2: "2nd", 3: "3rd", 4: "4th" })[d] + " quarter"; })
+      .replace(/\bQTR\b\.?/gi, "quarter")
+      .split(/(\s+)/).map(function (w) {
+        var core = w.replace(/^[^A-Za-z0-9]+|[^A-Za-z0-9]+$/g, "");
+        if (!core || /^\s+$/.test(w)) return w;
+        if (/^\d{5,}$/.test(core) || (/\d/.test(core) && /[A-Za-z]/.test(core) && core.length >= 5 && !/[a-z]{3,}/.test(core) && !/^\d+(st|nd|rd|th)$/i.test(core))) return "";
+        return w;
+      }).join("")
+      .replace(/\b(?:Project|Proj\.?|Contract|Solicitation|Bid|No\.?|Number|#)\s*[A-Z0-9][\w-]*\d[\w-]*(?:\s+\d{1,4}\b)*/g, "")
+      .replace(rx(/\s*,?\s*\(?\b(?:@AB@)\b\)?\.?\s*$/, ""), "")
+      .replace(/[A-Z]{2,}(?:-[A-Z]{2,})+/g, function (w) { return w.charAt(0) + w.slice(1).toLowerCase(); })
+      .replace(/[A-Za-z]{5,}/g, function (w, off, str) {   // ALL-CAPS words become words; acronyms (in brackets, no vowels, listed) stay
+        if (w !== w.toUpperCase() || KEEP_CAPS.test(w) || !/[AEIOU]/.test(w) || /\([^)]*$/.test(str.slice(0, off))) return w;
+        return w.charAt(0) + w.slice(1).toLowerCase();
+      })
+      .replace(/,(?=[A-Za-z])/g, ", ");
+    return t.replace(/\s{2,}/g, " ").replace(/\s+([,.;:)])/g, "$1").replace(/\b(?:project|no\.?|number|solicitation|contract|facility|bldg|building)\s*#?\s*$/i, "").replace(/\(\s*\)/g, "").trim();
+  }
   function cleanTitle(t, r, code) {
     var orig = t = String(t || "").replace(/\s+/g, " ").trim(), m;
     t = t.replace(/^not clear from the listing:\s*/i, "").replace(/^\*?\s*re-?bid\s*\*?[\s:–-]*/i, "")
@@ -187,6 +220,7 @@
         .replace(/\b(?:the\s+)?(?:City|Town) of [A-Z][\w.-]*(?: [A-Z][\w.-]*)?'s\s+/g, "the city's ");
       t = t.replace(/\b(for|at|by|with|from) (Department|Dept|Division|Office|Commission|Board|Bureau|Agency|Authority)\b/g, "$1 the $2");
     }
+    t = stripNoise(t);
     t = t.replace(/\s+([,.;:])/g, "$1").replace(/(^|\s)[,;:]+\s*/g, "$1").replace(/\s{2,}/g, " ").replace(/(?:\s+(?:for|in|at|of|the|and|to|by|with|-|–))+\s*$/i, "").replace(/[,;:\s-]+$/, "").trim();
     if (t.length < 8) t = orig.replace(/^not clear from the listing:\s*/i, "");
     return t.charAt(0).toUpperCase() + t.slice(1);
@@ -292,6 +326,8 @@
   var ICON_CLOCK = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
 
   // The simple filters are multi-select dropdowns too: tick as many as you like (any one may match).
+  // One toggle link per dropdown: "Select all" until everything is ticked, then "Clear all".
+  function tog(a, all) { return '<button type="button" data-a="' + a + '">' + (all ? "Clear all" : "Select all") + "</button>"; }
   function selectHtml(key) {
     var cust = key === "value" && st.value.indexOf("custom") >= 0 ? '<span class="hm-cust"><input type="text" inputmode="numeric" data-vc="vmin" placeholder="Min $" aria-label="Minimum value" value="' + esc(st.vmin) + '"><input type="text" inputmode="numeric" data-vc="vmax" placeholder="Max $" aria-label="Maximum value" value="' + esc(st.vmax) + '"></span>' : "";
     return ddHtml(key, SELECTS[key], simpleOpts(key), st[key], tog(key + "-none", st[key].length >= simpleOpts(key).length), "") + cust;
@@ -326,8 +362,6 @@
   }
   function ddHtml(key, label, opts, sel, topLinks, cls, grouped) {
     var list = "", grp = null;
-  // One toggle link per dropdown: "Select all" until everything is ticked, then "Clear all".
-  function tog(a, all) { return '<button type="button" data-a="' + a + '">' + (all ? "Clear all" : "Select all") + "</button>"; }
     if (grouped) list = groupedList(key, opts, sel);
     else opts.forEach(function (o) {
       if (o.group && o.group !== grp) { grp = o.group; list += '<div class="hm-grp">' + esc(grp) + "</div>"; }
