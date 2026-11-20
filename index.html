@@ -323,7 +323,7 @@
     det.appendChild(sum); det.appendChild(ok); box.appendChild(det);
   }
   try { window.RFQ_JUST_REFRESHED = !!sessionStorage.getItem("rfqAutoReload"); } catch (e) {} // set by the page's own reload after a refresh ends
-  box.hidden = !(items.length || (okItems.length && window.RFQ_JUST_REFRESHED));
+  box.hidden = !failed; // only a real fetch failure shows the banner: not success, partial fetches or not-set-up sources
   if (!items.length) box.classList.add("ok");
 })();
 </script>
@@ -1630,9 +1630,9 @@
     }
     el.classList.toggle("ok", !bad.length);
     // Overall colour: red if anything failed, amber if only warnings, green only when everything (states too) is fine.
-    var anyFail = sb.stateFailed || failedN, anyWarn = sb.stateItems || bad.length;
+    var anyFail = sb.stateFailed || failedN, anyWarn = anyFail; // banner = real failures only (not "not set up", partial or all-green)
     sb.box.classList.toggle("ok", !anyWarn);
-    sb.box.classList.toggle("warn", !!anyWarn && !anyFail);
+    sb.box.classList.toggle("warn", false);
     if (!sb.box.querySelector(".closex")) {
       var x = document.createElement("button"); x.className = "closex"; x.type = "button"; x.title = "Dismiss"; x.setAttribute("aria-label", "Dismiss"); x.textContent = "×";
       x.addEventListener("click", function () { sb.dismissed = true; sb.box.hidden = true; });
@@ -1641,7 +1641,7 @@
     // A dismissed green banner stays hidden; any problem brings it back (and re-arms the dismissal for the next green one).
     if (anyWarn) { sb.dismissed = false; }
     // The all-green banner only appears during a refresh and on the page load that follows it, not on a plain startup/reload.
-    sb.box.hidden = !!sb.dismissed || (!anyWarn && !pgl && !window.RFQ_JUST_REFRESHED);
+    sb.box.hidden = !!sb.dismissed || !anyWarn;
     var t =document.title.replace(/^⚠ /, "");
     document.title = anyWarn ? "⚠ " + t : t;
   }
@@ -1695,7 +1695,7 @@
     btn.disabled = true; btn.textContent = "Starting…";
     fetch("/api/refresh" + (modeSel.value === "failed" ? "?failed=1" : modeSel.value === "specific" ? "?portal=" + encodeURIComponent(portal) : ""), { method: "POST" }).then(function (r) {
       if (!r.ok && r.status !== 409) throw r.status; // 409 = one is already running: just show its progress
-      if (r.status === 200) { btn.disabled = false; btn.textContent = "Refresh data"; show("Nothing failed last time, so there is nothing to retry.", ""); return; }
+      if (r.status === 200) { btn.disabled = false; btn.textContent = "Refresh data"; show("Data is already up-to-date.", ""); return; }
       retried = true; poll();
     }).catch(function (e) {
       btn.disabled = false; btn.textContent = "Refresh data";

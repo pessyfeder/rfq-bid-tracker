@@ -461,6 +461,17 @@ const server = http.createServer((req, res) => {
 if (process.argv.includes("--once")) {
   runRefresh("--once").then(() => process.exit(0));
 } else {
+  // Only one service per data folder. A second copy on ANOTHER port (e.g. a preview that picked a free port because 8765 was
+  // taken) would run its own refresh over the same data files, and each stop of a preview kills the fetcher it spawned.
+  const LOCK = path.join(__dirname, "data", "service.lock");
+  try {
+    const other = Number(fs.readFileSync(LOCK, "utf8"));
+    let alive = false;
+    if (other && other !== process.pid) { try { process.kill(other, 0); alive = true; } catch (e) { alive = e.code === "EPERM"; } }
+    if (alive) { log(`another service copy (pid ${other}) is already running; exiting`); process.exit(0); }
+  } catch (e) { /* no lock file yet */ }
+  try { fs.writeFileSync(LOCK, String(process.pid)); } catch (e) { /* not fatal */ }
+  process.on("exit", () => { try { if (Number(fs.readFileSync(LOCK, "utf8")) === process.pid) fs.unlinkSync(LOCK); } catch (e) { /* already gone */ } });
   server.on("error", (e) => { // e.g. a second copy started while the first is running
     log(e.code === "EADDRINUSE" ? `port ${CFG.port} is already in use (another copy of the service is running); exiting` : "server error: " + e.message);
     process.exit(e.code === "EADDRINUSE" ? 0 : 1);
