@@ -187,13 +187,20 @@
   }
   function cleanTitle(t, r, code) {
     var orig = t = String(t || "").replace(/\s+/g, " ").trim(), m;
+    if (t.length > 8 && /[A-Z]/.test(t) && t === t.toUpperCase()) t = t.toLowerCase().replace(/(^|[\s\-\/(])([a-z])/g, function (m, a, b) { return a + b.toUpperCase(); }).replace(/\b(?:Of|For|And|The|To|In|On|At|By|With|From)\b(?=\s+\S)/g, function (w, off) { return off > 0 ? w.toLowerCase() : w; });
+    t = t.replace(/^(?:invitation (?:for|to) bids?|invitation to quote|request for (?:quotes?|quotations?|proposals?|bids?)|notice of (?:intent to )?(?:bid|award))\s*[-–:]\s*(?=\S)/i, "");
     t = t.replace(/^not clear from the listing:\s*/i, "").replace(/^\*?\s*re-?bid\s*\*?[\s:–-]*/i, "")
       .replace(/^(?:\*[^*]{2,30}\*\s*[-:–]?\s*)+(?=\S)/, "")                                   // "*Fax Bid* ..." status labels
       .replace(/^(?:General\s+)?(?:RFP|RFQ|IFB|ITB|RFB|RFI)\s*#?\s*\d[\w-]*\s*[:–-]\s*(?=[A-Za-z])/i, "")   // "General RFP 5026: ..."
       .replace(/(?<=\S{4,}.{6,})\s+[-–]\s+[A-Z]{3,5}$/, "")                                       // trailing agency tag " - DOC"
       .replace(/(?<=[A-Za-z].{5,}),?\s+\d+(?:-\d+)+$/, "")                                        // trailing item code ", 01-20-0100"
+      .replace(/^addendum\s+(?:no\.?\s*)?#?\d+\s*[-:–]?\s*(?=[A-Za-z]{3})/i, "")                 // "Addendum No 1Mainframe ..." (separator may be missing)
       .replace(/^(bid extension|correction|addendum( no\.? ?\d+)?|amendment|open-ended|cancell?ed|re-?issued?)\s*[-:–]\s*/i, "")
-      .replace(/^(?:[A-Z\/&]+\s+)*(?:opportunity)\s*[-–]\s*/i, function (x) { return /m\/?wbe|sdvob|mwbe/i.test(x) ? "" : x; });
+      .replace(/^(?:[^-–:|]{0,40}\|\s*)?(?:(?:m\/?wbe|sdvob|dbe|mbe|wbe)\b[\s|,\/&]*)+(?:and\s+)?(?:subcontractors?|suppliers?|[&\/]|and|\s)*(?:opportunit(?:y|ies)|solicitations?)\s*(?:for\s*)?[-–:]\s*(?=\S)/i, "")   // "MWBE | Sdvob Subcontractor & Supplier Opportunity - ..."
+      .replace(/^(?:[A-Z\/&]+\s+)*(?:opportunity)\s*[-–]\s*/i, function (x) { return /m\/?wbe|sdvob|mwbe/i.test(x) ? "" : x; })
+      .replace(/^(?:(?:attn:?|m\/?wbe|sdvob|opp|subcontractors|suppliers|&|\/|and)\s*)+(?:opportunit(?:y|ies)|solicitations?)?\s*(?:for\s*)?[-–:]\s*(?=\S)/i, function (x) { return /m\/?wbe|sdvob/i.test(x) ? "" : x; })
+      // buyer named as a prefix: "NYS DEC - ...", "Albany Port District Commission - ..." (second pass also catches it after the label above)
+      .replace(/^(?:(?:NYS|NYC)\s+[A-Z]{2,6}|[A-Z][\w.&']*(?: [A-Z][\w.&']*){0,5} (?:Commission|Authority|Department|Dept\.?|Agency|Bureau|Office|Port District|Thruway))\s+[-–]\s+(?=[A-Za-z]{3}.{8,})/, "");
     var dash = /^(.{3,45}?)\s*[-–:]\s+(?=\S)/.exec(t);
     // a label made only of codes and solicitation words ("IFB 26-083 -", "Smd_a&cm_ rfq's 523158 -"), never real words ("FY 27 Tree Removal -")
     if (dash && /[A-Za-z]/.test(dash[1]) && /[\d_#]/.test(dash[1]) && t.length - dash[0].length >= 8 &&
@@ -204,6 +211,14 @@
     var words = (t.match(/\b[A-Za-z]{3,}\b/g) || []).length;
     var boiler = /^(notice\b|submit to\b|email\b|sealed (bids|proposals)\b|written sealed\b|notice of (proposed|intent|sole)|the .{3,70}?\b(will receive|requests|invites|anticipates|is (hereby )?seeking)\b)/i.test(t) ||
       /^[A-Z][^.]{3,90}?\b(is|are) (hereby )?(soliciting|seeking|requesting|inviting|accepting)\b/.test(t) || /\bnotice of (proposed|intent)\b/i.test(t);
+    var rq = /^[A-Z][^.]{3,90}?\b(?:requests?|invites?|seeks?|solicits?)\s+(?:sealed\s+)?(?:bids?|quotes?|proposals?|quotations?)\s+(?:for|on)\s+(?:the\s+)?(?:purchase of\s+)?(.{12,})$/.exec(t);
+    if (rq) {   // "KDMC requests quotes for 53 new computers ... KDM..." -> what is wanted
+      boiler = false;
+      t = rq[1].replace(/(\.\.\.|…)\s*$/, "").replace(/\.\s[\s\S]*$/, "").replace(/\s+(?:in|of) the \w+ (?:groups?|lots?|items?) (?:below|above|listed)\b[\s\S]*$/i, "");
+      var sp = /^(.{20,}?)\s+to\s+/.exec(t); if (sp) t = sp[1];
+      if (t.length > 110) t = t.slice(0, 110).replace(/\s+\S*$/, "") + "…";
+      t = t.charAt(0).toUpperCase() + t.slice(1);
+    }
     var codey = /\d/.test(t) && words < 2 && t.length < 40;
     t = t.replace(/^\d{4}\s*[-–]\s*\d{4}\s+(?=[A-Za-z])/, "");
     if ((boiler || codey) && r) { var sh = scopeHeadline(r.scope); if (sh) t = sh; else if (boiler) t = "Bid notice (no description given)"; }
@@ -238,8 +253,11 @@
       .replace(/,\s*\d{1,6}\s+(?:[NSEW]\.?\s+)?[A-Z][\w.' -]*?(?:street|st|road|rd|avenue|ave|boulevard|blvd|drive|dr|lane|ln|highway|hwy|way|parkway|pkwy)\b\.?[\s\S]*$/i, "")
       .replace(/,\s*[A-Z][\w.' -]{2,50}\s+(?:Health Care|Healthcare|VA|Veterans)\s+(?:System|Network|Medical Center|VISN)\s*$/i, "")
       .replace(/,\s*(?:VISN\s*\d+|[A-Z][\w.' -]{2,40}\s+(?:VA Medical Center|VAMC|Air Force Base|AFB|Naval Station|Army Depot))\s*$/i, "");
+    t = t.replace(/(?<=\S{4,}.{8,}),\s*(?:[A-Z][\w.&']*\s+){1,4}(?:Port District|Commission|Authority)$/, "");   // buyer named at the tail
     t = stripNoise(t);
     t = t.replace(/\s+([,.;:])/g, "$1").replace(/(^|\s)[,;:]+\s*/g, "$1").replace(/\s{2,}/g, " ").replace(/(?:\s+(?:for|in|at|of|the|and|to|by|with|-|–))+\s*$/i, "").replace(/[,;:\s-]+$/, "").trim();
+    t = t.replace(/&(?=[A-Za-z])/g, "& ");
+    if ((t.match(/\(/g) || []).length > (t.match(/\)/g) || []).length) t += ")";   // title cut off mid-parenthesis
     if (t.length < 8) t = orig.replace(/^not clear from the listing:\s*/i, "");
     return t.charAt(0).toUpperCase() + t.slice(1);
   }
