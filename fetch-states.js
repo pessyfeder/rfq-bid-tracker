@@ -52,7 +52,9 @@ function dropNaicsHint(list) { for (const r of list) delete r.naics; }
 // AI read of each notice's page and PDF attachments: fills eligibility (requires), a one-line scope and key
 // "shall" points, the same as the NYC/SAM feeds. Needs ANTHROPIC_API_KEY; without it rows stay "Not checked".
 // Notices already read on an earlier run are reused (no fetch, no cost); MAX_READS caps new reads per run.
-const MAX_READS = Number(process.env.STATE_MAX_READS) || 150;
+// Per STATE, not per run: 150 left MA (875 notices) and OR/IL/HI unread for weeks. Reads are kept between runs, so this only
+// bounds one run's spend (Haiku: a 226-read run cost about $0.64).
+const MAX_READS = Number(process.env.STATE_MAX_READS) || 600;
 // Bump DOCS_VERSION when states/docs.js learns to reach more documents; rows read before that with no restriction found are read again.
 // Version 2: Periscope attachment downloads, Word (.docx) files, Indiana per-event zips.
 // Version 3: Mississippi attachments on srm.magic.ms.gov (earlier reads saw only the page header).
