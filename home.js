@@ -294,7 +294,7 @@
   // The simple filters are multi-select dropdowns too: tick as many as you like (any one may match).
   function selectHtml(key) {
     var cust = key === "value" && st.value.indexOf("custom") >= 0 ? '<span class="hm-cust"><input type="text" inputmode="numeric" data-vc="vmin" placeholder="Min $" aria-label="Minimum value" value="' + esc(st.vmin) + '"><input type="text" inputmode="numeric" data-vc="vmax" placeholder="Max $" aria-label="Maximum value" value="' + esc(st.vmax) + '"></span>' : "";
-    return ddHtml(key, SELECTS[key], simpleOpts(key), st[key], '<button type="button" data-a="' + key + '-none">Clear</button>', "") + cust;
+    return ddHtml(key, SELECTS[key], simpleOpts(key), st[key], tog(key + "-none", st[key].length >= simpleOpts(key).length), "") + cust;
   }
   function simpleOpts(key) { return OPTS[key].map(function (o) { return { v: o[0], label: o[1] }; }); }
   function ddText(label, opts, sel) {
@@ -326,6 +326,8 @@
   }
   function ddHtml(key, label, opts, sel, topLinks, cls, grouped) {
     var list = "", grp = null;
+  // One toggle link per dropdown: "Select all" until everything is ticked, then "Clear all".
+  function tog(a, all) { return '<button type="button" data-a="' + a + '">' + (all ? "Clear all" : "Select all") + "</button>"; }
     if (grouped) list = groupedList(key, opts, sel);
     else opts.forEach(function (o) {
       if (o.group && o.group !== grp) { grp = o.group; list += '<div class="hm-grp">' + esc(grp) + "</div>"; }
@@ -364,8 +366,8 @@
   }
   var MORE_KEYS = ["value", "aside"], SIMPLE = ["close", "posted", "value", "aside"];
   function fieldsHtml() {
-    return ddHtml("cats", "Category", catOpts(), selCats(), '<button type="button" data-a="cats-all">Select all</button><button type="button" data-a="cats-none">Clear</button>', "", true) +
-      ddHtml("where", "Jurisdiction", whereOpts(), st.where, '<button type="button" data-a="where-none">Clear</button>', "") +
+    return ddHtml("cats", "Category", catOpts(), selCats(), tog("cats-none", selCats().length >= catOpts().length), "", true) +
+      ddHtml("where", "Jurisdiction", whereOpts(), st.where, tog("where-none", st.where.length >= whereOpts().length), "") +
       selectHtml("posted") + selectHtml("close") + selectHtml("value") + selectHtml("aside");
   }
   function moreHtml() {
@@ -485,10 +487,12 @@
     if (d.a === "refresh") { var rb = document.getElementById("refreshBtn"); if (rb) rb.click(); b.textContent = "Refreshing…"; return; }
     if (d.a === "clear") { resetFilters(false); clearKw(); return refreshAll(); }
     if (d.a === "more-filters") { st.more = !(st.more || MORE_KEYS.some(function (k) { return st[k].length; })); if (!st.more) { MORE_KEYS.forEach(function (k) { st[k] = []; }); } return refreshAll(); }
-    if (d.a === "cats-all") st.cats = catOpts().map(function (c) { return c.v; });
-    else if (d.a === "cats-none") st.cats = [];
-    else if (d.a === "where-none") st.where = [];
-    else if (d.a && d.a.slice(-5) === "-none" && SIMPLE.indexOf(d.a.slice(0, -5)) >= 0) { st[d.a.slice(0, -5)] = []; if (d.a === "value-none") { st.vmin = ""; st.vmax = ""; } }
+    if (d.a === "cats-none") st.cats = selCats().length >= catOpts().length ? [] : catOpts().map(function (c) { return c.v; });
+    else if (d.a === "where-none") st.where = st.where.length >= whereOpts().length ? [] : whereOpts().map(function (o) { return o.v; });
+    else if (d.a && d.a.slice(-5) === "-none" && SIMPLE.indexOf(d.a.slice(0, -5)) >= 0) {
+      var sk = d.a.slice(0, -5), so = simpleOpts(sk);
+      if (st[sk].length >= so.length) { st[sk] = []; if (sk === "value") { st.vmin = ""; st.vmax = ""; } } else st[sk] = so.map(function (o) { return o.v; });
+    }
     else if (d.a === "more") { st.shown += PAGE; return results(); }
     else if (d.ro) { st.regOpen[d.ro] = !st.regOpen[d.ro]; return results(); }
     else if (d.r) { window.RFQProfile.setReg(d.r, d.v === "1"); return results(); }
