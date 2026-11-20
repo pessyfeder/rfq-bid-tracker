@@ -255,6 +255,7 @@
       .replace(/,\s*(?:VISN\s*\d+|[A-Z][\w.' -]{2,40}\s+(?:VA Medical Center|VAMC|Air Force Base|AFB|Naval Station|Army Depot))\s*$/i, "");
     t = t.replace(/(?<=\S{4,}.{8,}),\s*(?:[A-Z][\w.&']*\s+){1,4}(?:Port District|Commission|Authority)$/, "");   // buyer named at the tail
     t = stripNoise(t);
+    t = t.replace(/\s*(?:\.{2,}|…)+\s*$/, "");   // headlines never end in a trailing "..." (the dangling "for the" is dropped below)
     t = t.replace(/\s+([,.;:])/g, "$1").replace(/(^|\s)[,;:]+\s*/g, "$1").replace(/\s{2,}/g, " ").replace(/(?:\s+(?:for|in|at|of|the|and|to|by|with|-|–))+\s*$/i, "").replace(/[,;:\s-]+$/, "").trim();
     t = t.replace(/&(?=[A-Za-z])/g, "& ");
     if ((t.match(/\(/g) || []).length > (t.match(/\)/g) || []).length) t += ")";   // title cut off mid-parenthesis
