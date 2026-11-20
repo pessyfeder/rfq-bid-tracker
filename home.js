@@ -205,7 +205,7 @@
     // a label made only of codes and solicitation words ("IFB 26-083 -", "Smd_a&cm_ rfq's 523158 -"), never real words ("FY 27 Tree Removal -")
     if (dash && /[A-Za-z]/.test(dash[1]) && /[\d_#]/.test(dash[1]) && t.length - dash[0].length >= 8 &&
         dash[1].split(/\s+/).every(function (w) { return /[\d_#]/.test(w) || /^(bid|rfp|rfq|rfb|ifb|itb|rfi|project|no\.?|number|pin|fy|&)('?s)?$/i.test(w) || /^[A-Z&\/]{2,6}('S)?$/.test(w); })) t = t.slice(dash[0].length);
-    t = t.replace(/^(RFP|RFQ|IFB|ITB|RFB|RFI|ITN)-(?=[A-Za-z])/i, "").replace(/\s*[-–]\s*addendum\s*\d*\s*$/i, "");
+    t = t.replace(/^(RFP|RFQ|IFB|ITB|RFB|RFI|ITN)\s*[-–:]\s*(?=[A-Za-z])/i, "").replace(/\s*[-–]\s*addendum\s*\d*\s*$/i, "");
     t = t.replace(/^(?:RFP|RFQ|IFB|ITB|RFB|RFI|ITN|ARFQ|CRFQ|PB)\b[\s#:.-]*[A-Za-z0-9][\w\/.-]*\d[\w\/.-]*[\s:–-]+(?=[A-Za-z])/i, "");
     t = t.replace(/^(?=[A-Z0-9-]*\d)[A-Z0-9][A-Z0-9-]{4,}\s*[-:–]?\s+(?=[A-Za-z])/, "");
     var words = (t.match(/\b[A-Za-z]{3,}\b/g) || []).length;
@@ -260,6 +260,10 @@
     t = t.replace(/&(?=[A-Za-z])/g, "& ");
     if ((t.match(/\(/g) || []).length > (t.match(/\)/g) || []).length) t += ")";   // title cut off mid-parenthesis
     if (t.length < 8) t = orig.replace(/^not clear from the listing:\s*/i, "");
+    // an acronym that opens the title (STC, SCDOT, IT) stays in capitals when the source wrote it that way
+    var fw = /^[A-Za-z]{2,6}\b/.exec(t), ow = /^[A-Z]{2,6}\b/.exec(orig);
+    if (fw && ow && fw[0].toUpperCase() === ow[0] && !/^(THE|FOR|AND|NEW|OFF|ONE|TWO|OUR|ALL|ANY|USE|OIL|AIR|CAR|BUS|PAY|WEB|BID|RFQ|RFP|IFB|ITB|RFB|RFI|ITN|OF|TO|IN|ON|AT|BY|AS|AN|OR|IS|NO)$/.test(ow[0]) &&
+        (ow[0].length <= 3 || !/[AEIOUY]/.test(ow[0]) || /(?:DOT|DOC|DOH|DHS)$/.test(ow[0]) || KEEP_CAPS.test(ow[0]))) t = ow[0] + t.slice(fw[0].length);
     return t.charAt(0).toUpperCase() + t.slice(1);
   }
   window.cleanBidTitle = function (t, raw) { return cleanTitle(t, raw, raw && raw.level === "Federal" ? "US" : String((raw && raw.id) || "").split("-")[0].replace("TXDOT", "TX")); };
