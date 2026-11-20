@@ -143,7 +143,7 @@
   function scopeHeadline(scope) {
     var s = String(scope || "").replace(/<[^>]+>/g, " ").replace(/^[A-Z]{2,6} - RFx\.\s*/, "").replace(/\s+/g, " ").trim();
     var m = /\b(?:seeks?|seeking|requests?|invites?|solicits?|will receive|anticipates?)\s+(?:sealed\s+|competitive\s+)?(?:bids?|proposals?|quotes?|quotations?|qualifications|responses?|applications?|purchasing)\s+(?:for|to|from[^,]{0,60}\bto)\s+(?:the\s+)?(?:purchase of|provide|furnish(?:ing)?)?\s*(.{12,}?)(?:[.;]|$)/i.exec(s);
-    if (!m) m = /b(?:plans?|intends?|proposes?)\s+(?:a\s+|an\s+|to\s+)?(?:sole[- ]source\s+)?(?:purchase of|to purchase|to buy|procurement of)\s+(.{8,}?)(?:,|[.;]|$)/i.exec(s);
+    if (!m) m = /\b(?:plans?|intends?|proposes?)\s+(?:a\s+|an\s+|to\s+)?(?:sole[- ]source\s+)?(?:purchase of|to purchase|to buy|procurement of)\s+(.{8,}?)(?:,|[.;]|$)/i.exec(s);
     if (!m) return "";
     var t = m[1].replace(/\s+(until|by|no later than)\b[\s\S]*$/i, "").replace(/[,\s]+(?:funded|financed|paid|sponsored)$/i, "").trim();
     if (t.length > 110) t = t.slice(0, 110).replace(/\s+\S*$/, "") + "…";
