@@ -5,26 +5,200 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Explore this request</title>
 <style>
-  body { margin: 0; font: 15px/1.5 system-ui, sans-serif; background: #f6f7f9; color: #1c2430; }
-  main { max-width: 760px; margin: 0 auto; padding: 24px 16px; }
-  a { color: #1e3a5f; font-weight: 500; }
-  .box { background: #fff; border: 1px solid #d9dfe7; border-radius: 6px; padding: 16px 20px; margin-top: 12px; }
+  :root { --ink:#1f3347; --mut:#64748b; --line:#e3e8ef; --acc:#4338ca; --green:#1b7a34; }
+  * { box-sizing: border-box; }
+  body { margin:0; font:14px/1.5 Roboto, system-ui, -apple-system, "Segoe UI", sans-serif; background:#f6f7fb; color:var(--ink); }
+  main { max-width:900px; margin:0 auto; padding:18px 16px 60px; }
+  a { color:var(--acc); }
+  .back { display:inline-block; margin-bottom:10px; font-weight:600; text-decoration:none; }
+  .back:hover { text-decoration:underline; }
+  h1 { margin:0; font-size:24px; font-weight:600; line-height:1.3; color:#1f3a56; overflow-wrap:anywhere; }
+  .sub { color:var(--mut); margin-top:4px; }
+  .tags { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
+  .tag { font-size:12px; font-weight:600; padding:2px 9px; border-radius:999px; background:#eef0ff; color:var(--acc); }
+  .tag.warn { background:#fdf6e9; color:#b45309; }
+  .tag.red { background:#fdecec; color:#b42318; }
+  .banner { margin-top:12px; padding:9px 14px; border-radius:6px; background:#fdf6e9; border:1px solid #ecd9b0; border-left:3px solid #b45309; }
+  .facts { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:10px; margin-top:16px; }
+  .fact { background:#fff; border:1px solid var(--line); border-radius:8px; padding:10px 14px; }
+  .fact .k { font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--mut); }
+  .fact .v { font-size:17px; font-weight:600; margin-top:2px; }
+  .fact .s { font-size:12px; color:var(--mut); }
+  .green { color:var(--green); }
+  .warn { color:#b45309; }
+  .red { color:#b42318; }
+  .none { color:var(--mut); font-weight:500; }
+  .cta { display:inline-block; margin-top:16px; background:var(--acc); color:#fff; text-decoration:none; font-weight:600; padding:9px 18px; border-radius:6px; }
+  .cta:hover { background:#3730a3; }
+  section { background:#fff; border:1px solid var(--line); border-radius:8px; padding:14px 18px; margin-top:14px; }
+  section h2 { margin:0 0 8px; font-size:15px; font-weight:700; color:#1f3a56; }
+  section h2 small { font-weight:500; color:var(--mut); font-size:12px; margin-left:6px; }
+  .chips { display:flex; flex-wrap:wrap; gap:6px; }
+  .chip { font-size:13px; font-weight:500; padding:3px 10px; border-radius:6px; border:1px solid; cursor:help; }
+  .chip.gate { background:#fdecec; color:#b42318; border-color:#f3c0bb; }
+  .chip.cost { background:#fff4e0; color:#9a5b00; border-color:#f0d29a; }
+  .chip.info { background:#e8f1fd; color:#1a56a8; border-color:#b9d3f3; }
+  .chip.possible { background:transparent; border-style:dashed; }
+  .why { margin:8px 0 0; padding:0; list-style:none; font-size:13px; color:#3a4a5c; }
+  .why li { padding:3px 0; border-top:1px solid #f0f2f6; }
+  .why li:first-child { border-top:0; }
+  .scope { white-space:pre-wrap; overflow-wrap:anywhere; }
+  .na { color:var(--mut); }
+  .shall { margin:0; padding-left:20px; }
+  .shall li { margin:6px 0; overflow-wrap:anywhere; }
+  .ref { color:var(--mut); font-size:12px; }
+  dl { margin:0; display:grid; grid-template-columns:max-content 1fr; gap:4px 16px; }
+  dt { color:var(--mut); } dd { margin:0; overflow-wrap:anywhere; }
+  .foot { margin-top:18px; font-size:12px; color:var(--mut); }
+  @media (max-width:560px) { h1 { font-size:20px; } dl { grid-template-columns:1fr; } dd { margin-bottom:6px; } }
 </style>
 </head>
 <body>
 <main>
-  <a href="/">&larr; Back to bids</a>
-  <h1 id="t">Explore this request</h1>
-  <div class="box" id="b">Loading…</div>
+  <a class="back" href="/" id="back">&larr; Back to bids</a>
+  <div id="page">Loading&hellip;</div>
 </main>
-<script src="data.js"></script>
-<script src="live-sam.js"></script>
-<script src="live-nyc.js"></script>
-<script src="live-states.js"></script>
+<script src="facts.js"></script>
 <script>
-  // Placeholder page: design to be decided together.
+(function () {
   var id = new URLSearchParams(location.search).get("id") || "";
-  document.getElementById("b").textContent = "Request ID: " + id + " (page design coming soon).";
+  var $ = document.getElementById("page");
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  function safeUrl(u) { return /^https?:\/\//i.test(String(u || "")) ? String(u) : ""; }
+  function mdy(s) { s = String(s || "").slice(0, 10).split("-"); return s.length === 3 && s[0] ? s[1] + "/" + s[2] + "/" + s[0] : "Unknown"; }
+  function money(n) { return "$" + Math.round(n).toLocaleString("en-US"); }
+  function nice(t) {
+    t = String(t || "").replace(/[\u0000-\u001f]+/g, " ").trim();
+    if (t.length > 8 && t === t.toUpperCase()) t = t.toLowerCase().replace(/(^|[.:\-]\s*)([a-z])/g, function (m, a, b) { return a + b.toUpperCase(); });
+    return t;
+  }
+  function daysLeft(due) {
+    var p = String(due || "").slice(0, 10).split("-"); if (p.length !== 3) return null;
+    var n = new Date(); n = new Date(n.getFullYear(), n.getMonth(), n.getDate());
+    return Math.round((new Date(+p[0], +p[1] - 1, +p[2]) - n) / 86400000);
+  }
+  function fail(msg) { $.innerHTML = '<h1>Explore this request</h1><section>' + esc(msg) + "</section>"; }
+
+  if (!id) return fail("No request was chosen. Go back to the list and click a title.");
+  if (history.length > 1 && document.referrer) document.getElementById("back").onclick = function (e) { e.preventDefault(); history.back(); }; // keeps Home's filters and scroll
+
+  fetch("/api/rfqs/" + encodeURIComponent(id)).then(function (r) {
+    if (r.status === 404) throw new Error("This request is not in the data (the id may be old or mistyped).");
+    if (!r.ok) throw new Error("The service answered with an error (" + r.status + ").");
+    return r.json();
+  }).then(function (r) {
+    document.title = nice(r.title) + " - Explore this request";
+    draw(r, null);
+    return fetch("/shall/" + encodeURIComponent(id)).then(function (x) { return x.ok ? x.json() : null; }).then(function (j) {
+      if (j && j.shall && j.shall.length) { draw(r, j.shall); }
+    }).catch(function () {});
+  }).catch(function (e) {
+    fail(e.message && !/Failed to fetch/i.test(e.message) ? e.message : "Could not reach the service. Is it running?");
+  });
+
+  function draw(r, shallFull) {
+    var shall = shallFull || r.shall || [];
+    var title = nice(r.title), plain = r.plainTitle && r.plainTitle !== r.title ? r.plainTitle : "";
+    var dl = r.hasRealDeadline ? daysLeft(r.due) : null, closed = dl != null && dl < 0;
+    var left = dl == null ? "" : dl < 0 ? "Closed" : dl === 0 ? "today" : dl === 1 ? "tomorrow" : "in " + dl + " days";
+    var warnings = r.warnings || [];
+    var h = "";
+
+    // 1. header
+    h += "<h1>" + esc(plain || title) + "</h1>";
+    if (plain) h += '<div class="sub">Original title: ' + esc(title) + "</div>";
+    h += '<div class="sub">' + esc([r.agency && nice(r.agency), r.region, r.level, r.category].filter(Boolean).join(" · ")) + "</div>";
+    var tags = [];
+    if (r.amended) tags.push('<span class="tag warn">Amended</span>');
+    if (closed) tags.push('<span class="tag red">Closed</span>');
+    if (r.active === false) tags.push('<span class="tag warn">No longer listed at source</span>');
+    if (tags.length) h += '<div class="tags">' + tags.join("") + "</div>";
+    warnings.forEach(function (w) { h += '<div class="banner">' + esc(w) + "</div>"; });
+
+    // 2. key facts
+    var v = r.value || {}, vHtml, vSub = "";
+    if (v.amount != null) {
+      vHtml = '<span class="green">' + esc(money(v.amount)) + "</span>";
+      if (v.low != null && v.high != null) vSub = "Typical range " + money(v.low) + " – " + money(v.high);
+    } else vHtml = '<span class="none">' + (r.aiRead ? "Value not specified" : "Couldn't determine value") + "</span>";
+    var dlCls = dl == null ? "" : dl < 0 ? "red" : dl <= 7 ? "red" : dl <= 14 ? "warn" : "green";
+    h += '<div class="facts">' +
+      '<div class="fact"><div class="k">Days left</div><div class="v ' + dlCls + '">' + (dl == null ? '<span class="none">n/a</span>' : dl < 0 ? "Closed" : dl) + "</div></div>" +
+      '<div class="fact"><div class="k">Municipality</div><div class="v">' + esc(r.level || "Unknown") + "</div>" + (r.category ? '<div class="s">' + esc(r.category) + "</div>" : "") + "</div>" +
+      '<div class="fact"><div class="k">Closing</div><div class="v">' + (r.hasRealDeadline ? esc(mdy(r.due)) : '<span class="none">No firm deadline</span>') + "</div>" +
+        '<div class="s">' + esc([left, r.hasRealDeadline && r.dueTime].filter(Boolean).join(" · ")) + "</div></div>" +
+      '<div class="fact"><div class="k">Published</div><div class="v">' + esc(r.posted ? mdy(r.posted) : "Unknown") + "</div></div>" +
+      '<div class="fact"><div class="k">Estimated value</div><div class="v">' + vHtml + '</div><div class="s">' + esc(vSub) + "</div></div></div>";
+
+    // 9 (shown early so it is not missed). link to the notice
+    var link = safeUrl(r.sourceUrl || r.url);
+    if (link) h += '<a class="cta" href="' + esc(link) + '" target="_blank" rel="noopener">Open RFQ document &rarr;</a>';
+
+    // facts from the notice text (same rules as the table)
+    var facts = [];
+    try {
+      facts = window.computeFacts ? window.computeFacts({ id: r.id, title: r.title, scope: r.scope, shall: shall, aiRead: r.aiRead,
+        details: { requirements: r.requirements || [], restriction: r.restriction } }) : [];
+    } catch (e) {}
+    function chip(f, cls) { return '<span class="chip ' + cls + (f.kw ? " possible" : "") + '" title="' + esc(f.why || "") + '">' + (f.kw ? "Possible: " : "") + esc(f.label) + "</span>"; }
+    function whyList(list) {
+      var w = list.filter(function (f) { return f.why; });
+      return w.length ? '<ul class="why">' + w.map(function (f) { return "<li><b>" + esc(f.label) + ":</b> " + esc(f.why) + "</li>"; }).join("") + "</ul>" : "";
+    }
+
+    // 3. can I bid
+    var gates = facts.filter(function (f) { return f.gate; });
+    var gateChips = [];
+    (r.requires || []).forEach(function (q) { gateChips.push('<span class="chip gate">' + esc(q) + "</span>"); });
+    if (r.restriction && !(r.requires || []).length) gateChips.push('<span class="chip gate">' + esc(r.restriction) + "</span>");
+    gates.forEach(function (f) { gateChips.push(chip(f, "gate")); });
+    h += "<section><h2>Can I bid?</h2>";
+    if (gateChips.length) h += '<div class="chips">' + gateChips.join("") + "</div>" + whyList(gates);
+    else if (r.requires == null) h += '<span class="na">Not checked: the notice documents were not read, so eligibility is unknown.</span>';
+    else h += '<span class="na">No eligibility conditions found. Open to all, as far as the notice says.</span>';
+    h += "</section>";
+
+    // 4. bid factors
+    var rest = facts.filter(function (f) { return !f.gate; });
+    if (rest.length) h += "<section><h2>Bid factors<small>cost, effort and attractiveness. Hover a chip for the source sentence.</small></h2>" +
+      '<div class="chips">' + rest.map(function (f) { return chip(f, f.sev === "info" ? "info" : "cost"); }).join("") + "</div>" + whyList(rest) + "</section>";
+
+    // 4b. details from the original table: region, restriction, amended, requirement chips
+    var dets = [];
+    if (r.restriction) dets.push('<span class="chip gate" style="cursor:default">Restricted: ' + esc(r.restriction) + "</span>");
+    if (r.amended) dets.push('<span class="chip cost" style="cursor:default">Amended</span>');
+    (r.requirements || []).forEach(function (q) { dets.push('<span class="chip info" style="cursor:default">' + esc(q) + "</span>"); });
+    h += "<section><h2>Details</h2>" +
+      (r.region ? '<div style="margin-bottom:' + (dets.length ? "8px" : "0") + '"><b>Region:</b> ' + esc(r.region) + "</div>" : "") +
+      (dets.length ? '<div class="chips">' + dets.join("") + "</div>" : (r.region ? "" : '<span class="na">None listed</span>')) + "</section>";
+
+    // 5. scope
+    h += "<section><h2>What the work is" + (r.aiRead ? "<small>AI-read, verify</small>" : "") + "</h2>" +
+      (r.scope ? '<div class="scope">' + esc(r.scope) + "</div>" : '<span class="na">' + (r.aiRead ? "None stated" : "Not checked: the source data has no description.") + "</span>") + "</section>";
+
+    // 6. shall list
+    if (shall.length) h += "<section><h2>Key requirements<small>" + shall.length + " from the notice</small></h2><ol class=\"shall\">" +
+      shall.map(function (s) { return "<li>" + esc(s.text) + (s.ref ? ' <span class="ref">(' + esc(s.ref) + ")</span>" : "") + "</li>"; }).join("") + "</ol></section>";
+
+    // 7. value detail
+    if (v.amount != null && (v.note || v.basis)) h += "<section><h2>How the value was estimated</h2><dl>" +
+      "<dt>Basis</dt><dd>" + esc({ similar_awards: "Similar past awards", stated: "Stated in the notice" }[v.basis] || v.basis) + "</dd>" +
+      (v.note ? "<dt>Detail</dt><dd>" + esc(v.note) + "</dd>" : "") + "</dl></section>";
+
+    // 8. contact
+    var c = r.contact, parts = [];
+    if (c) {
+      if (c.name) parts.push("<dt>Name</dt><dd>" + esc(c.name) + "</dd>");
+      if (c.email && /^[^\s@<>"]+@[^\s@<>"]+$/.test(c.email)) parts.push('<dt>Email</dt><dd><a href="mailto:' + esc(c.email) + '">' + esc(c.email) + "</a></dd>");
+      if (c.phone) parts.push("<dt>Phone</dt><dd>" + esc(c.phone) + "</dd>");
+    }
+    h += "<section><h2>Contact</h2>" + (parts.length ? "<dl>" + parts.join("") + "</dl>" : '<span class="na">None stated</span>') + "</section>";
+
+    // 10. footer
+    h += '<div class="foot">ID ' + esc(r.id) + " · first seen " + esc(mdy(r.firstSeen)) + " · last updated " + esc(mdy(r.updatedAt)) + "</div>";
+    $.innerHTML = h;
+  }
+})();
 </script>
 </body>
 </html>
