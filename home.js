@@ -143,8 +143,9 @@
   function scopeHeadline(scope) {
     var s = String(scope || "").replace(/<[^>]+>/g, " ").replace(/^[A-Z]{2,6} - RFx\.\s*/, "").replace(/\s+/g, " ").trim();
     var m = /\b(?:seeks?|seeking|requests?|invites?|solicits?|will receive|anticipates?)\s+(?:sealed\s+|competitive\s+)?(?:bids?|proposals?|quotes?|quotations?|qualifications|responses?|applications?|purchasing)\s+(?:for|to|from[^,]{0,60}\bto)\s+(?:the\s+)?(?:purchase of|provide|furnish(?:ing)?)?\s*(.{12,}?)(?:[.;]|$)/i.exec(s);
+    if (!m) m = /b(?:plans?|intends?|proposes?)\s+(?:a\s+|an\s+|to\s+)?(?:sole[- ]source\s+)?(?:purchase of|to purchase|to buy|procurement of)\s+(.{8,}?)(?:,|[.;]|$)/i.exec(s);
     if (!m) return "";
-    var t = m[1].replace(/\s+(until|by|no later than)\b[\s\S]*$/i, "").trim();
+    var t = m[1].replace(/\s+(until|by|no later than)\b[\s\S]*$/i, "").replace(/[,\s]+(?:funded|financed|paid|sponsored)$/i, "").trim();
     if (t.length > 110) t = t.slice(0, 110).replace(/\s+\S*$/, "") + "…";
     return t.length >= 12 ? t.charAt(0).toUpperCase() + t.slice(1) : "";
   }
@@ -162,13 +163,15 @@
       .replace(rx(/,\s*(?:@AB@)\b(?=\s*[,;)])/, "g"), "")
       .replace(/\b(?:(?:in|for|of|at)\s+)?(?:the\s+)?County of [A-Z][\w.'-]*(?: [A-Z][\w.'-]*)?/g, "")
       .replace(/\b(?:[A-Z][\w.'-]*|[a-z]{3,})(?: [A-Z][\w.'-]*)?\s+County\b(?!\s+(?:Route|Road|Rd|Highway|Hwy|Line|Fair))/g, function (m) { return /^(?:the|in|for|of|at|and|a|an|by|to|each|every|any)\b/i.test(m) ? m : ""; })
+      .replace(/[,\s]+\d{2,}(?:-\d+){2,}\s*$/, "")                                                      // trailing part / stock number: ", 01-24-3106"
+      .replace(/\bTrk\s*:?\s*/g, "Track ").replace(/\bFOR\b/g, "for")
       .replace(/\bFY\s?'?\d{2,4}\b/gi, "").replace(/\bFiscal Year\s*\(FY\)\s*\d{2,4}\b/gi, "")
       .replace(/\b(\d)(?:st|nd|rd|th)?\s*QTR\b\.?/gi, function (m, d) { return ({ 1: "1st", 2: "2nd", 3: "3rd", 4: "4th" })[d] + " quarter"; })
       .replace(/\bQTR\b\.?/gi, "quarter")
       .split(/(\s+)/).map(function (w) {
         var core = w.replace(/^[^A-Za-z0-9]+|[^A-Za-z0-9]+$/g, "");
         if (!core || /^\s+$/.test(w)) return w;
-        if (/^\d{5,}$/.test(core) || (/\d/.test(core) && /[A-Za-z]/.test(core) && core.length >= 5 && !/[a-z]{3,}/.test(core) && !/^\d+(st|nd|rd|th)$/i.test(core))) return "";
+        if (/^\d{5,}$/.test(core) || (/\d/.test(core) && /[A-Za-z]/.test(core) && core.length >= 5 && !/[a-z]{3,}/.test(core) && !/^\d+(st|nd|rd|th)$/i.test(core) && !/^\d+(lbs?|in|ft|mm|cm|kv|hp|gal|oz|kg|psi|gpm|amp|volt)$/i.test(core))) return "";
         return w;
       }).join("")
       .replace(/\b(?:Project|Proj\.?|Contract|Solicitation|Bid|No\.?|Number|#)\s*[A-Z0-9][\w-]*\d[\w-]*(?:\s+\d{1,4}\b)*/g, "")
@@ -178,23 +181,29 @@
         if (w !== w.toUpperCase() || KEEP_CAPS.test(w) || !/[AEIOU]/.test(w) || /\([^)]*$/.test(str.slice(0, off))) return w;
         return w.charAt(0) + w.slice(1).toLowerCase();
       })
+      .replace(/\b(?:FOR|AND|THE|OF|TO|IN|ON|AT|BY|WITH|FROM)\b(?=\s+\S)/g, function (w, off, str) { return off > 0 ? w.toLowerCase() : w; })
       .replace(/,(?=[A-Za-z])/g, ", ");
     return t.replace(/\s{2,}/g, " ").replace(/\s+([,.;:)])/g, "$1").replace(/\b(?:project|no\.?|number|solicitation|contract|facility|bldg|building)\s*#?\s*$/i, "").replace(/\(\s*\)/g, "").trim();
   }
   function cleanTitle(t, r, code) {
     var orig = t = String(t || "").replace(/\s+/g, " ").trim(), m;
     t = t.replace(/^not clear from the listing:\s*/i, "").replace(/^\*?\s*re-?bid\s*\*?[\s:–-]*/i, "")
+      .replace(/^(?:\*[^*]{2,30}\*\s*[-:–]?\s*)+(?=\S)/, "")                                   // "*Fax Bid* ..." status labels
+      .replace(/^(?:General\s+)?(?:RFP|RFQ|IFB|ITB|RFB|RFI)\s*#?\s*\d[\w-]*\s*[:–-]\s*(?=[A-Za-z])/i, "")   // "General RFP 5026: ..."
+      .replace(/(?<=\S{4,}.{6,})\s+[-–]\s+[A-Z]{3,5}$/, "")                                       // trailing agency tag " - DOC"
+      .replace(/(?<=[A-Za-z].{5,}),?\s+\d+(?:-\d+)+$/, "")                                        // trailing item code ", 01-20-0100"
       .replace(/^(bid extension|correction|addendum( no\.? ?\d+)?|amendment|open-ended|cancell?ed|re-?issued?)\s*[-:–]\s*/i, "")
       .replace(/^(?:[A-Z\/&]+\s+)*(?:opportunity)\s*[-–]\s*/i, function (x) { return /m\/?wbe|sdvob|mwbe/i.test(x) ? "" : x; });
     var dash = /^(.{3,45}?)\s*[-–:]\s+(?=\S)/.exec(t);
     // a label made only of codes and solicitation words ("IFB 26-083 -", "Smd_a&cm_ rfq's 523158 -"), never real words ("FY 27 Tree Removal -")
     if (dash && /[A-Za-z]/.test(dash[1]) && /[\d_#]/.test(dash[1]) && t.length - dash[0].length >= 8 &&
-        dash[1].split(/\s+/).every(function (w) { return /[\d_#]/.test(w) || /^(bid|rfp|rfq|rfb|ifb|itb|rfi|project|no\.?|number|pin|fy|[A-Z&\/]{2,6}|&)('?s)?$/.test(w); })) t = t.slice(dash[0].length);
+        dash[1].split(/\s+/).every(function (w) { return /[\d_#]/.test(w) || /^(bid|rfp|rfq|rfb|ifb|itb|rfi|project|no\.?|number|pin|fy|&)('?s)?$/i.test(w) || /^[A-Z&\/]{2,6}('S)?$/.test(w); })) t = t.slice(dash[0].length);
     t = t.replace(/^(RFP|RFQ|IFB|ITB|RFB|RFI|ITN)-(?=[A-Za-z])/i, "").replace(/\s*[-–]\s*addendum\s*\d*\s*$/i, "");
     t = t.replace(/^(?:RFP|RFQ|IFB|ITB|RFB|RFI|ITN|ARFQ|CRFQ|PB)\b[\s#:.-]*[A-Za-z0-9][\w\/.-]*\d[\w\/.-]*[\s:–-]+(?=[A-Za-z])/i, "");
     t = t.replace(/^(?=[A-Z0-9-]*\d)[A-Z0-9][A-Z0-9-]{4,}\s*[-:–]?\s+(?=[A-Za-z])/, "");
     var words = (t.match(/\b[A-Za-z]{3,}\b/g) || []).length;
-    var boiler = /^(notice\b|submit to\b|email\b|sealed (bids|proposals)\b|written sealed\b|the .{3,70}?\b(will receive|requests|invites|anticipates|is (hereby )?seeking)\b)/i.test(t);
+    var boiler = /^(notice\b|submit to\b|email\b|sealed (bids|proposals)\b|written sealed\b|notice of (proposed|intent|sole)|the .{3,70}?\b(will receive|requests|invites|anticipates|is (hereby )?seeking)\b)/i.test(t) ||
+      /^[A-Z][^.]{3,90}?\b(is|are) (hereby )?(soliciting|seeking|requesting|inviting|accepting)\b/.test(t) || /\bnotice of (proposed|intent)\b/i.test(t);
     var codey = /\d/.test(t) && words < 2 && t.length < 40;
     t = t.replace(/^\d{4}\s*[-–]\s*\d{4}\s+(?=[A-Za-z])/, "");
     if ((boiler || codey) && r) { var sh = scopeHeadline(r.scope); if (sh) t = sh; else if (boiler) t = "Bid notice (no description given)"; }
@@ -220,6 +229,15 @@
         .replace(/\b(?:the\s+)?(?:City|Town) of [A-Z][\w.-]*(?: [A-Z][\w.-]*)?'s\s+/g, "the city's ");
       t = t.replace(/\b(for|at|by|with|from) (Department|Dept|Division|Office|Commission|Board|Bureau|Agency|Authority)\b/g, "$1 the $2");
     }
+    // tails and labels that say nothing about what is wanted: place of performance, street addresses, option-year terms, set-aside prefixes (shown as tags already)
+    t = t.replace(/\s*\|\s*(?:POP|Period of Performance|PoP)\b[\s\S]*$/i, "").replace(/\s*\|\s*$/, "")
+      .replace(/\s*\(?\bPOP:?[^)|]*\)?\s*$/i, "")
+      .replace(/\s*[-–,]\s*(?:base\s+(?:year\s+)?plus\s+\w+\s+option\s+years?|base\s+(?:year\s+)?(?:and|\+)\s+\w+\s+option\s+years?|\w+\s+option\s+years?)\s*$/i, "")
+      .replace(/\s*\((?:brand|brand name|brand name or equal)\)/gi, "")
+      .replace(/^(?:(?:total\s+|partial\s+)?(?:SDVOSB|VOSB|WOSB|EDWOSB|HUBZone|8\(a\)|small business|SB)(?:\s+set[- ]aside)?)(?:\s*[-–:|]\s*|\s+)(?=[A-Za-z])/i, "")
+      .replace(/,\s*\d{1,6}\s+(?:[NSEW]\.?\s+)?[A-Z][\w.' -]*?(?:street|st|road|rd|avenue|ave|boulevard|blvd|drive|dr|lane|ln|highway|hwy|way|parkway|pkwy)\b\.?[\s\S]*$/i, "")
+      .replace(/,\s*[A-Z][\w.' -]{2,50}\s+(?:Health Care|Healthcare|VA|Veterans)\s+(?:System|Network|Medical Center|VISN)\s*$/i, "")
+      .replace(/,\s*(?:VISN\s*\d+|[A-Z][\w.' -]{2,40}\s+(?:VA Medical Center|VAMC|Air Force Base|AFB|Naval Station|Army Depot))\s*$/i, "");
     t = stripNoise(t);
     t = t.replace(/\s+([,.;:])/g, "$1").replace(/(^|\s)[,;:]+\s*/g, "$1").replace(/\s{2,}/g, " ").replace(/(?:\s+(?:for|in|at|of|the|and|to|by|with|-|–))+\s*$/i, "").replace(/[,;:\s-]+$/, "").trim();
     if (t.length < 8) t = orig.replace(/^not clear from the listing:\s*/i, "");
