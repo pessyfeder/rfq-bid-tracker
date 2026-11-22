@@ -15,63 +15,25 @@
   .logo i { font-style:normal; color:#f59e0b; }
   .back { border:1px solid var(--acc); background:#fff; color:var(--acc); border-radius:999px; padding:5px 14px; font-weight:600; font-size:13px; text-decoration:none; }
   .back:hover { background:var(--soft); }
-  main { max-width:980px; margin:0 auto; padding:20px 24px 64px; }
-  .hero { border:1px solid var(--line); border-radius:12px; overflow:hidden; box-shadow:0 1px 2px rgba(49,46,129,.06); }
-  .hero-bar { display:flex; justify-content:space-between; align-items:center; gap:12px; background:linear-gradient(90deg,#312e81,#4338ca); color:#fff; padding:7px 20px; font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; }
-  .hero-body { padding:18px 20px 20px; }
-  h1 { margin:0; font-size:24px; font-weight:700; line-height:1.28; letter-spacing:-.02em; color:#27264f; overflow-wrap:anywhere; }
-  .sub { color:var(--mut); margin-top:5px; font-size:13px; }
-  .tags { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
-  .tag { font-size:12px; font-weight:600; padding:2px 10px; border-radius:999px; background:var(--soft); color:var(--acc); }
-  .tag.warn { background:#fdf6e9; color:#b45309; }
-  .tag.red { background:#fdecec; color:#b42318; }
-  .banner { margin-top:12px; padding:9px 14px; border-radius:8px; background:#fdf6e9; border:1px solid #ecd9b0; border-left:4px solid #b45309; font-size:13px; }
-  .hero-bar .orig { background:#fff; color:var(--acc2); text-decoration:none; font-size:12px; font-weight:700; letter-spacing:0; text-transform:none; padding:3px 12px; border-radius:999px; }
-  .hero-bar .orig:hover { background:var(--soft); }
-  .grp { margin-top:12px; } .grp:first-of-type { margin-top:0; }
-  .grp h3 { margin:0 0 6px; font-size:12.5px; font-weight:700; color:#27264f; }
-  .num { display:inline-grid; place-items:center; width:20px; height:20px; border-radius:6px; background:var(--acc); color:#fff; font-size:11px; margin-right:8px; letter-spacing:0; }
-  .cta { margin-top:0; }
-  .brief { margin-top:16px; padding:14px 16px; background:var(--soft); border-left:4px solid var(--acc); border-radius:8px; }
-  .brief .k { font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--acc); }
-  .brief p { margin:4px 0 0; font-size:16px; line-height:1.5; color:#27264f; font-weight:500; }
-  .brief small { display:block; margin-top:4px; color:var(--mut); font-size:12px; }
-  .facts { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin-top:12px; }
-  .fact { background:#fff; border:1px solid var(--line); border-left:4px solid var(--acc); border-radius:10px; padding:9px 14px; box-shadow:0 1px 2px rgba(49,46,129,.06); }
-  .fact .k { font-size:10.5px; font-weight:700; letter-spacing:.07em; text-transform:uppercase; color:var(--mut); }
-  .fact .v { font-size:18px; font-weight:700; margin-top:1px; color:#27264f; }
-  .fact .s { font-size:12px; color:var(--mut); }
-  .green { color:var(--green) !important; } .warn { color:#b45309 !important; } .red { color:#c62828 !important; }
-  .none { color:var(--mut); font-weight:500; font-size:14px; }
-  .cta { display:inline-block; margin-top:14px; background:var(--acc); color:#fff; text-decoration:none; font-weight:600; padding:10px 22px; border-radius:999px; }
-  .cta:hover { background:var(--acc2); }
-  section { background:#fff; border:1px solid var(--line); border-left:4px solid var(--acc); border-radius:10px; padding:14px 18px; margin-top:12px; box-shadow:0 1px 2px rgba(49,46,129,.06); }
-  section h2 { margin:0 0 8px; font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--acc2); }
-  section h2 small { font-weight:500; letter-spacing:0; text-transform:none; color:var(--mut); font-size:12px; margin-left:8px; }
-  .chips { display:flex; flex-wrap:wrap; gap:6px; }
-  .chip { font-size:13px; font-weight:500; padding:3px 10px; border-radius:6px; border:1px solid; cursor:help; }
-  .chip.gate { background:#fdecec; color:#b42318; border-color:#f3c0bb; }
-  .chip.cost { background:#fff4e0; color:#9a5b00; border-color:#f0d29a; }
-  .chip.info { background:#e8f1fd; color:#1a56a8; border-color:#b9d3f3; }
-  .chip.possible { background:transparent; border-style:dashed; }
-  .why { margin:8px 0 0; padding:0; list-style:none; font-size:13px; color:#3a4a5c; }
-  .why li { padding:4px 0; border-top:1px solid #f0f2f6; }
-  .why li:first-child { border-top:0; }
-  .scope { white-space:pre-wrap; overflow-wrap:anywhere; }
-  details.full summary { cursor:pointer; color:var(--acc); font-weight:600; font-size:13px; }
-  details.full .scope { margin-top:8px; }
+  main { max-width:760px; margin:0 auto; padding:28px 24px 64px; }
+  h1 { margin:0; font-size:26px; font-weight:700; line-height:1.28; letter-spacing:-.02em; color:#27264f; overflow-wrap:anywhere; }
+  .sub { color:var(--mut); margin-top:4px; font-size:13px; }
+  .sub a { font-weight:600; }
+  h2 { margin:30px 0 8px; font-size:17px; font-weight:700; color:#27264f; }
+  h3 { margin:16px 0 4px; font-size:14px; font-weight:700; color:var(--acc2); }
+  p { margin:0; }
+  .text { white-space:pre-wrap; overflow-wrap:anywhere; font-size:15px; line-height:1.6; }
+  .value { font-size:22px; font-weight:700; color:var(--green); }
+  .value.none { font-size:15px; font-weight:400; color:var(--mut); }
+  .items { margin:0; padding:0 0 0 20px; }
+  .items li { margin:4px 0; padding-left:2px; overflow-wrap:anywhere; }
+  .items li b { color:#27264f; }
   .na { color:var(--mut); }
-  .shall { margin:0; padding:0; list-style:none; counter-reset:s; }
-  .shall li { counter-increment:s; position:relative; padding:7px 0 7px 34px; border-top:1px solid #f0f2f6; overflow-wrap:anywhere; }
-  .shall li:first-child { border-top:0; }
-  .shall li::before { content:counter(s); position:absolute; left:0; top:7px; width:22px; height:22px; border-radius:6px; background:var(--soft); color:var(--acc); font-size:11px; font-weight:700; display:grid; place-items:center; }
-  .ref { color:var(--mut); font-size:12px; }
-  dl { margin:0; display:grid; grid-template-columns:max-content 1fr; gap:4px 16px; }
-  dt { color:var(--mut); } dd { margin:0; overflow-wrap:anywhere; }
-  .foot { margin-top:18px; font-size:12px; color:var(--mut); }
+  .small { color:var(--mut); font-size:12px; margin-top:6px; }
+  .foot { margin-top:36px; font-size:12px; color:var(--mut); }
   html.embed .nav { display:none; }
-  html.embed main { max-width:none; padding:16px 20px 48px; }
-  @media (max-width:560px) { main, .nav .in { padding-left:14px; padding-right:14px; } h1 { font-size:20px; } dl { grid-template-columns:1fr; } dd { margin-bottom:6px; } }
+  html.embed main { max-width:none; padding:20px 22px 48px; }
+  @media (max-width:560px) { main, .nav .in { padding-left:14px; padding-right:14px; } h1 { font-size:21px; } }
 </style>
 </head>
 <body>
@@ -130,42 +92,24 @@
   function draw(r, shallFull) {
     var shall = shallFull || r.shall || [];
     var title = nice(r.title), plain = r.plainTitle && r.plainTitle !== r.title ? r.plainTitle : "";
-    var dl = r.hasRealDeadline ? daysLeft(r.due) : null, closed = dl != null && dl < 0;
-    var left = dl == null ? "" : dl < 0 ? "Closed" : dl === 0 ? "today" : dl === 1 ? "tomorrow" : "in " + dl + " days";
-    var warnings = r.warnings || [];
-    var h = "";
-
-    // 1. header with a short summary of the work
-    var sum = brief(r.scope);
     var link = safeUrl(r.sourceUrl || r.url);
-    h += '<div class="hero"><div class="hero-bar"><span>Request for quote</span>' + (link ? '<a class="orig" href="' + esc(link) + '" target="_blank" rel="noopener">View original RFQ &#8599;</a>' : "") + '</div><div class="hero-body"><h1>' + esc(plain || title) + "</h1>";
+    var h = "<h1>" + esc(plain || title) + "</h1>";
     if (plain) h += '<div class="sub">Original title: ' + esc(title) + "</div>";
-    h += '<div class="sub">' + esc([r.agency && nice(r.agency), r.region, r.level, r.category].filter(Boolean).join(" · ")) + "</div>";
-    var tags = [];
-    if (r.amended) tags.push('<span class="tag warn">Amended</span>');
-    if (closed) tags.push('<span class="tag red">Closed</span>');
-    if (r.active === false) tags.push('<span class="tag warn">No longer listed at source</span>');
-    if (tags.length) h += '<div class="tags">' + tags.join("") + "</div>";
-    warnings.forEach(function (w) { h += '<div class="banner">' + esc(w) + "</div>"; });
-    h += '<div class="brief"><div class="k"><span class="num">1</span>The work in brief</div>' + (sum ? "<p>" + esc(sum) + "</p>" + (r.aiRead ? "<small>AI-read, verify against the notice.</small>" : "") :
-      '<p class="na" style="font-weight:400;font-size:14px">' + (r.aiRead ? "None stated." : "Not checked: the source data has no description.") + "</p>") + "</div>";
+    h += '<div class="sub">' + esc([r.agency && nice(r.agency), r.region, r.level].filter(Boolean).join(" · ")) +
+      (link ? ' · <a href="' + esc(link) + '" target="_blank" rel="noopener">View original RFQ &#8599;</a>' : "") + "</div>";
 
-    // 2. key facts
-    var v = r.value || {}, vHtml, vSub = "";
+    // 1. description, in full
+    h += "<h2>1. Description</h2>";
+    h += r.scope ? '<p class="text">' + esc(r.scope) + "</p>" + (r.aiRead ? '<p class="small">AI-read, verify against the notice.</p>' : "")
+      : '<p class="na">' + (r.aiRead ? "None stated." : "Not checked: the source data has no description.") + "</p>";
+
+    // 2. estimated value
+    var v = r.value || {};
+    h += "<h2>2. Estimated Value</h2>";
     if (v.amount != null) {
-      vHtml = '<span class="green">' + esc(money(v.amount)) + "</span>";
-      if (v.low != null && v.high != null) vSub = "Typical range " + money(v.low) + " – " + money(v.high);
-    } else vHtml = '<span class="none">' + (r.aiRead ? "Value not specified" : "Couldn't determine value") + "</span>";
-    var dlCls = dl == null ? "" : dl <= 7 ? "red" : dl <= 14 ? "warn" : "green";
-    h += '<div class="facts">' +
-      '<div class="fact"><div class="k">Estimated value</div><div class="v">' + vHtml + '</div><div class="s">' + esc(vSub) + "</div></div>" +
-      '<div class="fact"><div class="k">Days left</div><div class="v ' + dlCls + '">' + (dl == null ? '<span class="none">n/a</span>' : dl < 0 ? "Closed" : dl) + "</div></div>" +
-      '<div class="fact"><div class="k">Closing</div><div class="v">' + (r.hasRealDeadline ? esc(mdy(r.due)) : '<span class="none">No firm deadline</span>') + "</div>" +
-        '<div class="s">' + esc([left, r.hasRealDeadline && r.dueTime].filter(Boolean).join(" · ")) + "</div></div>" +
-      '<div class="fact"><div class="k">Published</div><div class="v">' + esc(r.posted ? mdy(r.posted) : "Unknown") + "</div></div>" +
-      '<div class="fact"><div class="k">Municipality</div><div class="v">' + esc(r.level || "Unknown") + "</div>" + (r.category ? '<div class="s">' + esc(r.category) + "</div>" : "") + "</div></div>";
-
-    h += "</div></div>";
+      h += '<p class="value">' + esc(money(v.amount)) + "</p>";
+      if (v.low != null && v.high != null) h += '<p class="small">Typical range ' + esc(money(v.low)) + " – " + esc(money(v.high)) + "</p>";
+    } else h += '<p class="value none">' + (r.aiRead ? "Value not specified" : "Couldn't determine value") + "</p>";
 
     // facts from the notice text (same rules as the table)
     var facts = [];
@@ -173,25 +117,13 @@
       facts = window.computeFacts ? window.computeFacts({ id: r.id, title: r.title, scope: r.scope, shall: shall, aiRead: r.aiRead,
         details: { requirements: r.requirements || [], restriction: r.restriction } }) : [];
     } catch (e) {}
-    function chip(f, cls) { return '<span class="chip ' + cls + (f.kw ? " possible" : "") + '" title="' + esc(f.why || "") + '">' + (f.kw ? "Possible: " : "") + esc(f.label) + "</span>"; }
-    function whyList(list) {
-      var w = list.filter(function (f) { return f.why; });
-      return w.length ? '<ul class="why">' + w.map(function (f) { return "<li><b>" + esc(f.label) + ":</b> " + esc(f.why) + "</li>"; }).join("") + "</ul>" : "";
+    function list(items) {
+      return '<ul class="items">' + items.map(function (f) {
+        return "<li><b>" + (f.kw ? "Possible: " : "") + esc(f.label) + "</b>" + (f.why ? " &ndash; " + esc(f.why) : "") + "</li>";
+      }).join("") + "</ul>";
     }
 
-    // 2. eligibility
-    var gates = facts.filter(function (f) { return f.gate; });
-    var gateChips = [];
-    (r.requires || []).forEach(function (q) { gateChips.push('<span class="chip gate">' + esc(q) + "</span>"); });
-    if (r.restriction && !(r.requires || []).length) gateChips.push('<span class="chip gate">' + esc(r.restriction) + "</span>");
-    gates.forEach(function (f) { gateChips.push(chip(f, "gate")); });
-    h += '<section><h2><span class="num">2</span>Eligibility</h2>';
-    if (gateChips.length) h += '<div class="chips">' + gateChips.join("") + "</div>" + whyList(gates);
-    else if (r.requires == null) h += '<span class="na">Not checked: the notice documents were not read, so eligibility is unknown.</span>';
-    else h += '<span class="na">No eligibility conditions found. Open to all, as far as the notice says.</span>';
-    h += "</section>";
-
-    // 3. trip-up factors, grouped by type
+    // 3. important details: trip-up factors, sub-headed by type
     var TYPE = {
       "Money and payment": ["Performance / payment bond", "Insurance minimums", "Prevailing / living wage", "Retainage or slow payment terms", "Liquidated damages for late work", "Fixed price, no escalation", "Permits and fees on the contractor", "Certified payroll / compliance reporting"],
       "Site, schedule and logistics": ["Mandatory site visit / pre-bid", "24/7 or after-hours", "Delivery terms (FOB / inside delivery)", "Escorted or restricted site access", "Hazardous materials handling", "Drug testing of workers"],
@@ -202,26 +134,23 @@
     Object.keys(TYPE).forEach(function (name) {
       var items = rest.filter(function (f) { return TYPE[name].indexOf(f.label) >= 0; });
       items.forEach(function (f) { used[f.label] = 1; });
-      if (items.length) tg += '<div class="grp"><h3>' + esc(name) + '</h3><div class="chips">' + items.map(function (f) { return chip(f, f.sev === "info" ? "info" : "cost"); }).join("") + "</div>" + whyList(items) + "</div>";
+      if (items.length) tg += "<h3>" + esc(name) + "</h3>" + list(items);
     });
     var other = rest.filter(function (f) { return !used[f.label]; });
-    if (other.length) tg += '<div class="grp"><h3>Other</h3><div class="chips">' + other.map(function (f) { return chip(f, f.sev === "info" ? "info" : "cost"); }).join("") + "</div>" + whyList(other) + "</div>";
-    h += '<section><h2><span class="num">3</span>Trip-up factors<small>what costs money or time, or narrows the field. Hover a chip for the source sentence.</small></h2>' +
-      (tg || '<span class="na">' + (r.aiRead || r.scope ? "None found in the notice text." : "Not checked: the notice was not read.") + "</span>") + "</section>";
+    if (other.length) tg += "<h3>Other</h3>" + list(other);
+    h += "<h2>3. Important Details</h2>" +
+      (tg || '<p class="na">' + (r.aiRead || r.scope ? "None found in the notice text." : "Not checked: the notice was not read.") + "</p>");
 
-    // 4. contact
-    var c = r.contact, parts = [];
-    if (c) {
-      if (c.name) parts.push("<dt>Name</dt><dd>" + esc(c.name) + "</dd>");
-      if (c.email && /^[^\s@<>"]+@[^\s@<>"]+$/.test(c.email)) parts.push('<dt>Email</dt><dd><a href="mailto:' + esc(c.email) + '">' + esc(c.email) + "</a></dd>");
-      if (c.phone) parts.push("<dt>Phone</dt><dd>" + esc(c.phone) + "</dd>");
-    }
-    h += '<section><h2><span class="num">4</span>Contact</h2>' + (parts.length ? "<dl>" + parts.join("") + "</dl>" : '<span class="na">None stated</span>') + "</section>";
+    // 4. eligibility
+    var gates = facts.filter(function (f) { return f.gate; }), items = [];
+    (r.requires || []).forEach(function (q) { items.push("<li><b>" + esc(q) + "</b></li>"); });
+    if (r.restriction && !(r.requires || []).length) items.push("<li><b>" + esc(r.restriction) + "</b></li>");
+    var gl = gates.length ? list(gates).replace(/^<ul class="items">|<\/ul>$/g, "") : "";
+    h += "<h2>4. Eligibility</h2>";
+    if (items.length || gl) h += '<ul class="items">' + items.join("") + gl + "</ul>";
+    else if (r.requires == null) h += '<p class="na">Not checked: the notice documents were not read, so eligibility is unknown.</p>';
+    else h += '<p class="na">No eligibility conditions found. Open to all, as far as the notice says.</p>';
 
-    // 5. link to the bid page
-    h += '<section><h2><span class="num">5</span>Bid page</h2>' + (link ? '<a class="cta" href="' + esc(link) + '" target="_blank" rel="noopener">Open the bid page &rarr;</a>' : '<span class="na">No link available.</span>') + "</section>";
-
-    // 10. footer
     h += '<div class="foot">ID ' + esc(r.id) + " · first seen " + esc(mdy(r.firstSeen)) + " · last updated " + esc(mdy(r.updatedAt)) + "</div>";
     $.innerHTML = h;
   }
