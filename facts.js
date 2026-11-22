@@ -38,9 +38,12 @@
   var KEYWORD_ONLY = /^(NY|WY|DE|TXDOT|ID|KS|PA)-/;
   // Short hover text: just the stretch of text around the match, not the whole paragraph.
   function excerpt(text, m) {
-    text = String(text).replace(/\s+/g, " ").trim();
+    var raw = String(text);
+    // m.index is an offset into the raw text: collapse whitespace in the part before the match the same way, so the offset
+    // still lands on the match (an indexOf of the match text could hit an earlier copy or miss and fall back to 0).
+    var at = raw.slice(0, m.index).replace(/\s+/g, " ").replace(/^ /, "").length;
+    text = raw.replace(/\s+/g, " ").trim();
     var max = 120;
-    var at = Math.max(0, text.indexOf(String(m[0]).replace(/\s+/g, " ").trim())); // m[0] is from the raw text: collapse it the same way
     // The sentence holding the match: from the previous ". " to the next one.
     var start = text.lastIndexOf(". ", at);
     start = start < 0 ? 0 : start + 2;
