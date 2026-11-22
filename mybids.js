@@ -51,7 +51,7 @@
   var css = document.createElement("style");
   css.textContent =
     "#mb-back{position:fixed;inset:0;z-index:1000;background:rgba(15,23,42,.35);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);opacity:0;pointer-events:none;transition:opacity .25s}#mb-back.on{opacity:1;pointer-events:auto}" +
-    "#mb{position:fixed;top:0;right:0;bottom:0;width:min(640px,100vw);z-index:1001;background:#f7f7fc;box-shadow:-8px 0 30px rgba(15,23,42,.25);transform:translateX(100%);transition:transform .28s ease;display:flex;flex-direction:column;font:13px/1.45 Roboto,system-ui,sans-serif;color:#1f3347}#mb.on{transform:none}#mb *{box-sizing:border-box}" +
+    "#mb{position:fixed;top:0;right:0;bottom:0;width:min(640px,100vw);z-index:1001;background:#f7f7fc;box-shadow:-8px 0 30px rgba(15,23,42,.25);transform:translateX(100%);transition:transform .28s ease;display:flex;flex-direction:column;font:13px/1.45 system-ui,sans-serif;color:#1f3347}#mb.on{transform:none}#mb *{box-sizing:border-box}" +
     "#mb .mb-bar{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;background:#fff;border-bottom:1px solid #e4e4f0}#mb .mb-bar h2{margin:0;font-size:17px;color:#27264f}#mb .mb-bar button{border:0;background:none;font-size:24px;line-height:1;cursor:pointer;color:#64748b}" +
     "#mb .mb-body{flex:1;overflow:auto;padding:14px 20px 40px}" +
     "#mb .mb-intro,#mb .mb-empty{color:#64748b;margin:0 0 12px}#mb .mb-empty{text-align:center;padding:40px 10px;background:#fff;border:1px dashed #cfd5de;border-radius:10px}" +
