@@ -78,6 +78,7 @@
 </main>
 <script src="facts.js"></script>
 <script src="sample-data.js"></script>
+<script src="shared.js?v=20261122a"></script>
 <script>
 (function () {
   var sel = document.getElementById("navsel");
@@ -142,6 +143,8 @@
   function draw(r, shallFull) {
     var shall = shallFull || r.shall || [];
     var title = nice(r.title), plain = r.plainTitle && r.plainTitle !== r.title ? r.plainTitle : "";
+    // no AI headline: federal catalogue titles ("59--SONAR HEADSET") get the same plain-language title the list shows
+    if (!plain && r.level === "Federal" && window.fedItemTitle) { try { var ft = nice(window.fedItemTitle(r.title, r.scope)); if (ft && ft !== title) plain = ft; } catch (e) {} }
     var link = safeUrl(r.sourceUrl || r.url);
     var dl = daysLeft(r.due), real = r.hasRealDeadline !== false && dl !== null;
     var dlTxt = !real ? "" : dl < 0 ? "Closed" : dl === 0 ? "Due today" : dl + (dl === 1 ? " day left" : " days left");
