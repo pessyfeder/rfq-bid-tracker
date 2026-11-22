@@ -851,7 +851,30 @@
     st.kw = ""; st.close = []; st.posted = []; st.shown = PAGE;
   }
   applyProfile();
+  // Keep the user's view across the reload that follows a refresh: filters, sort, how many results are shown, scroll position.
+  var UI_KEY = "rfqUiState", UI_LISTS = ["where", "close", "posted", "value", "aside", "reg"];
+  window.saveUiState = function () {
+    try {
+      var o = { at: Date.now(), scrollY: window.scrollY, kw: st.kw, cats: st.cats, vmin: st.vmin, vmax: st.vmax, sort: st.sort, shown: st.shown, openG: st.openG };
+      UI_LISTS.forEach(function (k) { o[k] = st[k]; });
+      sessionStorage.setItem(UI_KEY, JSON.stringify(o));
+    } catch (e) {}
+  };
+  var restoredScroll = null;
+  try {
+    var saved = JSON.parse(sessionStorage.getItem(UI_KEY) || "null");
+    sessionStorage.removeItem(UI_KEY); // used once, for the reload right after a refresh
+    if (saved && Date.now() - saved.at < 10 * 60000) {
+      UI_LISTS.forEach(function (k) { if (Array.isArray(saved[k])) st[k] = saved[k]; });
+      if (saved.cats === null || Array.isArray(saved.cats)) st.cats = saved.cats;
+      ["kw", "vmin", "vmax", "sort"].forEach(function (k) { if (typeof saved[k] === "string") st[k] = saved[k]; });
+      if (saved.shown > 0) st.shown = saved.shown;
+      if (saved.openG && typeof saved.openG === "object") st.openG = saved.openG;
+      restoredScroll = saved.scrollY;
+    }
+  } catch (e) {}
   window.addEventListener("rfqprofilechange", function () { applyProfile(); render(); });
   window.addEventListener("rfqwizardclose", render);
   render();
+  if (restoredScroll) window.scrollTo(0, restoredScroll);
 })();
