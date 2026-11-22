@@ -83,7 +83,8 @@
     ".hm-dd-btn.on,.hm-field select.on{color:#4a5562;box-shadow:inset 0 0 0 1px #0e5a73}.hm-dd-btn.on span{color:#4a5562}" +
     ".hm-cols{position:relative;margin-top:12px}.hm-side{position:absolute;top:0;right:100%;margin-right:12px;width:140px}.hm-side .hm-field{width:100%!important;flex:none!important}" +
     "@media(min-width:1251px){.hm-side{width:calc((100% - 30px) / 6)}}" + /* same width as one of the 6 filter columns above */
-    "@media(max-width:1250px){.hm-side{position:static;width:100%;margin:0 0 8px}}" +
+    "@media(max-width:1250px){.hm-side{position:static;width:calc((100% - 30px) / 6);min-width:112px;margin:0 0 8px}}" +
+    "@media(max-width:620px){.hm-side{width:calc(50% - 3px)}}" +
     /* search box ends where the Jurisdiction filter ends: 2 of the 6 equal filter columns */
     "@media(min-width:1101px){.hm-fields{grid-template-columns:repeat(6,minmax(0,1fr))}.hm-kw{width:calc((100% - 30px) / 3 + 6px)}}" +
     "@media(max-width:1100px){.hm-bar{flex-wrap:wrap}.hm-kw{flex:1 1 100%!important;max-width:calc(100% - 100px)}.hm-fields{flex:1 1 100%!important;flex-wrap:wrap}.hm-field{flex:1 1 calc(25% - 6px)!important;min-width:110px}.hm-field.rt .hm-dd-panel{left:auto;right:0}.hm-item{grid-template-columns:minmax(0,1fr)}.hm-map{display:none}.hm-dates{grid-column:1;min-width:0;grid-template-columns:auto auto;justify-content:start}}" +
