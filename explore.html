@@ -155,12 +155,12 @@
     } else vHtml = '<span class="none">' + (r.aiRead ? "Value not specified" : "Couldn't determine value") + "</span>";
     var dlCls = dl == null ? "" : dl <= 7 ? "red" : dl <= 14 ? "warn" : "green";
     h += '<div class="facts">' +
+      '<div class="fact"><div class="k">Estimated value</div><div class="v">' + vHtml + '</div><div class="s">' + esc(vSub) + "</div></div>" +
       '<div class="fact"><div class="k">Days left</div><div class="v ' + dlCls + '">' + (dl == null ? '<span class="none">n/a</span>' : dl < 0 ? "Closed" : dl) + "</div></div>" +
       '<div class="fact"><div class="k">Closing</div><div class="v">' + (r.hasRealDeadline ? esc(mdy(r.due)) : '<span class="none">No firm deadline</span>') + "</div>" +
         '<div class="s">' + esc([left, r.hasRealDeadline && r.dueTime].filter(Boolean).join(" · ")) + "</div></div>" +
       '<div class="fact"><div class="k">Published</div><div class="v">' + esc(r.posted ? mdy(r.posted) : "Unknown") + "</div></div>" +
-      '<div class="fact"><div class="k">Municipality</div><div class="v">' + esc(r.level || "Unknown") + "</div>" + (r.category ? '<div class="s">' + esc(r.category) + "</div>" : "") + "</div>" +
-      '<div class="fact"><div class="k">Estimated value</div><div class="v">' + vHtml + '</div><div class="s">' + esc(vSub) + "</div></div></div>";
+      '<div class="fact"><div class="k">Municipality</div><div class="v">' + esc(r.level || "Unknown") + "</div>" + (r.category ? '<div class="s">' + esc(r.category) + "</div>" : "") + "</div></div>";
 
     h += "</div></div>";
 
