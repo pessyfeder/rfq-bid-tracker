@@ -10,7 +10,25 @@
       rfqUrl: "https://example.com/sample-rfq/" + n,
       details: { region: region, requirements: reqs, restriction: restr, amended: !!amended, warnings: [] } };
   }
-  (window.LIVE_SOURCES = window.LIVE_SOURCES || []).push({ meta: { source: "SAMPLE DATA (not real)", fetchedAt: new Date().toISOString(), count: 14 }, rfqs: [
+  // Generated filler so the demo lists a realistic number of results (all invented).
+  var PLACES = [["Federal", "U.S. General Services Administration", "Region 2"], ["Federal", "Department of Veterans Affairs", "Regional office"], ["Federal", "U.S. Army Corps of Engineers", "District office"],
+    ["State", "Pennsylvania Department of General Services", "Harrisburg, PA"], ["State", "Texas Department of Transportation", "Austin, TX"], ["State", "Florida Department of Management Services", "Tallahassee, FL"],
+    ["State", "Ohio Department of Administrative Services", "Columbus, OH"], ["State", "California Department of General Services", "Sacramento, CA"], ["State", "Illinois Department of Central Management", "Springfield, IL"],
+    ["State", "Colorado Department of Personnel", "Denver, CO"], ["State", "Georgia Department of Administrative Services", "Atlanta, GA"], ["Local", "City of Philadelphia Procurement", "Philadelphia, PA"],
+    ["Local", "Harris County Purchasing", "Houston, TX"], ["Local", "City of Chicago Procurement Services", "Chicago, IL"], ["Local", "Miami-Dade County Internal Services", "Miami, FL"], ["Local", "NYC Department of Design and Construction", "New York City"]];
+  var WORK = [["Services", "Janitorial Services", 400000], ["Maintenance", "Elevator Maintenance and Repair", 260000], ["Construction", "Roof Replacement", 1900000], ["Construction", "Bridge Deck Rehabilitation", 5200000],
+    ["Information Technology", "Network Cabling and Wi-Fi Upgrade", 720000], ["Information Technology", "Cybersecurity Assessment Services", 340000], ["Landscaping", "Grounds Maintenance", 210000], ["Security", "Unarmed Guard Services", 880000],
+    ["Equipment", "Fleet Vehicle Lease", 1450000], ["Goods", "Office Supplies Requirements Contract", 150000], ["Printing", "Annual Printing and Mailing Services", 95000], ["Services", "Court Reporting Services", 180000]];
+  var EXTRA = [];
+  for (var i = 0; i < 90; i++) {
+    var pl = PLACES[(i * 7 + 3) % PLACES.length], w = WORK[(i * 5 + (i >> 2)) % WORK.length], n = 15 + i;
+    var value = Math.round(w[2] * (0.5 + ((i * 37) % 100) / 60) / 5000) * 5000;
+    EXTRA.push(R(n, pl[0], pl[1], w[1] + ", " + pl[2], w[0], -((i * 3) % 28) - 1, ((i * 11) % 55) - 2, value, pl[2],
+      i % 4 === 0 ? ["Small business set-aside"] : i % 5 === 0 ? ["MWBE goal"] : [], i % 4 === 0 ? "Small business set-aside" : null,
+      "Sample request for " + w[1].toLowerCase() + " (invented). Multi-year term with renewal options.",
+      ["Contractor shall provide all labor, materials and equipment.", "Proof of insurance shall be submitted with the bid."], i % 4 === 0 ? ["Small business"] : [], i % 9 === 0));
+  }
+  (window.LIVE_SOURCES = window.LIVE_SOURCES || []).push({ meta: { source: "SAMPLE DATA (not real)", fetchedAt: new Date().toISOString(), count: 14 + EXTRA.length }, rfqs: [
     R(1, "Federal", "General Services Administration", "Janitorial Services, Federal Building, Brooklyn", "Services", -6, 21, 1850000, "New York, NY", ["Small business set-aside"], "Small business set-aside",
       "Daily janitorial and day-porter services for a 400,000 sq ft federal office building, base year plus four option years. Service Contract Act wage determination applies.",
       ["Contractor shall provide all labor, supplies and equipment.", "Workers shall pass a background check and fingerprinting before badging."], ["Small business"]),
@@ -53,5 +71,5 @@
     R(14, "Local", "Department of Citywide Administrative Services", "Office Furniture Contract, Citywide", "Goods", -25, -3, 2100000, "New York City", [], null,
       "Citywide requirements contract for office furniture. (Sample of an already-closed request.)",
       ["Vendor shall provide a 10-year warranty."], [])
-  ] });
+  ].concat(EXTRA) });
 })();
