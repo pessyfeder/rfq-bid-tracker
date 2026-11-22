@@ -5,7 +5,7 @@
 (function () {
   var $app = document.getElementById("app");
   if (!$app) return;
-  var DAY = 86400000, PAGE = 25;
+  var DAY = 86400000, PAGE = /\.github\.io$/.test(location.hostname) ? 100 : 25; // the hosted demo lists more results per page
   var st = { view: (function () { try { return localStorage.getItem("rfq-view") === "grid" ? "grid" : "list"; } catch (e) { return "list"; } })(), kw: "", cats: [], where: [], close: [], posted: [], value: [], vmin: "", vmax: "", aside: [], sort: "new", shown: PAGE, dd: null, more: false, openG: { "My products": true } };
 
   var css = document.createElement("style");
@@ -653,7 +653,12 @@
     dp.innerHTML = '<div class="dp-bar"><span>Request details</span><span><a id="dp-full" href="#">Open full page &#8599;</a><button id="dp-x" aria-label="Close">&times;</button></span></div><iframe title="Request details"></iframe>';
     document.body.appendChild(back); document.body.appendChild(dp);
     var fr = dp.querySelector("iframe");
-    function close() { back.classList.remove("on"); dp.classList.remove("on"); setTimeout(function () { if (!dp.classList.contains("on")) fr.removeAttribute("src"); }, 300); }
+    // Browser Back closes the panel: opening pushes one history entry, and the iframe is loaded with
+    // location.replace so its own navigation never adds entries that Back would have to walk through first.
+    var pushed = false;
+    function hide() { back.classList.remove("on"); dp.classList.remove("on"); setTimeout(function () { if (!dp.classList.contains("on")) fr.removeAttribute("src"); }, 300); }
+    function close() { if (pushed) { pushed = false; try { history.back(); return; } catch (x) {} } hide(); }
+    window.addEventListener("popstate", function () { if (dp.classList.contains("on")) { pushed = false; hide(); } });
     back.addEventListener("click", close);
     dp.querySelector("#dp-x").addEventListener("click", close);
     document.addEventListener("keydown", function (e) { if (e.key === "Escape" && dp.classList.contains("on")) close(); });
@@ -662,8 +667,10 @@
       if (!a || e.ctrlKey || e.metaKey || e.shiftKey || e.button) return;
       e.preventDefault();
       dp.querySelector("#dp-full").href = a.getAttribute("href");
-      fr.src = a.getAttribute("href") + "&embed=1";
+      var url = a.getAttribute("href") + "&embed=1";
+      try { fr.contentWindow.location.replace(url); } catch (x) { fr.src = url; }
       back.classList.add("on"); dp.classList.add("on");
+      if (!pushed) { try { history.pushState({ dp: 1 }, ""); pushed = true; } catch (x) {} }
     });
   })();
 
