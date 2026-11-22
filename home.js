@@ -604,8 +604,8 @@
       return !toks.some(function (b, j) { return j !== i && Object.keys(b).length > a.length && a.every(function (w) { return b[w]; }); });
     });
     var h = "";
-    if (raw.requires == null && !raw.aiRead) h += '<span class="hm-flag unclear" role="button" tabindex="0" data-why="">Eligibility not checked</span>';
-    out.slice(0, FLAG_MAX).forEach(function (f) { h += '<span class="hm-flag ' + f.cls + '" role="button" tabindex="0" data-why="' + esc(f.why) + '">' + esc(f.label) + "</span>"; });
+    if (raw.requires == null && !raw.aiRead) h += '<span class="hm-flag unclear" title="Click for explanation" role="button" tabindex="0" data-why="">Eligibility not checked</span>';
+    out.slice(0, FLAG_MAX).forEach(function (f) { h += '<span class="hm-flag ' + f.cls + '" title="Click for explanation" role="button" tabindex="0" data-why="' + esc(f.why) + '">' + esc(f.label) + "</span>"; });
     if (out.length > FLAG_MAX) h += '<span class="hm-flag more" title="' + esc(out.slice(FLAG_MAX).map(function (f) { return f.label; }).join("; ")) + '">+' + (out.length - FLAG_MAX) + " more</span>";
     return h ? '<div class="hm-flags">' + h + "</div>" : "";
   }
@@ -638,7 +638,7 @@
   // ---------- chip explanation: click a coloured chip for a plain-language meaning ----------
   (function () {
     var css = document.createElement("style");
-    css.textContent = ".hm-flag{cursor:pointer}.hm-flag.sel{outline:2px solid currentColor}" +
+    css.textContent = ".hm-flag{cursor:pointer;box-shadow:0 1px 2px rgba(15,23,42,.25),inset 0 -1px 0 rgba(15,23,42,.12);transition:transform .08s,box-shadow .08s,filter .08s;user-select:none}.hm-flag:hover{filter:brightness(.94);box-shadow:0 2px 5px rgba(15,23,42,.3),inset 0 -1px 0 rgba(15,23,42,.12);transform:translateY(-1px)}.hm-flag:active{transform:translateY(1px);box-shadow:inset 0 1px 3px rgba(15,23,42,.3)}.hm-flag:focus-visible{outline:2px solid #2563eb;outline-offset:2px}.hm-flag.sel{outline:2px solid currentColor}" +
       "#hm-pop{position:absolute;z-index:900;max-width:320px;background:#fff;border:1px solid #cfd5de;border-radius:8px;box-shadow:0 6px 24px rgba(15,23,42,.2);padding:12px 14px;font:13px/1.45 Roboto,system-ui,sans-serif;color:#2d3a48}" +
       "#hm-pop b{display:block;margin-bottom:4px;color:#1f3a56}#hm-pop small{display:block;margin-top:8px;padding-top:6px;border-top:1px dashed #e4e4f0;color:#64748b;font-size:12px}";
     document.head.appendChild(css);
