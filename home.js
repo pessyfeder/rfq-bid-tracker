@@ -561,9 +561,19 @@
       var a = e.target.closest && e.target.closest(".hm-item h3 a");
       if (!a || e.ctrlKey || e.metaKey || e.shiftKey || e.button) return;
       e.preventDefault();
-      dp.querySelector("#dp-full").href = a.getAttribute("href");
-      var url = a.getAttribute("href") + "&embed=1";
-      try { fr.contentWindow.location.replace(url); } catch (x) { fr.src = url; }
+      var full = dp.querySelector("#dp-full");
+      if (window.__EXPLORE_TPL) {
+        // Single-file snapshot (no server): build the details page in place from the request already loaded in this page.
+        var rid = decodeURIComponent((/[?&]id=([^&]*)/.exec(a.getAttribute("href")) || [])[1] || ""), hit = null;
+        (window.RFQS || []).forEach(function (x) { if (String(x.id) === rid) hit = x; });
+        full.style.display = "none";
+        var inj = "<script>window.__RFQ = " + JSON.stringify(hit || { id: rid }).replace(/</g, "\\u003c").replace(/[\u2028\u2029]/g, " ") + ";</" + "script>";
+        fr.srcdoc = window.__EXPLORE_TPL.replace("<body>", function () { return "<body>" + inj; }); // function form: the data may contain "$&"
+      } else {
+        full.href = a.getAttribute("href");
+        var url = a.getAttribute("href") + "&embed=1";
+        try { fr.contentWindow.location.replace(url); } catch (x) { fr.src = url; }
+      }
       back.classList.add("on"); dp.classList.add("on");
       if (!pushed) { try { history.pushState({ dp: 1 }, ""); pushed = true; } catch (x) {} }
     });

@@ -75,7 +75,7 @@
 </style>
 </head>
 <body>
-<script>if (/[?&]embed=1/.test(location.search)) document.documentElement.classList.add("embed");</script>
+<script>if (window.__RFQ || /[?&]embed=1/.test(location.search)) document.documentElement.classList.add("embed");</script>
 <div class="nav"><div class="in"><span class="logo">Bid<i>.</i>Finder <span style="white-space:nowrap">&ndash; Discover Group, Inc.</span></span><a class="back" href="/" id="back">&larr; Back to bids</a><button type="button" class="back" id="navsel" title="Change which categories you see">&larr; Back to selection</button></div></div>
 <main>
   <div id="page">Loading&hellip;</div>
@@ -92,7 +92,7 @@
 </script>
 <script>
 (function () {
-  var id = new URLSearchParams(location.search).get("id") || "";
+  var id = window.__RFQ ? String(window.__RFQ.id) : new URLSearchParams(location.search).get("id") || ""; // window.__RFQ: set by the single-file snapshot (build-artifact.js), which has no server
   var $ = document.getElementById("page");
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
   function safeUrl(u) { return /^https?:\/\//i.test(String(u || "")) ? String(u) : ""; }
@@ -123,10 +123,10 @@
   if (history.length > 1 && document.referrer) document.getElementById("back").onclick = function (e) { e.preventDefault(); history.back(); }; // keeps Home's filters and scroll
 
   // Public demo (static GitHub Pages): no service, so read the request from the sample data.
-  var demo = /\.github\.io$/.test(location.hostname);
+  var demo = !!window.__RFQ || /\.github\.io$/.test(location.hostname);
   var apiGet = demo ? new Promise(function (ok) {
-    var hit = null;
-    (window.LIVE_SOURCES || []).forEach(function (s) { (s.rfqs || []).forEach(function (x) { if (String(x.id) === id) hit = x; }); });
+    var hit = window.__RFQ || null;
+    if (!hit) (window.LIVE_SOURCES || []).forEach(function (s) { (s.rfqs || []).forEach(function (x) { if (String(x.id) === id) hit = x; }); });
     ok(hit ? { status: 200, ok: true, json: function () { return Promise.resolve(Object.assign({ sourceUrl: hit.rfqUrl, region: hit.details && hit.details.region }, hit)); } } : { status: 404, ok: false });
   }) : fetch("/api/rfqs/" + encodeURIComponent(id));
   apiGet.then(function (r) {
