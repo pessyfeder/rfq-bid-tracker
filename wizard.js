@@ -150,7 +150,10 @@
     var saved = null;
     if (restore === true) { try { saved = JSON.parse(sessionStorage.getItem(WZKEY) || "null"); } catch (e) {} }
     var cur = load() || {};
-    var d = { cats: (cur.cats || []).slice(), extra: cur.extra || "",
+    // Only real bid categories ("c:..." ids) are listed. Older saves held the retired "My products" ids; those, or no save at all,
+    // mean "start from the categories that apply to Discover Group".
+    var oldCats = cur.cats || [], pend = !cur.cats || oldCats.some(function (i) { return String(i).slice(0, 2) !== "c:"; });
+    var d = { cats: oldCats.filter(function (i) { return String(i).slice(0, 2) === "c:"; }), extra: cur.extra || "",
       src: (cur.src || SOURCES.map(function (s) { return s.id; })).slice(), value: toArr(cur.value), aside: toArr(cur.aside), vmin: cur.vmin || "", vmax: cur.vmax || "" };
     close();
     back = document.createElement("div"); back.className = "wz-back";
@@ -158,16 +161,27 @@
 
     var openDd = false;
     // Every category: the product types (pre-selected) plus every category the bids themselves carry (not pre-selected).
-    var ALL = [];
+    var ALL = [], openG = {};
+    // Does a category apply to Discover Group? Its title mentions something Discover sells, or it sits in a goods group it sells from.
+    // Discover sells goods, not services, so service-type categories are left unticked.
+    var DG_GROUPS = ["Goods - Electronics & electrical", "Goods - Wholesale & supplies"];
+    var DG_RES = null;
+    function applies(o) {
+      if (!DG_RES) DG_RES = CATS.reduce(function (a, c) { return a.concat(c.kw); }, []).map(function (k) { return new RegExp("\\b" + esc(k).replace(/\s+/g, "\\s+") + "(?:s|es)?\\b", "i"); });
+      if (/\bserv(ice|ices)\b|\bsvcs\b|maintenance|leased space|surgical|\bvans?\b|minivan/i.test(o.label) && !/suppl|equipment|product|manufactur/i.test(o.label)) return false;
+      return DG_GROUPS.indexOf(o.group) >= 0 || DG_RES.some(function (re) { return re.test(o.label); });
+    }
     function loadAll() {
-      ALL = CATS.map(function (c) { return { v: c.id, label: c.label, group: "My products" }; });
-      // Bid categories come in their own groups, collapsed by default so the long list stays usable.
-      try { ALL = ALL.concat((window.RFQExtraCats ? window.RFQExtraCats() : []).map(function (o) { return { v: o.v, label: o.label, group: o.group }; })); } catch (e) {}
+      // Every bid category, in its own group; groups start collapsed so the long list stays usable.
+      try { ALL = (window.RFQExtraCats ? window.RFQExtraCats() : []).map(function (o) { return { v: o.v, label: o.label, group: o.group }; }); } catch (e) { ALL = []; }
+      if (pend && ALL.length) { // first time the list is known: tick what applies to Discover Group and open those groups
+        ALL.forEach(function (o) { if (applies(o)) { if (d.cats.indexOf(o.v) < 0) d.cats.push(o.v); openG[o.group] = true; } });
+        pend = false;
+      }
     }
     loadAll();
     function label() { return d.cats.length ? d.cats.length + " of " + ALL.length + " selected" : "All categories"; }
-    // Collapsible groups: a group checkbox ticks every category inside it; the arrow expands it. My products start open.
-    var openG = { "My products": true };
+    // Collapsible groups: a group checkbox ticks every category inside it; the arrow expands it.
     function groups() {
       var gs = [], idx = {};
       ALL.forEach(function (c) { if (!(c.group in idx)) { idx[c.group] = gs.length; gs.push({ name: c.group, items: [] }); } gs[idx[c.group]].items.push(c); });
@@ -196,7 +210,7 @@
     }
     // Step 2: which jurisdictions. Everything is ticked by default; all ticked is saved as "no restriction".
     var step = 1, J = [];
-    if (saved && saved.step >= 1 && saved.step <= 3 && saved.d) { Object.keys(saved.d).forEach(function (k) { d[k] = saved.d[k]; }); step = saved.step; }
+    if (saved && saved.step >= 1 && saved.step <= 3 && saved.d) { Object.keys(saved.d).forEach(function (k) { d[k] = saved.d[k]; }); step = saved.step; pend = false; }
     function loadJ() { try { J = window.RFQJurisdictions ? window.RFQJurisdictions() : []; } catch (e) { J = []; } }
     var openJ = false;
     function jLabel() { return d.where.length ? d.where.length + " of " + J.length + " selected" : "All locations"; }
@@ -246,7 +260,7 @@
       if (step === 2) return drawJ();
       if (!openDd) loadAll(); // pick up bid categories that arrived after the page loaded (live data)
       back.innerHTML = "<div class='wz' role='dialog' aria-modal='true' aria-label='Setup'><p class='wz-step'>Step 1</p><h2>Which request categories would you like to see?</h2>" +
-        "<p class='wz-note'>Pre-selected from discovergroup.net. Change them any time.</p>" +
+        "<p class='wz-note'>Every category is listed; the ones that apply to Discover Group, Inc. are pre-selected. Change them any time.</p>" +
         "<div class='wz-dd'><button type='button' class='wz-dd-btn' data-a='toggle' aria-expanded='" + openDd + "'><span>" + label() + "</span><span>&#9662;</span></button>" +
         (openDd ? "<div class='wz-dd-list'><div class='wz-dd-tools'><button type='button' class='link' data-a='none'>" + ((d.cats.length >= ALL.length) ? "Clear all" : "Select all") + "</button></div>" +
           listHtml() + "</div>" : "") + "</div>" +
