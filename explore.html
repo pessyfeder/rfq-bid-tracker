@@ -49,10 +49,6 @@
   .bid:hover { background:var(--navy2); }
   .bid.off { background:#c9d1dc; cursor:not-allowed; }
   .bid { border:0; cursor:pointer; font-family:inherit; }
-  .trk { flex:none; align-self:flex-start; white-space:nowrap; background:#fff; color:#4338ca; border:2px solid #4338ca; border-radius:999px; padding:8px 16px; font-weight:700; font-size:14px; cursor:pointer; font-family:inherit; }
-  .trk:hover { background:#eef0ff; }
-  .trk.on { color:#1b7a34; border-color:#1b7a34; }
-  .trkm { margin-top:6px; font-size:13px; }
   .chips, .links { display:flex; flex-wrap:wrap; gap:6px 8px; margin-top:6px; align-items:center; }
   .chip { display:inline-block; padding:3px 10px; border-radius:999px; font-size:12.5px; font-weight:600; background:#fff; border:1px solid #d9dcf5; color:var(--navy); }
   .chip.gate { background:#fff7e6; border-color:#f3d9a4; color:#8a5a00; }
@@ -76,25 +72,17 @@
 </head>
 <body>
 <script>if (/[?&]embed=1/.test(location.search)) document.documentElement.classList.add("embed");</script>
-<div class="nav"><div class="in"><span class="logo">Bid<i>.</i>Finder <span style="white-space:nowrap">&ndash; Discover Group, Inc.</span></span><a class="back" href="/" id="back">&larr; Back to bids</a><button type="button" class="back" id="navsel" title="Change which categories you see">&larr; Back to selection</button><button type="button" class="back" id="navmb" title="Bids you are tracking: checklist, notes and closing-date reminders">My bids<span id="hm-mb"></span></button></div></div>
+<div class="nav"><div class="in"><span class="logo">Bid<i>.</i>Finder <span style="white-space:nowrap">&ndash; Discover Group, Inc.</span></span><a class="back" href="/" id="back">&larr; Back to bids</a><button type="button" class="back" id="navsel" title="Change which categories you see">&larr; Back to selection</button></div></div>
 <main>
   <div id="page">Loading&hellip;</div>
 </main>
 <script src="facts.js"></script>
 <script src="sample-data.js"></script>
-<script src="mybids.js"></script>
 <script>
 (function () {
-  var sel = document.getElementById("navsel"), mb = document.getElementById("navmb");
+  var sel = document.getElementById("navsel");
   // Back to selection: the main page opens the category setup on a fresh visit.
   sel.onclick = function () { try { sessionStorage.removeItem("rfqStarted"); } catch (e) {} location.href = "/"; };
-  mb.onclick = function () { if (window.RFQBids) window.RFQBids.open(); };
-  function badge() {
-    var el = document.getElementById("hm-mb"); if (!el || !window.RFQBids) return;
-    var n = window.RFQBids.count(), due = window.RFQBids.dueSoon(3).length;
-    el.innerHTML = n ? '<span class="hm-badge' + (due ? " due" : "") + '">' + n + "</span>" : "";
-  }
-  badge(); window.addEventListener("rfqbidschange", badge);
 })();
 </script>
 <script>
@@ -160,9 +148,7 @@
     var v = r.value || {};
     var ICON = '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg>';
     var agency = r.agency && nice(r.agency);
-    var h = '<div class="head"><div class="tile">' + ICON + '</div><div class="grow"><div class="eyebrow">' + esc(agency || "Request for quotation") + "</div><h1>" + esc(plain || title) + "</h1></div>" +
-      (window.RFQBids ? '<button type="button" class="trk" id="trkbtn"></button>' : "") + "</div>" +
-      (window.RFQBids ? '<div class="small trkm" id="trkmsg"></div>' : "");
+    var h = '<div class="head"><div class="tile">' + ICON + '</div><div class="grow"><div class="eyebrow">' + esc(agency || "Request for quotation") + "</div><h1>" + esc(plain || title) + "</h1></div></div>";
     if (plain) h += '<div class="sub">Original title: ' + esc(title) + "</div>";
 
     // key facts: due date, value, posted
@@ -268,10 +254,11 @@
       if (!restates && desc) req += li(brief(desc));
       qs.forEach(function (q) { req += li("Quantity: " + q); });
       var who = "";
-      (r.requires || []).forEach(function (q) { who += li(q); });
+      var reg = "", REG = /regist|\bCAGE\b|\bUEI\b|vendor (?:number|id)|PASPort|SAM\.gov|\bSAM\b/i;
+      (r.requires || []).forEach(function (q) { if (REG.test(q)) reg += li(q); else who += li(q); });
       if (r.restriction && !(r.requires || []).length) who += li(window.asideLabel ? window.asideLabel(r.restriction) : r.restriction);
-      gates.forEach(function (f) { who += gc(f); });
-      if (!who) who = li(r.requires == null ? "Eligibility not checked: the notice documents were not read." : "Open to all bidders, as far as the notice says.");
+      gates.forEach(function (f) { if (REG.test(f.label)) reg += gc(f); else who += gc(f); });
+      if (!who && !reg) who = li(r.requires == null ? "Eligibility not checked: the notice documents were not read." : "Open to all bidders, as far as the notice says.");
       var costs = rest.filter(function (f) { return f.sev === "cost"; }).map(gc).join("");
       var info = rest.filter(function (f) { return f.sev !== "cost"; }).map(gc).join("");
       var details = costs + info;
@@ -282,28 +269,13 @@
       if (contact.phone) cb.push(esc(contact.phone));
       var cinfo = cb.length ? "<li>" + cb.join(" &middot; ") + "</li>" : "<li>No contact stated. Ask through the posting site.</li>";
       if (!req) req = li(r.title || "Not stated in the notice.");
-      var g = '<section class="glance">' + (link ? '<a class="rfqdoc" href="' + esc(link) + '" target="_blank" rel="noopener">View RFQ doc &#8599;</a>' : "") + '<h2>At a glance</h2><ol class="g-list">' + row("Request + Description", req) + row("Who can bid", who) + row("Important Details", details) + row("Contact Information", cinfo) + "</ol>" +
+      var g = '<section class="glance">' + (link ? '<a class="rfqdoc" href="' + esc(link) + '" target="_blank" rel="noopener">View RFQ doc &#8599;</a>' : "") + '<h2>At a glance</h2><ol class="g-list">' + row("Request + Description", req) + row("Who can bid", who) + row("Registration", reg) + row("Important Details", details) + row("Contact Information", cinfo) + "</ol>" +
         (!r.aiRead && !r.scope ? '<p class="small">The notice text was not read, so only what the posting itself states is shown.</p>' : "") + "</section>";
       h = h.replace("<!--GLANCE-->", g);
     })();
 
     h += '<div class="foot">ID ' + esc(r.id) + " · first seen " + esc(mdy(r.firstSeen)) + " · last updated " + esc(mdy(r.updatedAt)) + "</div>";
     $.innerHTML = h;
-    var tb = document.getElementById("trkbtn");
-    if (tb) {
-      var paint = function () {
-        var on = window.RFQBids.has(r.id);
-        tb.className = "trk" + (on ? " on" : ""); tb.innerHTML = on ? "&#10003; Tracking this bid" : "&#9734; Track this bid";
-        document.getElementById("trkmsg").innerHTML = on ? 'Checklist, notes and a closing-date reminder are in <a href="#" id="trkopen">My bids</a>. Click again to stop tracking.' : "Start a checklist, notes and a closing-date reminder for this bid.";
-        var o = document.getElementById("trkopen"); if (o) o.onclick = function (e) { e.preventDefault(); window.RFQBids.open(); };
-      };
-      tb.onclick = function () {
-        if (window.RFQBids.has(r.id) && !window.confirm("Stop tracking this bid? Its checklist and notes will be deleted.")) return;
-        window.RFQBids.toggle({ id: r.id, title: plain || title, agency: agency || "", where: [r.region, r.level].filter(Boolean).join(", "), due: real ? r.due : "", url: link });
-        paint();
-      };
-      paint();
-    }
   }
 })();
 </script>
