@@ -182,6 +182,8 @@ function ingest(state, now = new Date()) {
 // Public view of a record (internal fields removed).
 function publicRecord(rec) {
   const { _h, ...rest } = rec;
+  // records stored before the name check existed may carry a sentence in the name field
+  if (rest.contact) { const k = rest.contact; rest.contact = require("../contacts").make(k.name, k.email, k.phone); }
   return rest;
 }
 

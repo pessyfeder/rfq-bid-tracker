@@ -308,8 +308,8 @@ function statesHealth(sourceId) {
 // are private.
 const STATIC_OK = /^\/(index\.html|explore\.html|profile\.html|facts\.js|wizard\.js|home\.js|data\.js|sample-data\.js|live-(nyc|sam|states)\.js)?$/;
 const PAGE_HEADERS = {
-  // Defence in depth: no inline event handlers, no remote scripts, no framing, even if agency text slipped through unescaped.
-  "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'none'; form-action 'none'",
+  // Defence in depth: no inline event handlers, no remote scripts, no framing by other sites (our own side panel frames the details page), even if agency text slipped through unescaped.
+  "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; frame-ancestors 'self'; base-uri 'none'; form-action 'none'",
   "X-Content-Type-Options": "nosniff"
 };
 

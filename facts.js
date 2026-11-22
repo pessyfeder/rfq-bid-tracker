@@ -14,7 +14,7 @@
     { label: "Performance / payment bond", sev: "cost", re: /(performance|payment|surety)\s+(bond|security)|\bsurety\b|bonding/i },
     { label: "Insurance minimums",         sev: "cost", re: /\binsurance\b|general liability|workers.? comp/i },
     { label: "Prevailing / living wage",   sev: "cost", re: /prevailing wage|living wage|service contract (labor )?standards|\bSCA\b|davis[- ]bacon|wage determination|\bunions?\b(?!\s+(station|square|city|county|pacific|street|avenue))|collective bargaining/i },
-    { label: "Mandatory site visit / pre-bid", sev: "cost", re: /(mandatory|required)[^.]{0,60}(pre-?bid|site (visit|walk)|walk-?through|conference)|pre-?bid[^.]{0,40}mandatory/i },
+    { label: "Mandatory site visit / pre-bid", sev: "cost", re: /(mandatory|required)[^.]{0,60}(pre-?bid|site (visit|walk)|walk-?through|conference)|pre-?bid[^.]{0,40}mandatory|(site (visit|walk)|walk-?through)[^.]{0,30}(required|mandatory)/i },
     { label: "24/7 or after-hours",        sev: "cost", re: /24\s*\/\s*7|24[- ]hour|after[- ]hours|overnight|night shift|on-?call|emergency response/i },
     // note: true = the chip shows as written (a condition of the job), not as "Must provide ...".
     { label: "Domestic-content rule (Buy America / TAA)", sev: "cost", re: /buy america|buy american|\bBABA\b|trade agreements act|\bTAA\b|domestic (content|preference|product)|made in (the )?(usa|u\.s\.)|country of origin/i },

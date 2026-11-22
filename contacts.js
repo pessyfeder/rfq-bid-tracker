@@ -10,9 +10,13 @@ const ROLE = "Contracting Officer|Contract Specialist|Contract Officer|Procureme
 
 const tidy = (s, max) => (typeof s === "string" ? s.replace(/\s+/g, " ").trim().slice(0, max) : "");
 
+// A person's name, not a sentence some agencies type into the name field ("Questions regarding this solicitation ...").
+const looksLikeName = (n) => n.length <= 60 && n.split(" ").length <= 5 && !/[@\d:;]/.test(n) && !/\b(questions?|regarding|solicitation|email|emailed|please|contact|listed|buyer|see|refer|n\/a|none|tbd)\b/i.test(n);
+
 function make(name, email, phone) {
   const c = {};
-  const n = tidy(name, 80), e = tidy(email, 120), p = tidy(phone, 40);
+  const n0 = tidy(name, 400), n = looksLikeName(n0) ? n0 : "";
+  const e = tidy(email, 120), p = tidy(phone, 40);
   if (n) c.name = n;
   if (/^[^\s@<>"]+@[^\s@<>"]+\.[A-Za-z]{2,}$/.test(e)) c.email = e;
   if (p && /\d{3}\D*\d{3}\D*\d{4}/.test(p)) c.phone = p;
