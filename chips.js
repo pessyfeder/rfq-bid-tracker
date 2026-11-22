@@ -18,7 +18,7 @@
     var same = cur === chip; close(); if (same) return;
     if (chip.hasAttribute("title") && !chip.hasAttribute("data-why") && chip.getAttribute("title") !== TIP) chip.setAttribute("data-why", chip.getAttribute("title"));
     chip.removeAttribute("title"); // no tooltip while the explanation is open
-    var label = chip.textContent.replace(/^\s*[⚑⚠]\s*/, "").replace(/^Possible: /, "").trim();
+    var label = (chip.getAttribute("data-key") || chip.textContent).replace(/^\s*[⚑⚠]\s*/, "").replace(/^Possible: /, "").trim();
     var key = label.replace(/^Must provide (\w)/, function (m, c) { return c.toUpperCase(); });
     var text = window.explainFact ? (window.explainFact(key) || window.explainFact(label)) : "";
     var why = (chip.getAttribute("data-why") || "").replace(/^Possible, keyword match: /, "");

@@ -105,6 +105,10 @@
     "Past performance / references": "The buyer will check your past jobs or references. Have similar projects and contacts ready.",
     "Multi-year / renewal term": "The contract can run several years or be renewed. That is steady work, but your price is held for a long time."
   };
+  var OPEN_ALL = "Open to all businesses";
+  EXPLAIN[OPEN_ALL] = "When a notice says no set-aside is used, any company can bid, regardless of size or ownership status. You compete against larger firms, but you also don't need a special certification.";
+  // "No Set aside used" (as SAM.gov words it) is shown as "Open to all businesses"
+  root.asideLabel = function (s) { return /^\s*no set[- ]?aside( used)?\.?\s*$/i.test(String(s || "")) ? OPEN_ALL : s; };
   function explainFact(label) {
     label = String(label || "");
     if (EXPLAIN[label]) return EXPLAIN[label];

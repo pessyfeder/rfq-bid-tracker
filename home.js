@@ -608,6 +608,7 @@
     var out = [], seen = {};
     function add(label, cls, why) {
       // Every plain small-business set-aside wording ("Small Business Set Aside - Total", "100% Small business set-aside", ...) is one chip.
+      if (window.asideLabel) label = window.asideLabel(label);
       var sl = String(label || "").toLowerCase();
       if (/small business/.test(sl) && /set[- ]?aside/.test(sl) && !/partial|veteran|sdvos?b|vosb|wosb|women|hubzone|8\(a\)|minority|mbe|wbe|dbe|sdvob/.test(sl)) label = "Small Business Set Aside";
       var k = String(label).toLowerCase(); if (!label || seen[k]) return; seen[k] = 1;
