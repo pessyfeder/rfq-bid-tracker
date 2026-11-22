@@ -196,7 +196,7 @@
     }
     // Step 2: which jurisdictions. Everything is ticked by default; all ticked is saved as "no restriction".
     var step = 1, J = [];
-    if (saved && saved.step >= 1 && saved.step <= 4 && saved.d) { Object.keys(saved.d).forEach(function (k) { d[k] = saved.d[k]; }); step = saved.step; }
+    if (saved && saved.step >= 1 && saved.step <= 3 && saved.d) { Object.keys(saved.d).forEach(function (k) { d[k] = saved.d[k]; }); step = saved.step; }
     function loadJ() { try { J = window.RFQJurisdictions ? window.RFQJurisdictions() : []; } catch (e) { J = []; } }
     var openJ = false;
     function jLabel() { return d.where.length ? d.where.length + " of " + J.length + " selected" : "All locations"; }
@@ -216,32 +216,17 @@
           }).join("") + "</div>" : "") + "</div>" +
         "<div class='wz-btns'><button data-a='back'>&larr; Back</button><button class='pri' data-a='next3'>Next &rarr;</button></div></div>";
     }
-    // Step 3: which bid value. Stored as the same keys the main page's "Bid value" filter uses ("any" = no restriction).
-    var openV = false;
-    function multiLabel(opts, sel, none) { var o = opts.filter(function (x) { return sel.indexOf(x[0]) >= 0; }); return !o.length ? none : o.length === 1 ? o[0][1] : o.length + " selected"; }
-    function vLabel() { return multiLabel(VALUE_OPTS, d.value, "Any value"); }
-    function drawV() {
-      back.innerHTML = "<div class='wz' role='dialog' aria-modal='true' aria-label='Setup'><p class='wz-step'>Step 3</p><h2>Which value would you like to see?</h2>" +
-        "<p class='wz-note'>Many bids do not state a value; choosing a range hides those. Change it any time.</p>" +
-        "<div class='wz-dd'><button type='button' class='wz-dd-btn' data-a='vtoggle' aria-expanded='" + openV + "'><span>" + h(vLabel()) + "</span><span>&#9662;</span></button>" +
-        (openV ? "<div class='wz-dd-list'><div class='wz-dd-tools'><button type='button' class='link' data-a='vnone'>" + ((d.value.length >= VALUE_OPTS.length) ? "Clear all" : "Select all") + "</button></div>" + VALUE_OPTS.map(function (o) {
-          return "<label class='wz-row'><input type='checkbox' data-vpick='" + h(o[0]) + "'" + (d.value.indexOf(o[0]) >= 0 ? " checked" : "") + "> <span>" + h(o[1]) + "</span></label>";
-        }).join("") + "</div>" : "") + "</div>" +
-        "<div class='wz-cust' data-cust" + (d.value.indexOf("custom") >= 0 ? "" : " hidden") + "><label>From $ <input type='text' inputmode='numeric' data-vmin placeholder='no minimum' value='" + h(d.vmin) + "'></label>" +
-        "<label>To $ <input type='text' inputmode='numeric' data-vmax placeholder='no maximum' value='" + h(d.vmax) + "'></label></div>" +
-        "<div class='wz-btns'><button data-a='back3'>&larr; Back</button><button class='pri' data-a='next4'>Next &rarr;</button></div></div>";
-    }
-    // Step 4: which eligibility would you like to see? Which set-aside / eligibility group the vendor belongs to.
+    // Step 3: which eligibility would you like to see? Which set-aside / eligibility group the vendor belongs to.
     var openA = false;
     function aLabel() { return multiLabel(ASIDE_OPTS, d.aside, "Anyone"); }
     function drawA() {
-      back.innerHTML = "<div class='wz' role='dialog' aria-modal='true' aria-label='Setup'><p class='wz-step'>Step 4</p><h2>Which eligibility criteria would you like to see?</h2>" +
+      back.innerHTML = "<div class='wz' role='dialog' aria-modal='true' aria-label='Setup'><p class='wz-step'>Step 3</p><h2>Which eligibility criteria would you like to see?</h2>" +
         "<p class='wz-note'>Some bids are reserved for certain businesses. Pick the eligibility you want to see. Change it any time.</p>" +
         "<div class='wz-dd'><button type='button' class='wz-dd-btn' data-a='atoggle' aria-expanded='" + openA + "'><span>" + h(aLabel()) + "</span><span>&#9662;</span></button>" +
         (openA ? "<div class='wz-dd-list'><div class='wz-dd-tools'><button type='button' class='link' data-a='anone'>" + ((d.aside.length >= ASIDE_OPTS.length) ? "Clear all" : "Select all") + "</button></div>" + ASIDE_OPTS.map(function (o) {
           return "<label class='wz-row'><input type='checkbox' data-apick='" + h(o[0]) + "'" + (d.aside.indexOf(o[0]) >= 0 ? " checked" : "") + "> <span>" + h(o[1]) + "</span></label>";
         }).join("") + "</div>" : "") + "</div>" +
-        "<div class='wz-btns'><button data-a='back4'>&larr; Back</button><button class='pri' data-a='finish'>Show me my RFQs</button></div></div>";
+        "<div class='wz-btns'><button data-a='back3'>&larr; Back</button><button class='pri' data-a='finish'>Show me my RFQs</button></div></div>";
     }
     function collectJ() {
       var boxes = back.querySelectorAll("[data-jur]");
@@ -252,8 +237,7 @@
       drawStep();
     }
     function drawStep() {
-      if (step === 4) return drawA();
-      if (step === 3) return drawV();
+      if (step === 3) return drawA();
       if (step === 2) return drawJ();
       if (!openDd) loadAll(); // pick up bid categories that arrived after the page loaded (live data)
       back.innerHTML = "<div class='wz' role='dialog' aria-modal='true' aria-label='Setup'><p class='wz-step'>Step 1</p><h2>Which request categories would you like to see?</h2>" +
@@ -273,18 +257,12 @@
         Array.prototype.forEach.call(back.querySelectorAll("[data-kids='" + t.dataset.grp + "'] [data-cat]"), function (el) { el.checked = t.checked; });
         collect(); sync();
       } else if (t.dataset.cat) { collect(); sync(); }
-      else if (t.dataset.vpick != null) {
-        d.value = Array.prototype.map.call(back.querySelectorAll("[data-vpick]:checked"), function (el) { return el.dataset.vpick; });
-        var vb = back.querySelector(".wz-dd-btn span"); if (vb) vb.textContent = vLabel();
-        var vc = back.querySelector("[data-cust]"); if (vc) vc.hidden = d.value.indexOf("custom") < 0;
-      }
       else if (t.dataset.apick != null) {
         d.aside = Array.prototype.map.call(back.querySelectorAll("[data-apick]:checked"), function (el) { return el.dataset.apick; });
         var ab = back.querySelector(".wz-dd-btn span"); if (ab) ab.textContent = aLabel();
       }
       else if (t.dataset.jur) { collectJ(); var jl = back.querySelector(".wz-dd-btn span"); if (jl) jl.textContent = jLabel(); }
     });
-    back.addEventListener("input", function (e) { var t = e.target; if (t.dataset.vmin != null) d.vmin = t.value; else if (t.dataset.vmax != null) d.vmax = t.value; });
     back.addEventListener("click", function (e) {
       var g = e.target.closest("[data-g]"); if (!g) return;
       var gr = groups()[+g.dataset.g], kids = back.querySelector("[data-kids='" + g.dataset.g + "']");
@@ -296,28 +274,24 @@
       var s = ev.state && ev.state.wz;
       if (!s) { close(); return; } // Back past step 1: leave the wizard
       if (step === 2) collectJ(); else if (step === 1) collect();
-      step = s; openJ = openV = openA = false; draw();
+      step = s; openJ = openA = false; draw();
     };
     window.addEventListener("popstate", onPop);
     back.addEventListener("click", function (e) {
       var a = e.target.closest("[data-a]"); if (!a) return;
       var act = a.dataset.a;
       if (step === 2) collectJ(); else if (step === 1) collect();
-      if (pushed && (act === "back" || act === "back3" || act === "back4")) { history.back(); return; }
+      if (pushed && (act === "back" || act === "back3")) { history.back(); return; }
       var before = step;
       if (act === "toggle") openDd = !openDd;
       else if (act === "none") d.cats = d.cats.length >= ALL.length ? [] : ALL.map(function (o) { return o.v; });
       else if (act === "jtoggle") openJ = !openJ;
-      else if (act === "vtoggle") openV = !openV;
       else if (act === "atoggle") openA = !openA;
-      else if (act === "vnone") d.value = d.value.length >= VALUE_OPTS.length ? [] : VALUE_OPTS.map(function (o) { return o[0]; });
       else if (act === "anone") d.aside = d.aside.length >= ASIDE_OPTS.length ? [] : ASIDE_OPTS.map(function (o) { return o[0]; });
-      else if (act === "next4") { step = 4; openA = false; }
-      else if (act === "back4") { step = 3; openV = false; }
       else if (act === "jnone") d.where = d.where.length >= J.length ? [] : J.map(function (o) { return o.v; });
       else if (act === "back") { step = 1; openJ = false; }
       else if (act === "back3") { step = 2; openJ = false; }
-      else if (act === "next3") { step = 3; openV = false; }
+      else if (act === "next3") { step = 3; openA = false; }
       else if (act === "done") {
         step = 2; openJ = false;
       }
