@@ -15,6 +15,7 @@
   .logo i { font-style:normal; color:#f59e0b; }
   .back { border:1px solid var(--acc); background:#fff; color:var(--acc); border-radius:999px; padding:5px 14px; font-weight:600; font-size:13px; text-decoration:none; }
   .back:hover { background:var(--soft); }
+  button.back { font-family:inherit; cursor:pointer; line-height:inherit; }
   main { max-width:760px; margin:0 auto; padding:28px 24px 64px; }
   h1 { margin:0; font-size:26px; font-weight:700; line-height:1.28; letter-spacing:-.02em; color:#27264f; overflow-wrap:anywhere; }
   .sub { color:var(--mut); margin-top:4px; font-size:13px; }
@@ -75,13 +76,27 @@
 </head>
 <body>
 <script>if (/[?&]embed=1/.test(location.search)) document.documentElement.classList.add("embed");</script>
-<div class="nav"><div class="in"><span class="logo">Bid<i>.</i>Finder <span style="white-space:nowrap">&ndash; Discover Group, Inc.</span></span><a class="back" href="/" id="back">&larr; Back to bids</a></div></div>
+<div class="nav"><div class="in"><span class="logo">Bid<i>.</i>Finder <span style="white-space:nowrap">&ndash; Discover Group, Inc.</span></span><a class="back" href="/" id="back">&larr; Back to bids</a><button type="button" class="back" id="navsel" title="Change which categories you see">&larr; Back to selection</button><button type="button" class="back" id="navmb" title="Bids you are tracking: checklist, notes and closing-date reminders">My bids<span id="hm-mb"></span></button></div></div>
 <main>
   <div id="page">Loading&hellip;</div>
 </main>
 <script src="facts.js"></script>
 <script src="sample-data.js"></script>
 <script src="mybids.js"></script>
+<script>
+(function () {
+  var sel = document.getElementById("navsel"), mb = document.getElementById("navmb");
+  // Back to selection: the main page opens the category setup on a fresh visit.
+  sel.onclick = function () { try { sessionStorage.removeItem("rfqStarted"); } catch (e) {} location.href = "/"; };
+  mb.onclick = function () { if (window.RFQBids) window.RFQBids.open(); };
+  function badge() {
+    var el = document.getElementById("hm-mb"); if (!el || !window.RFQBids) return;
+    var n = window.RFQBids.count(), due = window.RFQBids.dueSoon(3).length;
+    el.innerHTML = n ? '<span class="hm-badge' + (due ? " due" : "") + '">' + n + "</span>" : "";
+  }
+  badge(); window.addEventListener("rfqbidschange", badge);
+})();
+</script>
 <script>
 (function () {
   var id = new URLSearchParams(location.search).get("id") || "";

@@ -333,9 +333,9 @@ function statesHealth(sourceId) {
 
 // The human page (index.html + live-*.js) is served to this machine only: statuses and bid interest
 // are private.
-const STATIC_OK = /^\/(index\.html|explore\.html|profile\.html|facts\.js|chips\.js|wizard\.js|home\.js|mybids\.js|data\.js|sample-data\.js|live-(nyc|sam|states)\.js)?$/;
+const STATIC_OK = /^\/(index\.html|explore\.html|profile\.html|facts\.js|chips\.js|wizard\.js|home\.js|shared\.js|mybids\.js|data\.js|sample-data\.js|live-(nyc|sam|states)\.js)?$/;
 const PAGE_HEADERS = {
-  // Defence in depth: no inline event handlers, no remote scripts, no framing by other sites (our own side panel frames the details page), even if agency text slipped through unescaped.
+  // Defence in depth: no remote scripts or styles, no framing by other sites (our own side panel frames the details page), no base-tag or form hijacking. NOTE: 'unsafe-inline' is still allowed for scripts and styles because the pages use inline <script> blocks and onerror= handlers, so this does NOT stop injected inline script; escaping agency text is the real defence. Tightening that means moving the inline scripts into files and using a nonce or hash.
   "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; frame-ancestors 'self'; base-uri 'none'; form-action 'none'",
   "X-Content-Type-Options": "nosniff"
 };

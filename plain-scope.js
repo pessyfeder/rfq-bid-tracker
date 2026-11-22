@@ -5,7 +5,7 @@
 const SWAPS = [
   [/\bthe contractor shall\b/gi, "The contractor must"],
   [/\bthe offeror shall\b/gi, "The bidder must"],
-  [/\bcontractor\b/gi, "contractor"],
+  [/\bcontractor\b/gi, (m) => m.toLowerCase()], // case-normalize mid-sentence "Contractor"
   [/\boff?erors?\b/gi, "bidders"],
   [/\bshall furnish\b/gi, "must provide"],
   [/\bshall provide\b/gi, "must provide"],
@@ -18,12 +18,11 @@ const SWAPS = [
   [/\bcommence\b/gi, "start"],
   [/\butilize[sd]?\b/gi, "use"],
   [/\bin the event that\b/gi, "if"],
-  [/\bwithin\s+(\d+)\s+miles of\b/gi, "within $1 miles of"],
+  [/\bwithin\s+(\d+)\s+miles of\b/gi, (m, n) => `within ${n} miles of`], // case/whitespace-normalize
   [/\bmaterial material\b/gi, "material"] // doubled word seen in source text
 ];
 
 const ABBR = [
-  [/\bJEBLC\b/g, "JEBLC"], // kept: spelled out in the text itself
   [/\bIDIQ\b/g, "indefinite-delivery contract"],
   [/\bMILCON\b/g, "military construction"],
   [/\bPWS\b/g, "performance work statement"],
@@ -63,7 +62,7 @@ function dlaScope(text) {
   const place = (w) => titleCase(w.replace(/^[A-Z0-9]{4}\s+(?=[A-Z])/, "").replace(/\bDIST\b/g, "Distribution")).replace(/\bDla\b/g, "DLA");
   const where = [...new Set(lines.map((l) => place((l[3] || "").trim())).filter((w) => w))];
   const days = Math.max(...lines.map((l) => Number(l[4])));
-  const item = titleCase(m[2].replace(/\s*,\s*/g, ", ")).replace(/(\w)$/, "$1");
+  const item = titleCase(m[2].replace(/\s*,\s*/g, ", "));
   let out = `Defense Logistics Agency wants to buy ${qty.toLocaleString("en-US")}${unit ? " " + unit : ""} of ${item.toLowerCase()} (part number ${m[1]})`;
   if (where.length) out += `, delivered to ${(where.length > 1 ? where[0] + " and others" : where[0])}`;
   if (days) out += `, within ${days} days of award`;
