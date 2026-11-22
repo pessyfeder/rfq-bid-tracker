@@ -36,3 +36,6 @@ Discover Group real anthropic api key.txt
 # Built distribution zip (contains node.exe)
 dist/
 
+
+# SAM.gov fetch single-run lock
+sam-run.lock

@@ -184,16 +184,48 @@ async function enrich(r, o, text, AI_KEY) {
     if (ai.naics) r.naics = ai.naics;
     if (ai.dueDate) r.docDue = ai.dueDate;
     r.aiRead = true;
+    if (!r.scope) r.scope = require("./plain-scope").plainScope(text);
     return true;
   }
+  // No AI read (no key, or too little text): still build a plain-language description from the Description text.
+  if (!r.scope) r.scope = require("./plain-scope").plainScope(text);
   return false;
 }
 
+// One run at a time. Two runs share sam-cache.json and the quota count, so a second one would overwrite the first's
+// work and spend the budget twice. A lock file holds the running process id; a stale one (process gone) is ignored.
+const LOCK_FILE = path.join(__dirname, "sam-run.lock");
+function takeLock() {
+  try {
+    const other = Number(fs.readFileSync(LOCK_FILE, "utf8"));
+    if (other && other !== process.pid) {
+      let alive = false;
+      try { process.kill(other, 0); alive = true; } catch (e) { alive = e.code === "EPERM"; }
+      if (alive) { console.log(`Another SAM.gov fetch (pid ${other}) is already running; not starting a second one.`); process.exit(0); }
+    }
+  } catch (_) { /* no lock yet */ }
+  fs.writeFileSync(LOCK_FILE, String(process.pid));
+  process.on("exit", () => { try { if (Number(fs.readFileSync(LOCK_FILE, "utf8")) === process.pid) fs.unlinkSync(LOCK_FILE); } catch (_) {} });
+}
+
 (async () => {
+  takeLock();
   const today = require("./et-today").etToday();
   const cache = readJson(CACHE_FILE, { searchedThrough: null, resume: null, notices: {} });
   const notices = cache.notices;
   const AI_KEY = process.env.ANTHROPIC_API_KEY;
+  // Fill the blanks in this same run. A notice already marked done can still be missing its description (read earlier with
+  // no result) or have only the plain-wording fallback while a key is now set. Put each back in the queue ONCE (flags
+  // `healed` / `aiTried` stop it looping), so the description loop below reads it with the AI if the key is set,
+  // or with the plain-wording fallback if not.
+  let healed = 0;
+  for (const n of Object.values(notices)) {
+    if (!n.descDone || !n.descUrl || n.rfq.due < today) continue;
+    const blank = !n.rfq.scope && !n.healed;
+    const upgrade = AI_KEY && !n.aiTried && !n.rfq.aiRead;
+    if (blank || upgrade) { n.descDone = false; n.tries = 0; if (blank) n.healed = true; healed++; }
+  }
+  if (healed) console.log(`${healed} already-read notices are missing their description or AI read; they are re-read in this run.`);
   if (!AI_KEY) console.log("ANTHROPIC_API_KEY not set: skipping AI reading (requires/scope/key points stay as basic values).");
   console.log(`SAM.gov budget: ${BUDGET}/day, ${quota.used} used so far today (UTC).`);
   let stopped = null, added = 0, described = 0, aiOk = 0;
@@ -245,6 +277,7 @@ async function enrich(r, o, text, AI_KEY) {
         if (dj && typeof dj.description === "string") {
           const aiRead = await enrich(n.rfq, n.raw, dj.description, AI_KEY);
           if (aiRead) aiOk++;
+          if (AI_KEY) n.aiTried = true;
           // Done only if the AI read worked or no key is set; otherwise retry next run (up to 3 tries).
           if (aiRead || !AI_KEY || ++n.tries >= 3) n.descDone = true;
           described++;

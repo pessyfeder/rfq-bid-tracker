@@ -249,12 +249,23 @@ function onWake(slept) {
   log(`woke after ~${Math.round(slept)}s asleep and no refresh yet this morning; refreshing in ${CFG.wakeDelaySec}s (network may still be coming up)`);
   wakeTimer = setTimeout(() => { wakeTimer = null; runRefresh("wake from sleep, first of the morning"); }, CFG.wakeDelaySec * 1000);
 }
+// SAM.gov's request quota resets at 00:00 UTC. If the last SAM run stopped at the quota with descriptions still waiting
+// and the UTC day has changed since, one SAM-only run fills them (AI read if ANTHROPIC_API_KEY is set, plain-wording
+// fallback if not; fetch-sam.js does both in the same pass). Never starts while another refresh is running or while the
+// morning refresh is still due: that refresh includes SAM, so there is only ever one run.
+function samBacklogAfterReset() {
+  if (!process.env.SAM_API_KEY) return false;
+  const run = state.runs.sam || {}, src = state.sources.sam || {};
+  if (!(src.descriptionsWaiting > 0) || !run.lastAttempt) return false;
+  return run.lastAttempt.slice(0, 10) < new Date().toISOString().slice(0, 10);
+}
 function startScheduler() {
   let last = Date.now();
   setInterval(() => {
     const now = Date.now(), gap = now - last; last = now;
     if (gap > TICK_MS * 3) onWake(gap / 1000);                          // slept
     else if (!refresh.running && !wakeTimer && due()) runRefresh("first refresh of the morning");
+    else if (!refresh.running && !wakeTimer && !followTimer && samBacklogAfterReset()) runRefresh("SAM.gov daily reset: filling the blanks", { only: new Set(["sam"]) });
   }, TICK_MS);
   log(`refresh rule: once per day, first tick/wake after ${CFG.morningHour}:00 (next by ${dueAt().toString()})`);
 }
@@ -306,7 +317,7 @@ function statesHealth(sourceId) {
 
 // The human page (index.html + live-*.js) is served to this machine only: statuses and bid interest
 // are private.
-const STATIC_OK = /^\/(index\.html|explore\.html|profile\.html|facts\.js|wizard\.js|home\.js|data\.js|sample-data\.js|live-(nyc|sam|states)\.js)?$/;
+const STATIC_OK = /^\/(index\.html|explore\.html|profile\.html|facts\.js|chips\.js|wizard\.js|home\.js|data\.js|sample-data\.js|live-(nyc|sam|states)\.js)?$/;
 const PAGE_HEADERS = {
   // Defence in depth: no inline event handlers, no remote scripts, no framing by other sites (our own side panel frames the details page), even if agency text slipped through unescaped.
   "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; frame-ancestors 'self'; base-uri 'none'; form-action 'none'",
