@@ -280,7 +280,26 @@ const send = (res, code, body, type = "application/json") => {
   res.end(buf);
 };
 
+// Active-record counts (total, per source, per state code for the states source). One pass over the records, redone only
+// when state.seq moves: every change to the active set (add, change, reactivate, deactivate) bumps seq in feed.ingest,
+// while dropping long-inactive records does not touch active counts. /api/status polls every few seconds per open tab,
+// so this keeps the poll O(sources) instead of O(records).
+let countsCache = { state: null, seq: -1, total: 0, bySource: {}, byStateCode: {} };
+function activeCounts() {
+  if (countsCache.state === state && countsCache.seq === state.seq) return countsCache;
+  const bySource = {}, byStateCode = {};
+  let total = 0;
+  for (const r of Object.values(state.records)) {
+    if (!r.active) continue;
+    total++;
+    bySource[r.source] = (bySource[r.source] || 0) + 1;
+    if (r.source === "states") { const c = String(r.id).split("-")[0]; byStateCode[c] = (byStateCode[c] || 0) + 1; }
+  }
+  return (countsCache = { state, seq: state.seq, total, bySource, byStateCode });
+}
+
 function statusBody() {
+  const counts = activeCounts();
   return {
     schemaVersion: feed.SCHEMA_VERSION, now: new Date().toISOString(),
     refreshing: refresh.running || !!wakeTimer, stale: !refresh.running && !wakeTimer && due(), refreshStartedAt: refresh.startedAt, refreshProgress: refresh.running ? refresh.progress : null,
@@ -288,11 +307,11 @@ function statusBody() {
     retry: followInfo, gaveUp, // scheduled follow-up: { at, attempt, max, sources }; gaveUp = follow-ups used up, next try tomorrow morning
     nextDueBy: dueAt().toISOString(),
     generatedAt: state.generatedAt || null, dataAsOf: feed.dataAsOf(state), latestSeq: state.seq, // generatedAt = feed rebuilt (also on every start); dataAsOf = oldest source's last good fetch
-    activeRecords: Object.values(state.records).filter((r) => r.active).length,
+    activeRecords: counts.total,
     sources: feed.SOURCES.map((s) => ({
       id: s.id, label: s.label, schedulable: !!s.script,
       fetchedAt: (state.sources[s.id] || {}).fetchedAt || null,
-      records: Object.values(state.records).filter((r) => r.source === s.id && r.active).length,
+      records: counts.bySource[s.id] || 0,
       ...(state.runs[s.id] || {}),
       ...(s.id === "states" ? { states: statesHealth(s.id) } : {})
     }))
@@ -303,10 +322,7 @@ function statusBody() {
 // so "stale" tells you the data is not from the latest fetch even though the source as a whole reported success.
 function statesHealth(sourceId) {
   const meta = (state.sources[sourceId] || {}).states || {};
-  const counts = {};
-  for (const r of Object.values(state.records)) {
-    if (r.source === sourceId && r.active) { const c = String(r.id).split("-")[0]; counts[c] = (counts[c] || 0) + 1; }
-  }
+  const counts = sourceId === "states" ? activeCounts().byStateCode : {}; // cached per-code counts; the per-state meta below is small and read fresh
   const codes = new Set([...Object.keys(meta), ...Object.keys(counts)]);
   return [...codes].sort().map((code) => {
     const m = meta[code] || {};
