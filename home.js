@@ -543,6 +543,21 @@
     return '<span class="hm-view" role="group" aria-label="View">' + ["list", "grid"].map(function (v) { return '<button type="button" class="hm-vb' + (st.view === v ? " on" : "") + '" data-a="view" data-v="' + v + '" aria-pressed="' + (st.view === v) + '" aria-label="' + v + ' view" title="' + v + ' view">' + ic[v] + "</button>"; }).join("") + "</span>";
   }
   // ---------- page ----------
+  // Mirror the hidden legacy Refresh button (its disabled state tracks the real refresh, set by its click handler and the status poller).
+  var refreshObs = null;
+  function syncRefresh() {
+    var rb = document.getElementById("refreshBtn"), hb = $app.querySelector('[data-a="refresh"]');
+    if (!hb) return;
+    var busy = !!(rb && rb.disabled);
+    hb.disabled = busy;
+    hb.textContent = busy ? "Refreshing…" : "Refresh";
+  }
+  function watchRefresh() {
+    var rb = document.getElementById("refreshBtn");
+    if (!rb || refreshObs || !window.MutationObserver) return;
+    refreshObs = new MutationObserver(syncRefresh);
+    refreshObs.observe(rb, { attributes: true, attributeFilter: ["disabled"] });
+  }
   function shell() {
     var prof = P();
     $app.innerHTML = '<div class="hm"><div class="hm-nav"><div class="hm-in"><span class="hm-logo">Bid<i>.</i>Finder <span style="white-space:nowrap">– Discover Group, Inc.</span></span>' +
@@ -553,6 +568,7 @@
       '<div class="hm-in"><div class="hm-title"><h1>View Open Bids &amp; RFQs</h1><p id="hm-stats"></p></div>' +
       '<form class="hm-bar" data-form><label class="hm-kw"><input type="search" data-kw placeholder="Search by keyword or bid title" aria-label="Keyword" value="' + esc(st.kw) + '">' + ICON_SEARCH + '</label>' + VIEW_HTML() + '<div class="hm-fields" id="hm-fields"></div></form>' +
       '<div id="hm-more"></div><div class="hm-cols"><div class="hm-side" id="hm-side"></div><div class="hm-main"><div id="hm-res"></div></div></div></div></div>';
+    watchRefresh(); syncRefresh();
     fields();
   }
   function fields() {
@@ -767,7 +783,7 @@
       return;
     }
     if (d.a === "profile") { window.location.href = "/profile.html"; return; }
-    if (d.a === "refresh") { var rb = document.getElementById("refreshBtn"); if (rb) rb.click(); b.textContent = "Refreshing…"; return; }
+    if (d.a === "refresh") { var rb = document.getElementById("refreshBtn"); if (rb) rb.click(); syncRefresh(); return; } // the observer keeps the label in step afterwards
     if (d.a === "clear") { resetFilters(false); clearKw(); return refreshAll(); }
     if (d.a === "more-filters") { st.more = !(st.more || MORE_KEYS.some(function (k) { return st[k].length; })); if (!st.more) { MORE_KEYS.forEach(function (k) { st[k] = []; }); } return refreshAll(); }
     if (d.a === "cats-none") st.cats = selCats().length >= catOpts().length ? [] : catOpts().map(function (c) { return c.v; });
