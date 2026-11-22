@@ -187,6 +187,70 @@
       .replace(/,(?=[A-Za-z])/g, ", ");
     return t.replace(/\s{2,}/g, " ").replace(/\s+([,.;:)])/g, "$1").replace(/\b(?:project|no\.?|number|solicitation|contract|facility|bldg|building)\s*#?\s*$/i, "").replace(/\(\s*\)/g, "").trim();
   }
+  // Requirements written into a notice title ("- Site Visit Required", "SDVOSB - ...", "Mandatory Prebid/Site Visit, 5% Security, ...",
+  // "MBE, WBE and Sdvob Subcontractor Procurement for ...") are NOT part of what is being bought. ONE table drives both sides, so
+  // they cannot drift apart: cleanTitle() cuts each phrase out of the headline and flagsHtml() turns the same match into a chip.
+  // To cover a new phrase, add a rule here. chips(m) returns [label, cls, why] triples; labels reuse facts.js wording so they merge.
+  var SA_TOK = "(?:small business|sdvosb|vosb|wosb|edwosb|hubzone|8\\(a\\))";
+  var MW_TOK = "(?:M\\/)?(?:MBE|WBE|DBE|MWBE|SDVOB|SDVOSB)(?:\\s+(\\d+)%)?";
+  var MW_LIST = MW_TOK + "(?:\\s*(?:,\\s*and|,|\\/|&|\\||and)\\s*" + MW_TOK + ")*";
+  function saLabel(pct, tok) { return (pct ? pct + "% " : "") + (/small business|^sb$/i.test(tok) ? "Small business" : tok.toUpperCase()) + " set-aside"; }
+  function mwChip(txt) {
+    var toks = [], pct = false, re = /(?:M\/)?(MBE|WBE|DBE|MWBE|SDVOB|SDVOSB)(?:\s+(\d+)%)?/gi, m;
+    while ((m = re.exec(txt))) { if (m[2]) pct = true; var t = m[0].toUpperCase().replace(/^M\//, "M/"); if (toks.indexOf(t) < 0) toks.push(t); }
+    return toks.length ? [[toks.join(" / ") + (pct ? " goals" : " subcontracting"), "elig", "Who can bid"]] : [];
+  }
+  var TITLE_RULES = [
+    // "SDVOSB - Roof repair", "Total Small Business Set-Aside: Paving"
+    { re: /^(?:(?:total\s+|partial\s+)?(?:SDVOSB|VOSB|WOSB|EDWOSB|HUBZone|8\(a\)|small business|SB)(?:\s+set[- ]aside)?)(?:\s*[-–:|]\s*|\s+)(?=[A-Za-z0-9(])/i,
+      chips: function (m) { var t = /(SDVOSB|VOSB|WOSB|EDWOSB|HUBZone|8\(a\)|small business|SB)/i.exec(m[0])[1]; return [[saLabel("", t), "elig", "Who can bid"]]; } },
+    // "... - 100% Small Business Set-Aside", "(SDVOSB Set-Aside)" anywhere in the title
+    { re: new RegExp("\\s*[-–,|(]*\\s*(?:(?:total|partial)\\s+)?(?:(\\d+)%\\s*)?(" + SA_TOK + ")\\s+set[- ]?aside\\)?", "i"),
+      chips: function (m) { return [[saLabel(m[1], m[2]), "elig", "Who can bid"]]; } },
+    // "... - SDVOSB" (just the tag after a separator)
+    { re: new RegExp("\\s*[-–,|]\\s*(?:(?:total|partial)\\s+)?(?:(\\d+)%\\s*)?(" + SA_TOK + ")(?=\\s*[-–,|]|\\s*$)", "i"),
+      chips: function (m) { return [[saLabel(m[1], m[2]), "elig", "Who can bid"]]; } },
+    // "... - Site Visit Required"
+    { re: /\s*[-–,|]\s*(?:(?:mandatory\s+)?(?:pre-?bid\s+)?site\s+(?:visit|walk-?through)s?(?:\s+(?:is\s+)?(?:required|mandatory))?)(?=\s*[-–,|]|\s*$)/i,
+      chips: function () { return [["Mandatory site visit / pre-bid", "cost", "Stated in the notice title"]]; } },
+    // "Site visit required" / "mandatory site walk" in the middle of a title
+    { re: /\s*\b(?:site\s+(?:visit|walk-?through)s?\s+(?:is\s+)?(?:required|mandatory)|(?:required|mandatory)\s+site\s+(?:visit|walk))\b/i,
+      chips: function () { return [["Mandatory site visit / pre-bid", "cost", "Stated in the notice title"]]; } },
+    // Pre-bid logistics glued to the end: "... Mandatory Prebid/Site Visit, 5% Security, Performance/Payment Bond",
+    // "... Mandatory Pre bid 11/16/2026, 10:00 am", "... There is a non-mandatory pre-bid meeting on 11/20/26". All of it is a tail.
+    { re: /(?<=\S[^]{7,}?)[\s,;:.–-]*(?:there is an?\s+|an?\s+)?(?:(?:non-?\s?mandatory|mandatory)\s+pre-?\s?bid|pre-?\s?bid\s+(?:conference|meeting|\/\s*site))[^]*$/i,
+      guard: function (t) { return !/^pre-?\s?bid/i.test(t); },   // a title that IS the pre-bid notice has no job left to name
+      chips: function (m) {
+        var x = m[0], o = [];
+        o.push(/non-?\s?mandatory/i.test(x) ? ["Optional pre-bid meeting", "info", "Stated in the notice title"] : ["Mandatory site visit / pre-bid", "cost", "Stated in the notice title"]);
+        if (/\d+\s*%\s*(?:bid\s+)?security|bid (?:bond|security)/i.test(x)) o.push(["Bid bond / bid guarantee", "hard", "Stated in the notice title"]);
+        if (/performance\s*\/?\s*(?:and\s*)?payment\s+bond/i.test(x)) o.push(["Performance / payment bond", "cost", "Stated in the notice title"]);
+        return o;
+      } },
+    // "Parks M/WBE-Only Site Work ..."
+    { re: /\s*\b(?:M\/)?(?:MBE|WBE|DBE|MWBE)(?:\s*[\/,&]\s*(?:M\/)?(?:MBE|WBE|DBE))*[- ]only\b/i,
+      chips: function (m) { return [[m[0].replace(/[- ]only$/i, "").trim().toUpperCase() + " only", "elig", "Who can bid"]]; } },
+    // "(Small Business Concerns and Minority Business Concerns only)"
+    { re: /\s*\((?=[^()]*\b(?:small business|minority business|women|veteran|sdvosb|mbe|wbe)\b)[^()]*?\bonly\)\s*$/i,
+      chips: function (m) { return [[/small/i.test(m[0]) && /minority/i.test(m[0]) ? "Small / minority business only" : /small/i.test(m[0]) ? "Small business only" : "Restricted bidders", "elig", "Who can bid"]]; } },
+    // NY subcontracting calls: "MBE, WBE and Sdvob Subcontractor Procurement for ...", "PCI: MP/PW: MBE 20% WBE 10% Sdvob 5%: GC - ..."
+    { re: new RegExp("^(?:[A-Z]{2,5}:\\s*[A-Z\\/]{2,6}:\\s*)?(?:opportunity for\\s+)?(?:" + MW_LIST + "(?:\\s+(?=\\d))?\\s*)+(?:\\s*(?:contracting\\s+)?opportunit(?:y|ies))?(?:\\s*subcontractors?(?:\\s+and\\/or\\s+suppliers)?\\s+for the following bid\\s*:)?\\s*[-–:]?\\s*(?=\\S)", "i"),
+      guard: function (t) { return /[A-Za-z]{4,}\s+[A-Za-z]{3,}/.test(t); },   // keep the prefix when nothing readable would be left
+      chips: function (m) { return mwChip(m[0]); } }
+  ];
+  function applyTitleRule(rule, t) { // -> { t: title without the phrase, m: the match } (m null when the rule does not apply)
+    var m = rule.re.exec(t);
+    if (!m || !m[0]) return { t: t, m: null };
+    var out = t.slice(0, m.index) + t.slice(m.index + m[0].length);
+    if (rule.guard && !rule.guard(out)) return { t: t, m: null };
+    return { t: out, m: m };
+  }
+  function titleChips(title) { // the chips a title's requirement phrases stand for
+    var t = String(title || "").replace(/\s+/g, " ").trim(), o = [];
+    TITLE_RULES.forEach(function (rule) { for (var i = 0; i < 4; i++) { var a = applyTitleRule(rule, t); if (!a.m) break; o = o.concat(rule.chips(a.m)); t = a.t; } });
+    return o;
+  }
+
   function cleanTitle(t, r, code) {
     var orig = t = String(t || "").replace(/\s+/g, " ").trim(), m;
     if (t.length > 8 && /[A-Z]/.test(t) && t === t.toUpperCase()) t = t.toLowerCase().replace(/(^|[\s\-\/(])([a-z])/g, function (m, a, b) { return a + b.toUpperCase(); }).replace(/\b(?:Of|For|And|The|To|In|On|At|By|With|From)\b(?=\s+\S)/g, function (w, off) { return off > 0 ? w.toLowerCase() : w; });
@@ -251,16 +315,15 @@
       .replace(/\s*\(?\bPOP:?[^)|]*\)?\s*$/i, "")
       .replace(/\s*[-–,]\s*(?:base\s+(?:year\s+)?plus\s+\w+\s+option\s+years?|base\s+(?:year\s+)?(?:and|\+)\s+\w+\s+option\s+years?|\w+\s+option\s+years?)\s*$/i, "")
       .replace(/\s*\((?:brand|brand name|brand name or equal)\)/gi, "")
-      .replace(/^(?:(?:total\s+|partial\s+)?(?:SDVOSB|VOSB|WOSB|EDWOSB|HUBZone|8\(a\)|small business|SB)(?:\s+set[- ]aside)?)(?:\s*[-–:|]\s*|\s+)(?=[A-Za-z])/i, "")
       .replace(/,\s*\d{1,6}\s+(?:[NSEW]\.?\s+)?[A-Z][\w.' -]*?(?:street|st|road|rd|avenue|ave|boulevard|blvd|drive|dr|lane|ln|highway|hwy|way|parkway|pkwy)\b\.?[\s\S]*$/i, "")
       .replace(/,\s*[A-Z][\w.' -]{2,50}\s+(?:Health Care|Healthcare|VA|Veterans)\s+(?:System|Network|Medical Center|VISN)\s*$/i, "")
       .replace(/,\s*(?:VISN\s*\d+|[A-Z][\w.' -]{2,40}\s+(?:VA Medical Center|VAMC|Air Force Base|AFB|Naval Station|Army Depot))\s*$/i, "");
     t = t.replace(/(?<=\S{4,}.{8,}),\s*(?:[A-Z][\w.&']*\s+){1,4}(?:Port District|Commission|Authority)$/, "");   // buyer named at the tail
-    // requirement phrases glued onto the title ("- Site Visit Required", "- 100% Small Business Set-Aside"): shown as chips instead
-    t = t.replace(/\s*[-–,|]\s*(?:(?:mandatory\s+)?(?:pre-?bid\s+)?site\s+(?:visit|walk-?through)s?(?:\s+(?:is\s+)?(?:required|mandatory))?|(?:total\s+|partial\s+)?(?:\d+%\s*)?(?:small business|sdvosb|vosb|wosb|edwosb|hubzone|8\(a\))(?:\s+set[- ]?aside)?)(?=\s*[-–,|]|\s*$)/gi, "");
+    // requirement phrases glued onto the title are cut out here and shown as chips (see TITLE_RULES)
+    TITLE_RULES.forEach(function (rule) { for (var i = 0; i < 4; i++) { var a = applyTitleRule(rule, t); if (!a.m) break; t = a.t; } });
     t = stripNoise(t);
     t = t.replace(/\s*(?:\.{2,}|…)+\s*$/, "");   // headlines never end in a trailing "..." (the dangling "for the" is dropped below)
-    t = t.replace(/\s+([,.;:])/g, "$1").replace(/(^|\s)[,;:]+\s*/g, "$1").replace(/\s{2,}/g, " ").replace(/(?:\s+(?:for|in|at|of|the|and|to|by|with|-|–))+\s*$/i, "").replace(/[,;:\s-]+$/, "").trim();
+    t = t.replace(/\s+([,.;:])/g, "$1").replace(/(^|\s)[,;:]+\s*/g, "$1").replace(/\s{2,}/g, " ").replace(/^[-–|]\s*/, "").replace(/(?:\s+(?:for|in|at|of|the|and|to|by|with|-|–))+\s*$/i, "").replace(/[,;:\s-]+$/, "").trim();
     t = t.replace(/&(?=[A-Za-z])/g, "& ");
     if ((t.match(/\(/g) || []).length > (t.match(/\)/g) || []).length) t += ")";   // title cut off mid-parenthesis
     if (t.length < 8) t = orig.replace(/^not clear from the listing:\s*/i, "");
@@ -270,6 +333,7 @@
         (ow[0].length <= 3 || !/[AEIOUY]/.test(ow[0]) || /(?:DOT|DOC|DOH|DHS)$/.test(ow[0]) || KEEP_CAPS.test(ow[0]))) t = ow[0] + t.slice(fw[0].length);
     return t.charAt(0).toUpperCase() + t.slice(1);
   }
+  window.titleChips = titleChips;
   window.cleanBidTitle = function (t, raw) { return cleanTitle(t, raw, raw && raw.level === "Federal" ? "US" : String((raw && raw.id) || "").split("-")[0].replace("TXDOT", "TX")); };
 
   function prep() {
@@ -530,10 +594,7 @@
     }
     (raw.requires || []).forEach(function (q) { add(q, /unless waived/i.test(q) ? "cost" : "elig", "Who can bid"); });
     var rs = raw.details && raw.details.restriction; if (rs) add(rs, "elig", "Who can bid");
-    var ttl = String(raw.title || "");   // requirements written into the title become chips
-    if (/site\s+(?:visit|walk-?through)s?\s+(?:is\s+)?(?:required|mandatory)|(?:required|mandatory)\s+site\s+(?:visit|walk)/i.test(ttl)) add("Site visit required", "cost", "Stated in the notice title");
-    var tm = /(?:(\d+)%\s*)?(small business|sdvosb|vosb|wosb|edwosb|hubzone|8\(a\))\s*set[- ]?aside/i.exec(ttl);
-    if (tm) add((tm[1] ? tm[1] + "% " : "") + (/small business/i.test(tm[2]) ? "Small business" : tm[2].toUpperCase()) + " set-aside", "elig", "Who can bid");
+    titleChips(raw.title).forEach(function (c) { add(c[0], c[1], c[2]); });   // requirements written into the title become chips
     var facts = raw.facts || (window.computeFacts ? (function () { try { return window.computeFacts(raw); } catch (e) { return []; } })() : []);
     facts.forEach(function (f) { add(f.label, f.sev === "hard" ? "hard" : f.sev === "cost" ? "cost" : "info", f.why); });
     // Merge near-duplicates: a chip whose words are all contained in another chip's words is dropped (keeps the more specific one).
