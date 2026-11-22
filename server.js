@@ -364,6 +364,26 @@ function slimStates() {
   return slim;
 }
 
+// NYC and SAM files are served whole, but with `facts` worked out here so the browser needn't run computeFacts per row per render.
+const factsCache = new Map(); // file -> { mtime, js }
+function withFacts(file) {
+  const p = path.join(ROOT, file);
+  const mtime = fs.statSync(p).mtimeMs + fs.statSync(path.join(ROOT, "facts.js")).mtimeMs;
+  const c = factsCache.get(file);
+  if (c && c.mtime === mtime) return c;
+  const sandbox = { window: {} };
+  vm.runInNewContext(fs.readFileSync(p, "utf8"), sandbox, { timeout: 10000 }); // our own generated file
+  const sources = sandbox.window.LIVE_SOURCES || [];
+  if (!sources.length) throw new Error(file + " has no data");
+  const js = sources.map((entry) => {
+    const rfqs = (entry.rfqs || []).map((r) => { try { return { ...r, facts: computeFacts(r) }; } catch (e) { return r; } });
+    return "(window.LIVE_SOURCES = window.LIVE_SOURCES || []).push(" + JSON.stringify({ ...entry, rfqs }) + ");\n";
+  }).join("");
+  const out = { mtime, js };
+  factsCache.set(file, out);
+  return out;
+}
+
 const gzCache = new Map(); // file -> { mtime, gz }
 function serveStatic(req, res, pathname) {
   const file = pathname === "/" ? "index.html" : pathname.slice(1);
@@ -373,6 +393,7 @@ function serveStatic(req, res, pathname) {
     const full = path.join(ROOT, file);
     mtime = fs.statSync(full).mtimeMs;
     if (file === "live-states.js") { const s = slimStates(); buf = Buffer.from(s.js); mtime = s.mtime; }
+    else if (file === "live-nyc.js" || file === "live-sam.js") { const s = withFacts(file); buf = Buffer.from(s.js); mtime = s.mtime; }
     else buf = fs.readFileSync(full);
   } catch (e) {
     return send(res, 404, { error: "not found" });
