@@ -64,6 +64,10 @@
   .go { display:inline-block; margin-top:6px; background:var(--navy); color:#fff; border-radius:8px; padding:9px 16px; font-weight:700; text-decoration:none; }
   .src { margin-top:10px; font-size:13px; text-align:center; }
   .sub { color:var(--mut); margin-top:6px; font-size:13px; }
+  .reqs { margin-top:8px; }
+  .rq-h { display:inline-flex; align-items:center; gap:8px; margin:14px 0 4px; padding:3px 12px 3px 8px; border-radius:999px; background:var(--c); color:var(--i); font-size:13px; font-weight:700; }
+  .rq-dot { width:8px; height:8px; border-radius:50%; background:var(--i); }
+  .reqs .items { margin-bottom:6px; }
   .foot { margin-top:36px; font-size:12px; color:var(--mut); }
   html.embed .nav { display:none; }
   html.embed main { max-width:none; padding:20px 22px 48px; }
@@ -76,8 +80,9 @@
 <main>
   <div id="page">Loading&hellip;</div>
 </main>
-<script src="facts.js"></script>
+<script src="facts.js?v=20261122c"></script>
 <script src="sample-data.js"></script>
+<script src="quote-ui.js?v=1"></script>
 <script src="shared.js?v=20261122b"></script>
 <script>
 (function () {
@@ -152,7 +157,6 @@
     var ICON = '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg>';
     var agency = r.agency && nice(r.agency);
     var h = '<div class="head"><div class="tile">' + ICON + '</div><div class="grow"><div class="eyebrow">' + esc(agency || "Request for quotation") + "</div><h1>" + esc(plain || title) + "</h1></div></div>";
-    if (plain) h += '<div class="sub">Original title: ' + esc(title) + "</div>";
 
     // key facts: due date, value, posted
     h += '<div class="pills">' +
@@ -164,6 +168,7 @@
     if (where.length) h += '<div class="where">' + where.map(function (w) { return "<span>&#128205; " + esc(w) + "</span>"; }).join("") + "</div>";
 
     h += "<!--GLANCE-->";
+    h += '<section id="quotehelper"></section>';
 
     // RFQ documents: the posting plus any attachments found
     var docs = [];
@@ -216,7 +221,7 @@
     // facts from the notice text (same rules as the table)
     var facts = [];
     try {
-      facts = window.computeFacts ? window.computeFacts({ id: r.id, title: r.title, scope: r.scope, shall: shall, aiRead: r.aiRead,
+      facts = window.computeFacts ? window.computeFacts({ id: r.id, title: r.title, scope: r.scope, shall: shall, aiRead: r.aiRead, terms: r.terms, docFacts: r.docFacts,
         details: { requirements: r.requirements || [], restriction: r.restriction } }) : [];
     } catch (e) {}
     function list(items) {
@@ -246,6 +251,44 @@
     (r.requires || []).forEach(function (q) { items.push("<li><b>" + esc(q) + "</b></li>"); });
 
     // At a glance: what is requested, quantities, who can bid, costs and insurance, as coloured chips (no need to open the notice)
+    // Requirements: the bid checklist (specs and quantities, deadlines and submission, delivery, payment, certifications and compliance),
+    // from the AI-read lines (r.terms), the rule hits in the notice and its documents, and the notice's own key obligations.
+    var reqHtml = "";
+    (function () {
+      var G = window.REQ_GROUPS || [], sec = "", total = 0, seenTxt = {};
+      var terms = r.terms || {};
+      function norm(t) { return String(t || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim(); }
+      function item(t, why) { var k = norm(t); if (!k || seenTxt[k]) return ""; seenTxt[k] = 1; total++; return "<li>" + esc(t) + (why ? ' <span class="g-why">&ndash; ' + esc(why) + "</span>" : "") + "</li>"; }
+      G.forEach(function (g) {
+        var li = "";
+        if (g.id === "deadline") {
+          if (r.docDue && r.due && String(r.docDue).slice(0, 10) !== String(r.due).slice(0, 10)) li += item("The documents state a different due date: " + mdy(r.docDue) + ". Confirm which one applies.");
+        }
+        (terms[g.id] || []).forEach(function (t) { li += item(t); });
+        facts.filter(function (f) { return (f.grp || (window.reqGroupOf && window.reqGroupOf(f.label))) === g.id; }).forEach(function (f) {
+          var line = (f.kw ? "Possible: " : "") + f.label;
+          if (f.why && norm(f.why).indexOf(norm(f.label)) < 0) { li += item(line, f.why); } else if (f.why) { li += item(f.why); } else { li += item(line); }
+        });
+        if (g.id === "certs") {
+          (r.requires || []).forEach(function (q) { if (!/^\s*no set[- ]?aside/i.test(q)) li += item("Eligibility: " + q); });
+        }
+        if (li) sec += '<h3 class="rq-h" style="--c:' + g.color + ';--i:' + g.ink + '"><span class="rq-dot"></span>' + esc(g.title) + '</h3><ul class="items">' + li + "</ul>";
+      });
+      var other = "";
+      facts.forEach(function (f) {
+        var gid = f.grp || (window.reqGroupOf && window.reqGroupOf(f.label));
+        if (G.some(function (g) { return g.id === gid; })) return;
+        other += item((f.kw ? "Possible: " : "") + f.label, f.why && norm(f.why).indexOf(norm(f.label)) < 0 ? f.why : "");
+      });
+      if (other) sec += '<h3 class="rq-h" style="--c:#e2e8f0;--i:#334155"><span class="rq-dot"></span>Other terms and costs</h3><ul class="items">' + other + "</ul>";
+      if (!total || !(r.requires || []).length) sec = '<h3 class="rq-h" style="--c:#e2e8f0;--i:#334155"><span class="rq-dot"></span>Eligibility</h3><ul class="items"><li>' + esc(r.requires == null ? "Eligibility not checked: the notice documents were not read." : "Open to all bidders, as far as the notice says.") + "</li></ul>" + sec;
+      var ob = "";
+      (shall || []).forEach(function (s) { if (s && s.text) ob += item(s.text, s.ref); });
+      if (ob) sec += '<h3 class="rq-h" style="--c:#e2e8f0;--i:#334155"><span class="rq-dot"></span>Key obligations quoted from the notice</h3><ul class="items">' + ob + "</ul>";
+      var note = r.aiRead ? "" : (r.docAccess === "none" || !r.scope ? '<p class="small">The notice documents were not read, so this list is limited to what the posting itself states. Open the RFQ doc to check the full specifications, line items and quantities.</p>' : "");
+      reqHtml = '<div class="reqs">' + sec + '<p class="small">Always confirm against the RFQ document: every line item, specification, quantity, certification and the submission format.</p>' + note + "</div>";
+    })();
+
     (function () {
       var MONEY = /\$\s?[\d,.]+(?:\s?(?:million|billion|thousand|[MKB])\b)?(?:\s+(?:per|each)\s+(?:occurrence|person|claim|accident|incident))?|\b\d{1,2}(?:\.\d+)?\s?%/i;
       var WITH_AMOUNT = /^(Insurance minimums|Bid bond|Performance|Bonding capacity|Liquidated)/;
@@ -297,13 +340,14 @@
         fb += li("The notice gives no further description" + (r.docAccess === "none" ? "; its documents could not be opened." : "."));
         req = (fb || li("Not stated in the notice.")) + req;
       }
-      var g = '<section class="glance">' + (link ? '<a class="rfqdoc" href="' + esc(link) + '" target="_blank" rel="noopener">View RFQ doc &#8599;</a>' : "") + '<h2>At a glance</h2><ol class="g-list">' + row("Request + Description", req) + row("Who can bid", who) + row("Registration", reg) + row("Important Details", details) + row("Contact Information", cinfo) + "</ol>" +
+      var g = '<section class="glance">' + (link ? '<a class="rfqdoc" href="' + esc(link) + '" target="_blank" rel="noopener">View RFQ doc &#8599;</a>' : "") + '<h2>At a glance</h2><ol class="g-list">' + row("Request + Description", req) + row("Registration", reg) + ('<li class="g-sec"><b>Requirements</b>' + reqHtml + "</li>") +row("Contact Information", cinfo) + "</ol>" +
         (!r.aiRead && !r.scope ? '<p class="small">The notice text was not read, so only what the posting itself states is shown.</p>' : "") + "</section>";
       h = h.replace("<!--GLANCE-->", g);
     })();
 
     h += '<div class="foot">ID ' + esc(r.id) + " · first seen " + esc(mdy(r.firstSeen)) + " · last updated " + esc(mdy(r.updatedAt)) + "</div>";
     $.innerHTML = h;
+    if (window.QuoteHelper) try { window.QuoteHelper.mount(document.getElementById("quotehelper"), { id: String(r.id), demo: demo }); } catch (e) {}
   }
 })();
 </script>
