@@ -30,7 +30,7 @@
 
   var api = window.RFQBids = {
     has: function (id) { return !!load()[id]; },
-    count: function () { return Object.keys(load()).filter(function (k) { return activeStage(load()[k].stage); }).length; },
+    count: function () { var d = load(); return Object.keys(d).filter(function (k) { return activeStage(d[k].stage); }).length; },
     // Bids still being prepared that close within `n` days (default 7), soonest first.
     dueSoon: function (n) {
       var d = load(), lim = n == null ? 7 : n;
