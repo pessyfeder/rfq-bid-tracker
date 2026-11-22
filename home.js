@@ -110,7 +110,9 @@
   // Set-asides / who may bid, read from the requirement list and restriction text. "No set-aside found" only means none was stated.
   function asideOf(raw) {
     var t = ((raw.requires || []).join(" ; ") + " ; " + ((raw.details && raw.details.restriction) || "")).replace(/no set.?aside( used)?/ig, "");
-    var a = { small: /small business/i.test(t), vet: /SDVOSB|service-disabled|veteran/i.test(t), women: /WOSB|women/i.test(t),
+    // "Service-Disabled Veteran-Owned Small Business" etc. are narrower programs, not the plain small-business set-aside
+    var plain = t.replace(/(service[- ]disabled veteran[- ]owned|veteran[- ]owned|(economically disadvantaged )?women?[- ]owned|HUBZone|8\(a\)|minority[- ]owned|(economically )?disadvantaged)\s+small business(es)?/ig, "");
+    var a = { small: /small business/i.test(plain), vet: /SDVOSB|service-disabled|veteran/i.test(t), women: /WOSB|women/i.test(t),
       other: /HUBZone|8\(a\)|\b(SBE|DBE|MBE|WBE|MWBE)\b|minority|disadvantaged/i.test(t) };
     a.any = a.small || a.vet || a.women || a.other;
     return a;
