@@ -171,7 +171,7 @@ async function enrich(r, o, text, AI_KEY) {
     r.details.restriction = r.details.restriction || found.join(", ") + " only";
     found.forEach((f) => { if (r.details.requirements.indexOf(f) < 0) r.details.requirements.push(f); });
   } else if (r.requires == null && !code0(o)) r.requires = []; // text read, no restriction found
-  // Always try a stated amount first (keyword pass, then AI); the USAspending estimate only fills what is left.
+  // Look for a stated amount (keyword pass, then AI); values are never inferred from other awards.
   if (r.value == null) {
     let a = require("./stated-amount").statedAmount(text);
     if (!a && AI_KEY) a = await require("./ai-extract").extractAmount(text, AI_KEY).catch(() => null);

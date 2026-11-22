@@ -216,11 +216,10 @@ Search (query syntax in the code; no search box in the toolbar at present)
     wake after 5:00 local time (REFRESH_MORNING_HOUR changes the hour); after a wake the service waits
     45 s for the network. A source still failing is retried up to 3 times, 20 minutes apart. On first
     install every source runs at once. A fetcher frozen by sleep is stopped after FETCH_TIMEOUT_MIN
-    (45) and retried. Network calls (Anthropic, SAM.gov, USAspending) have their own request
+    (120) and retried. Network calls (Anthropic, SAM.gov) have their own request
     timeouts, and the AI cache and SAM cache are saved after every call, page and notice, so a
     killed run keeps the paid work; live-nyc.js and live-sam.js are written via a temp file and
-    rename so a crash never leaves a half-written file. A failed USAspending estimate lookup is
-    retried next run; if the NYC awards query fails only the similar-award estimates are skipped.
+    rename so a crash never leaves a half-written file.
     The AI cache file (ai-cache.json) must persist on the
     server between runs, otherwise every notice is re-read and re-billed. Estimated AI
     cost is a few cents a day, roughly $1 to $3 a month (a projection, not a measurement;
