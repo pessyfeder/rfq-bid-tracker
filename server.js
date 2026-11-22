@@ -435,6 +435,10 @@ const server = http.createServer((req, res) => {
     if (p.startsWith("/api/")) {
       if (p === "/api/status" && req.method === "GET") return send(res, 200, statusBody());
       if (p === "/api/rfqs" && req.method === "GET") return send(res, 200, feed.query(state, url.searchParams));
+      if (p === "/api/site-text" && req.method === "GET") { // setup wizard's helper bot: reads a vendor's public website (SSRF-guarded, see service/site-reader.js)
+        require("./service/site-reader").readSite(url.searchParams.get("url")).then((r) => send(res, 200, r), (e) => send(res, 422, { error: e.message || "Could not read that website" }));
+        return;
+      }
       const one = /^\/api\/rfqs\/([^/]+)$/.exec(p);
       if (one && req.method === "GET") {
         let id; try { id = decodeURIComponent(one[1]); } catch { return send(res, 400, { error: "malformed id" }); } // a stray "%" is the caller's mistake, not a server error

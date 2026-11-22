@@ -154,16 +154,21 @@
     ".wz-grp{position:sticky;top:-6px;background:#fff;margin:8px 0 2px;padding:4px 2px;font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#64748b}" +
     ".wz-spin{width:34px;height:34px;margin:6px auto 14px;border:4px solid #e5e9f0;border-top-color:#1e3a5f;border-radius:50%;animation:wzspin .8s linear infinite}@keyframes wzspin{to{transform:rotate(360deg)}}" +
     ".wz-dd-tools{display:flex;gap:14px;padding:4px 2px}.wz .wz-dd-tools .link{margin:0;padding:2px 0}" +
-    ".wz-back{gap:20px;flex-wrap:wrap}.wz-back>.wz{flex:0 1 660px;width:auto;min-width:0}" +
-    ".wz-side{flex:0 0 280px;box-sizing:border-box;position:sticky;top:20px;background:#fff;color:#1f2937;border:1px solid #d9dfe7;border-radius:8px;padding:20px;box-shadow:0 1px 3px rgba(15,23,42,.08)}" +
-    ".wz-side h3{margin:0 0 12px;font-size:15px;font-weight:600;color:#0f2742}" +
-    ".wz-side-sec{padding:9px 10px;margin:0 -10px;border-left:3px solid transparent;border-radius:4px;font-size:13px}.wz-side-sec.cur{background:#f0f4f9;border-left-color:#1e3a5f}" +
-    ".wz-side-h{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#64748b;margin-bottom:4px}" +
-    ".wz-side ul{margin:0;padding-left:18px}.wz-side li{margin:1px 0}.wz-side-more{list-style:none;margin-left:-18px!important;color:#64748b}.wz-side-none{color:#64748b;font-style:italic}" +
-    ".wz-side-sel{margin-bottom:16px}.wz-bot{border-top:1px solid #e5e9f0;padding-top:14px}.wz-bot h3{margin:0 0 8px}.wz-bot-log{max-height:260px;overflow:auto;margin-bottom:8px}" +
+    ".wz-back{gap:20px;flex-wrap:wrap;align-items:stretch}.wz-back>.wz{flex:0 1 660px;width:auto;min-width:0}" +
+    ".wz-side{flex:0 0 185px;box-sizing:border-box;contain:size;display:flex;flex-direction:column;overflow:hidden;background:#fff;color:#1f2937;border:1px solid #d9dfe7;border-radius:8px;padding:6px 8px;box-shadow:0 1px 3px rgba(15,23,42,.08);font-size:12px}" +
+    ".wz-side summary{cursor:pointer;font-size:12px;font-weight:600;color:#0f2742;padding:4px 0;list-style:none}.wz-side summary::-webkit-details-marker{display:none}.wz-side summary:before{content:'\\25B8';display:inline-block;width:12px;color:#64748b}.wz-side details[open]>summary:before{content:'\\25BE'}" +
+    ".wz-side-sec{padding:3px 6px;margin:0 -2px;border-left:2px solid transparent;border-radius:3px;font-size:12px}.wz-side-sec.cur{background:#f0f4f9;border-left-color:#1e3a5f}" +
+    ".wz-side-sec>summary{font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#64748b;padding:1px 0}.wz-side-sec>summary b{color:#1f2937;letter-spacing:0;text-transform:none;font-weight:600}" +
+    ".wz-side ul{margin:2px 0 0;padding-left:14px}.wz-side li{margin:0;line-height:1.3}.wz-side-more{list-style:none;margin-left:-14px!important;color:#64748b}.wz-side-none{color:#64748b;font-style:italic}" +
+    ".wz-sel-box{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}.wz-side-sel{flex:1 1 auto;min-height:0;overflow-x:hidden;overflow-y:auto;overflow-wrap:anywhere;margin-bottom:2px}.wz-side-sel *{max-width:100%;box-sizing:border-box}" +
+    ".bt-fab{position:fixed;right:22px;bottom:22px;z-index:20;display:flex;align-items:center;gap:8px;padding:10px 18px 10px 12px;border:0;border-radius:999px;background:#1e3a5f;color:#fff;font:600 14px system-ui,-apple-system,'Segoe UI',sans-serif;cursor:pointer;box-shadow:0 4px 14px rgba(15,39,66,.35)}.bt-fab:hover{background:#16304f}.bt-fab svg{width:30px;height:30px;flex:none}" +
+    ".bt-panel{position:fixed;right:22px;bottom:22px;z-index:21;width:360px;max-width:calc(100vw - 24px);max-height:calc(100vh - 44px);display:flex;flex-direction:column;background:#fff;color:#1f2937;border:1px solid #b8c2cf;border-radius:12px;box-shadow:0 8px 28px rgba(15,23,42,.28);font:14px/1.45 system-ui,-apple-system,'Segoe UI',sans-serif;overflow:hidden}" +
+    ".bt-head{display:flex;align-items:center;gap:10px;padding:10px 14px;background:#1e3a5f;color:#fff;font-weight:600}.bt-head svg{width:30px;height:30px;flex:none}.bt-head span{flex:1}.bt-head button{border:0;background:none;color:#fff;font-size:22px;line-height:1;cursor:pointer;padding:0 4px}" +
+    ".bt-log{flex:1 1 auto;min-height:120px;overflow:auto;padding:8px 12px}.bt-form{padding:10px 12px;border-top:1px solid #e5e9f0;background:#f7f9fb}.bt-form label{display:block;font-size:12px;font-weight:600;color:#64748b;margin:0 0 3px}" +
+    ".bt-row{display:flex;gap:6px;margin-bottom:8px}.bt-row input,.bt-form textarea{flex:1;min-width:0;font:inherit;padding:7px 9px;border:1px solid #c5cdd8;border-radius:6px;box-sizing:border-box}.bt-form textarea{width:100%;resize:vertical;margin-bottom:6px}.bt-row input:focus,.bt-form textarea:focus{outline:2px solid #1e3a5f33;border-color:#1e3a5f}" +
+    ".bt-form button{font:inherit;font-size:13px;font-weight:500;padding:7px 12px;border-radius:6px;border:1px solid #b8c2cf;background:#fff;color:#1f2937;cursor:pointer}.bt-form button.pri{background:#1e3a5f;border-color:#1e3a5f;color:#fff}.bt-form button:disabled{opacity:.5;cursor:default}.bt-go{width:100%}" +
     ".wz-msg{background:#f0f4f9;border-radius:6px;padding:8px 10px;margin:6px 28px 6px 0;font-size:13px}.wz-msg.me{background:#1e3a5f;color:#fff;margin:6px 0 6px 28px}.wz-msg .pri{margin-top:6px;padding:4px 12px;font-size:13px}.wz-msg .wz-note{font-size:12px}" +
-    ".wz-bot textarea{font-size:13px;margin-bottom:6px;box-sizing:border-box}.wz-bot-go{width:100%}" +
-    "@media(max-width:1060px){.wz-side{flex:1 1 660px;position:static}}" +
+    "@media(max-width:900px){.wz-side{flex:1 1 660px;contain:none;max-height:420px}}" +
     ".match-chip{display:inline-block;background:#e3f4ea;color:#1d7a46;border-radius:4px;padding:1px 6px;margin:0 6px 0 0;font-size:12px;font-weight:600;cursor:help}";
   document.head.appendChild(css);
 
@@ -301,9 +306,9 @@
     function sideItems(ids, labelOf, none) {
       var names = ids.map(labelOf).filter(Boolean);
       if (!names.length) return "<span class='wz-side-none'>" + none + "</span>";
-      var shown = names.slice(0, 6).map(function (n) { return "<li>" + h(n) + "</li>"; }).join("");
-      return "<ul>" + shown + (names.length > 6 ? "<li class='wz-side-more'>+ " + (names.length - 6) + " more</li>" : "") + "</ul>";
+      return "<ul>" + names.map(function (n) { return "<li>" + h(n) + "</li>"; }).join("") + "</ul>";
     }
+    var sideOpen = {};
     function side() {
       if (!back) return;
       if (!J.length) loadJ();
@@ -317,14 +322,16 @@
       var el = back.querySelector(".wz-side");
       if (!el) {
         el = document.createElement("aside"); el.className = "wz-side"; el.setAttribute("aria-label", "Your selections");
-        el.innerHTML = "<div class='wz-side-sel'></div>" +
-          "<div class='wz-bot'><h3>Helper bot</h3><div class='wz-bot-log' aria-live='polite'></div>" +
-          "<textarea rows='2' class='wz-bot-in' placeholder='e.g. We sell laptops and toner to schools in Texas. Veteran-owned.' aria-label='Describe your business'></textarea>" +
-          "<button type='button' class='pri wz-bot-go' data-b='ask'>Suggest options</button></div>";
-        back.appendChild(el); botLog();
+        el.innerHTML = "<details open class='wz-sel-box'><summary>Your selections</summary><div class='wz-side-sel'></div></details>";
+        back.appendChild(el);
       }
-      el.querySelector(".wz-side-sel").innerHTML = "<h3>Your selections</h3>" + items.map(function (x, i) {
-        return "<div class='wz-side-sec" + (i + 1 === step ? " cur" : "") + "'><div class='wz-side-h'>Step " + (i + 1) + " &middot; " + x[0] + "</div>" + x[1] + "</div>";
+      botUi();
+      // Each section is its own collapsible <details>; remember which ones the user opened/closed across rebuilds.
+      var box = el.querySelector(".wz-side-sel");
+      if (!box.dataset.w) { box.dataset.w = "1"; box.addEventListener("click", function (e) { var s = e.target.closest && e.target.closest("summary"); if (s && s.parentNode.dataset.i) sideOpen[s.parentNode.dataset.i] = !s.parentNode.open; }); }
+      box.innerHTML = items.map(function (x, i) {
+        var open = sideOpen[i] !== undefined ? sideOpen[i] : i + 1 === step;
+        return "<details data-i='" + i + "' class='wz-side-sec" + (i + 1 === step ? " cur" : "") + "'" + (open ? " open" : "") + "><summary>" + (i + 1) + ". " + x[0] + "</summary>" + x[1] + "</details>";
       }).join("");
     }
 
@@ -355,7 +362,7 @@
     ];
     var ASIDE_RE = [["vet", /veteran|sdvosb|\bvosb\b/i], ["women", /\bwom[ae]n|\bwosb\b|female/i], ["small", /small business|\bsmb\b|small (company|shop|firm)/i], ["other", /hubzone|8\(a\)|\b8a\b|minority/i]];
     var REG_RE = [["fed", /sam\.gov|\bsam\b/i], ["nyc", /passport/i], ["pa", /emarketplace/i], ["tx", /cmbl|\bcentralized master/i]];
-    function suggest(text) {
+    function suggest(text, site) {
       var low = text.toLowerCase(), terms = {}, s = { cats: [], where: [], aside: [], reg: [], all: false };
       low.split(/[^a-z0-9]+/).forEach(function (w) { var t = stem(w); if (t.length > 2 && !STOP[t]) terms[t] = 1; });
       SYN.forEach(function (x) { if (x[0].test(low)) x[1].forEach(function (w) { terms[stem(w)] = 1; }); });
@@ -368,11 +375,12 @@
       ALL.forEach(function (o) {
         var lt = {}, sc = 0; o.label.split(/[^A-Za-z0-9]+/).forEach(function (w) { lt[stem(w)] = 1; });
         for (var t in terms) if (lt[t]) sc++;
-        if (sc) hits.push({ v: o.v, label: o.label, sc: sc });
+        if (sc >= (site ? 2 : 1)) hits.push({ v: o.v, label: o.label, sc: sc });
       });
       hits.sort(function (a, b) { return b.sc - a.sc; });
-      s.cats = hits.slice(0, 40);
+      s.cats = hits.slice(0, site ? 25 : 40);
       loadJ();
+      if (site) return finishSite(s, text);
       if (/nationwide|all states|anywhere|everywhere|across the (us|country)/.test(low)) s.all = true;
       else J.forEach(function (o) {
         var nm = String(o.label).replace(/\(.*?\)/g, "").trim().toLowerCase();
@@ -382,10 +390,15 @@
       REG_RE.forEach(function (x) { if (x[1].test(text)) s.reg.push(x[0]); });
       return s;
     }
+    function finishSite(s, text) { // a website says what a company sells, not where it bids: only eligibility and registrations are read from it
+      ASIDE_RE.forEach(function (x) { if (x[1].test(text)) s.aside.push(x[0]); });
+      REG_RE.forEach(function (x) { if (x[1].test(text)) s.reg.push(x[0]); });
+      return s;
+    }
     function names(arr, max) { var n = arr.length; return arr.slice(0, max).join(", ") + (n > max ? " and " + (n - max) + " more" : ""); }
-    var chat = [{ me: false, text: "Hi! Tell me what your business sells or does, and where you work. I'll suggest categories, locations and eligibility." }];
+    var chat = [{ me: false, text: "Hi! Enter your website and I'll read it to suggest request categories. Or just describe your business below." }];
     function botLog() {
-      var log = back && back.querySelector(".wz-bot-log"); if (!log) return;
+      var log = back && back.querySelector(".bt-log"); if (!log) return;
       log.innerHTML = chat.map(function (m, i) {
         var body = m.html || h(m.text);
         if (m.sug && !m.done) body += "<div><button type='button' class='pri' data-b='apply' data-m='" + i + "'>Use these</button></div>";
@@ -394,8 +407,45 @@
       }).join("");
       log.scrollTop = log.scrollHeight;
     }
+    var ICON = "<svg viewBox='0 0 32 32' aria-hidden='true'><line x1='16' y1='3' x2='16' y2='8' stroke='#fff' stroke-width='2' stroke-linecap='round'/><circle cx='16' cy='3.5' r='2' fill='#fbbf24'/><rect x='4' y='8' width='24' height='17' rx='6' fill='#fff'/><circle cx='11.5' cy='16' r='2.6' fill='#1e3a5f'/><circle cx='20.5' cy='16' r='2.6' fill='#1e3a5f'/><path d='M12 21.2q4 2.4 8 0' stroke='#1e3a5f' stroke-width='1.8' fill='none' stroke-linecap='round'/><rect x='1' y='13' width='3' height='6' rx='1.5' fill='#fff'/><rect x='28' y='13' width='3' height='6' rx='1.5' fill='#fff'/></svg>";
+    var botOpen = false, reading = false;
+    // The icon button (always visible) and the chat panel it opens. Rebuilt with the wizard page; chat history is kept in `chat`.
+    function botUi() {
+      var f = back.querySelector(".bt-fab"), pn = back.querySelector(".bt-panel");
+      if (botOpen && !pn) {
+        if (f) f.remove();
+        pn = document.createElement("div"); pn.className = "bt-panel"; pn.setAttribute("role", "dialog"); pn.setAttribute("aria-label", "Helper bot");
+        pn.innerHTML = "<div class='bt-head'>" + ICON + "<span>Helper bot</span><button type='button' data-b='close' aria-label='Close helper bot'>&times;</button></div>" +
+          "<div class='bt-log' aria-live='polite'></div><div class='bt-form'><label for='bt-site'>Your website</label>" +
+          "<div class='bt-row'><input id='bt-site' class='bt-site' type='text' inputmode='url' placeholder='yourcompany.com' autocomplete='url'><button type='button' class='pri' data-b='site'" + (reading ? " disabled" : "") + ">" + (reading ? "Reading&hellip;" : "Read it") + "</button></div>" +
+          "<label for='bt-in'>Or describe your business</label><textarea id='bt-in' rows='2' class='bt-in' placeholder='e.g. We sell laptops and toner to schools. Veteran-owned.'></textarea>" +
+          "<button type='button' class='pri bt-go' data-b='ask'>Suggest options</button></div>";
+        back.appendChild(pn); botLog();
+      } else if (!botOpen && !f) {
+        if (pn) pn.remove();
+        f = document.createElement("button"); f.type = "button"; f.className = "bt-fab"; f.setAttribute("data-b", "open"); f.setAttribute("aria-label", "Open helper bot");
+        f.innerHTML = ICON + "<span>Helper bot</span>"; back.appendChild(f);
+      }
+    }
+    function botSay(m) { chat.push(m); botLog(); }
+    function botSite() {
+      var box = back.querySelector(".bt-site"), url = (box && box.value || "").trim(); if (!url || reading) return;
+      chat.push({ me: true, text: url }); reading = true; botLog();
+      var go = back.querySelector("[data-b='site']"); if (go) { go.disabled = true; go.textContent = "Reading\u2026"; }
+      var done = function () { reading = false; var g = back && back.querySelector("[data-b='site']"); if (g) { g.disabled = false; g.textContent = "Read it"; } };
+      fetch("/api/site-text?url=" + encodeURIComponent(url)).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); }).then(function (x) {
+        done(); if (!back) return;
+        if (!x.ok) return botSay({ me: false, text: (x.j && x.j.error) || "I could not read that website." });
+        var s = suggest(x.j.text, true), lines = [];
+        if (s.cats.length) lines.push("<b>Categories (" + s.cats.length + "):</b> " + h(names(s.cats.map(function (o) { return o.label; }), 5)));
+        if (s.aside.length) lines.push("<b>Eligibility:</b> " + h(names(s.aside.map(function (v) { for (var i = 0; i < ASIDE_OPTS.length; i++) if (ASIDE_OPTS[i][0] === v) return ASIDE_OPTS[i][1]; return v; }), 5)));
+        if (s.reg.length) lines.push("<b>Registered with:</b> " + h(names(s.reg.map(function (v) { var o = SOURCES.filter(function (q) { return q.id === v; })[0]; return o ? o.label : v; }), 5)));
+        if (lines.length) botSay({ me: false, html: "I read <b>" + h(x.j.title || x.j.site) + "</b>. Here is what I would suggest:<br>" + lines.join("<br>") + "<br><span class='wz-note'>Websites do not say where you bid, so locations are left to you.</span>", sug: s });
+        else botSay({ me: false, text: "I read the site but could not match it to any category. Try describing what you sell instead." });
+      }, function () { done(); botSay({ me: false, text: "I could not reach the website reader. It needs the tracker service running. You can describe your business instead." }); });
+    }
     function botAsk() {
-      var box = back.querySelector(".wz-bot-in"), text = (box.value || "").trim(); if (!text) return;
+      var box = back.querySelector(".bt-in"), text = (box.value || "").trim(); if (!text) return;
       box.value = "";
       chat.push({ me: true, text: text });
       var s = suggest(text), lines = [];
@@ -419,10 +469,13 @@
     }
     back.addEventListener("click", function (e) {
       var b = e.target.closest("[data-b]"); if (!b) return;
-      if (b.dataset.b === "ask") botAsk(); else if (b.dataset.b === "apply") botApply(+b.dataset.m);
+      var k = b.dataset.b;
+      if (k === "ask") botAsk(); else if (k === "site") botSite(); else if (k === "apply") botApply(+b.dataset.m);
+      else if (k === "open" || k === "close") { botOpen = k === "open"; botUi(); var i = back.querySelector(".bt-site"); if (botOpen && i) i.focus(); }
     });
     back.addEventListener("keydown", function (e) {
-      if (e.key === "Enter" && !e.shiftKey && e.target.classList && e.target.classList.contains("wz-bot-in")) { e.preventDefault(); botAsk(); }
+      var c = e.target.classList; if (e.key !== "Enter" || !c) return;
+      if (c.contains("bt-site")) { e.preventDefault(); botSite(); } else if (!e.shiftKey && c.contains("bt-in")) { e.preventDefault(); botAsk(); }
     });
     function drawStep() {
       if (step === 4) return drawA();
