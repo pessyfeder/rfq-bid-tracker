@@ -393,7 +393,7 @@
       ".hm-item{grid-template-columns:auto auto minmax(0,1fr) auto}.hm-list.grid .hm-item{grid-template-columns:minmax(0,1fr)}.hm-list.grid .hm-stat{grid-template-columns:repeat(4,24px);justify-content:start}" +
       "@media(max-width:1100px){.hm-item{grid-template-columns:minmax(0,1fr)}.hm-stat{grid-template-columns:repeat(4,24px);justify-content:start}}" +
       ".hm-st.interested.on{background:#dbeafe;border-color:#2563eb;color:#1e40af}.hm-st.bidding.on{background:#fef3c7;border-color:#d97706;color:#92400e}.hm-st.submitted.on{background:#dcfce7;border-color:#16a34a;color:#166534}.hm-st.no.on{background:#e5e7eb;border-color:#6b7280;color:#374151}" +
-      ".hm-item.is-no{opacity:.55}.hm-hid{border:0;background:none;color:#4338ca;cursor:pointer;font:13px system-ui,sans-serif;margin-left:12px;text-decoration:underline}";
+      ".hm-item.is-no{opacity:.55}.hm-hid{border:0;background:none;color:#fff;cursor:pointer;font:600 13px system-ui,sans-serif;padding:0;margin-right:auto;margin-left:6px;text-decoration:underline}.hm-hid:hover{opacity:.85}";
     document.head.appendChild(css);
   })();
 
@@ -414,7 +414,7 @@
     });
     var chips = chipList();
     var h = '<div class="hm-filt">' + (chips.length ? "<b>Filtered by</b>" + chips.map(function (c) { return '<button class="hm-chip" data-x="' + c[0] + '" title="Remove this filter">' + esc(c[1]) + ICON_X + "</button>"; }).join("") + '<button class="hm-clear" data-a="clear">Clear All</button>' : "") + "</div>";
-    h += '<div class="hm-resbar"><span class="hm-cnt">' + list.length.toLocaleString() + (list.length === 1 ? " result" : " results") + '</span>' + (hiddenN ? '<button type="button" class="hm-hid" data-a="hidden">' + (showHidden ? "Hide" : "Show") + " " + hiddenN + " not interested</button>" : "") + '<label for="hm-sort">Order By</label><select id="hm-sort" data-sel="sort">' +
+    h += '<div class="hm-resbar"><span class="hm-cnt"' + (hiddenN ? ' style="margin-right:0"' : "") + '>' + list.length.toLocaleString() + (list.length === 1 ? " result" : " results") + '</span>' + (hiddenN ? '<button type="button" class="hm-hid' + (showHidden ? " on" : "") + '" data-a="hidden" title="Requests you marked Not interested">' + (showHidden ? "Hide " : "Show ") + hiddenN + " &ldquo;Not interested&rdquo; request" + (hiddenN === 1 ? "" : "s") + "</button>" : "") + '<label for="hm-sort">Order By</label><select id="hm-sort" data-sel="sort">' +
       SORT_OPT.map(function (o) { return '<option value="' + o[0] + '"' + (st.sort === o[0] ? " selected" : "") + ">" + esc(o[1]) + "</option>"; }).join("") + "</select></div>";
     if (!list.length) h += '<div class="hm-empty"><h3>No bids match these filters</h3><p class="hm-sub">Try widening the category, jurisdiction or deadline.</p><button class="hm-go" data-a="clear">Clear all filters</button></div>';
     h += '<div class="hm-list' + (st.view === "grid" ? " grid" : "") + '">';
