@@ -78,7 +78,7 @@ If `more` is `true`, the page was cut off by `limit`; call again with `after=<cu
 | `region` | string \| null | Place of performance / "New York City". |
 | `posted` | `YYYY-MM-DD` | |
 | `due` | `YYYY-MM-DD` | Eastern-time date. |
-| `dueTime` | string \| null | As published, e.g. `3:30 PM EST`. Midnight and date-only deadlines (SAM.gov sometimes gives only a day) are treated as no time given: `null`, and the page shows "No time given". |
+| `dueTime` | string \| null | As published, e.g. `3:30 PM EST`. When a date-only deadline is given (SAM.gov sometimes gives only a day) the feeds emit the string `"No time given"` (SAM) or `"No data"` (states) instead of `null`; the page prints it after the date. In the feed JSON, `dueTime` is `null` only when the source row has no value at all. |
 | `dueAt` | ISO UTC \| null | `due` + `dueTime` converted to an instant (null if no usable time). Use this to compare to "now". |
 | `hasRealDeadline` | bool | `false` = placeholder (year 2099+ or over 3 years out). |
 | `warnings` | string[] | e.g. "Posted over a year ago". The human page hides flagged rows by default. |
@@ -91,7 +91,7 @@ If `more` is `true`, the page was cut off by `limit`; call again with `after=<cu
 | `sourceUrl` | string | Deep link to the source posting (same as `url`). |
 | `naics`, `docDue` | string \| null | NAICS code and due date (YYYY-MM-DD) as stated in the documents, AI-read; null when not stated. |
 | `shall` | `{text, ref}[]` | Key "shall" statements. |
-| `amended` | bool | Currently never set by the feeds. |
+| `amended` | bool | Set by `fetch-sam.js` (`details.amended = true`) whenever a notice's deadline moves. |
 | `aiRead` | bool | `scope`/`requires`/`shall` came from an AI read: verify before relying on them. |
 | `value` | object | See below. |
 | `active` | bool | `false` = no longer listed by its source (closed, withdrawn, or aged out). Treat as removed. |

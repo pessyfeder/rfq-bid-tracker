@@ -268,9 +268,9 @@ and is flagged on the page and in /api/status.
    state does not stop the others; one retry pass after a pause):
      DE IN IA LA MS SC ID VT TX (TxDOT lettings only) RI NY WY KS FL NE WV MO SD OK AR CO AK HI,
      plus NV NJ OR IL MA via the shared Periscope adapter (states/bso.js).
-   Each notice needs a title, https link and due date, else it is dropped. Then USAspending
-   value estimates and the AI read of the notice page and attachments (needs
-   ANTHROPIC_API_KEY; capped at STATE_MAX_READS = 150 new reads per run, soonest deadline
+   Each notice needs a title, https link and due date, else it is dropped. Then the AI
+   read of the notice page and attachments (needs ANTHROPIC_API_KEY; values are never
+   estimated from other agencies' awards; capped at STATE_MAX_READS = 600 new reads per run, soonest deadline
    first; earlier reads are reused; a notice whose listing changed, i.e. an amendment, is re-read). Portals that forbid reads or need a login are marked
    noPageReads and show a "Not read" note. Run: node fetch-states.js [DE NV ...]
    Per-state status and the reasons for parked states: state-sources-survey.md,
@@ -347,7 +347,7 @@ Docs and notes
  state-fetch-status.pdf  Per-state fetch status report.
 
 Other settings (environment or .env): PORT, HOST, REFRESH_TOKEN, REFRESH_MORNING_HOUR, WAKE_DELAY_SEC (45),
-FETCH_TIMEOUT_MIN (120), RETRY_AFTER_MIN, RETRY_MAX, SAM_DAILY_BUDGET, STATE_MAX_READS (150),
+FETCH_TIMEOUT_MIN (120), RETRY_AFTER_MIN, RETRY_MAX, SAM_DAILY_BUDGET, STATE_MAX_READS (600),
 STATE_RETRY_WAIT_SEC (60), STATE_REREAD_ONLY, BSO_DEBUG, SAM_BASE (offline testing only).
 
 Generated at run time (git-ignored): live-*.js, data/ (state.json, feed.json, service.log,

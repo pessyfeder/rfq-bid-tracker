@@ -20,7 +20,7 @@ const SOURCES = [
   { id: "nyc", label: "NYC City Record", file: "live-nyc.js", script: "fetch-nyc.js", needsEnv: [] },
   // windowed: the fetch only looks back N days, so absence from it does not mean withdrawn.
   { id: "sam", label: "SAM.gov", file: "live-sam.js", script: "fetch-sam.js", needsEnv: ["SAM_API_KEY"], windowed: true },
-  // DE, IN, NV, NJ, OR, IL, MA (one adapter per state in states/; a failing state keeps its last notices).
+  // 28 state adapters (one adapter per state in states/; a failing state keeps its last notices).
   { id: "states", label: "State portals (incl. NY)", file: "live-states.js", script: "fetch-states.js", needsEnv: [] }
 ];
 
