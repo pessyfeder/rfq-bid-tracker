@@ -327,7 +327,7 @@
     det.appendChild(sum); det.appendChild(ok); box.appendChild(det);
   }
   try { window.RFQ_JUST_REFRESHED = !!sessionStorage.getItem("rfqAutoReload"); } catch (e) {} // set by the page's own reload after a refresh ends
-  box.hidden = !failed; // only a real fetch failure shows the banner: not success, partial fetches or not-set-up sources
+  box.hidden = !items.length; // failures (red) and partial fetches (amber) show the banner; all-green stays hidden
   if (!items.length) box.classList.add("ok");
 })();
 </script>
@@ -1672,9 +1672,10 @@
     }
     el.classList.toggle("ok", !bad.length);
     // Overall colour: red if anything failed, amber if only warnings, green only when everything (states too) is fine.
-    var anyFail = sb.stateFailed || failedN, anyWarn = anyFail; // banner = real failures only (not "not set up", partial or all-green)
+    var anyFail = sb.stateFailed || failedN;
+    var anyWarn = anyFail || sb.stateItems > 0 || skippedN > 0; // red = failed; amber = partial state fetch or a source not set up
     sb.box.classList.toggle("ok", !anyWarn);
-    sb.box.classList.toggle("warn", false);
+    sb.box.classList.toggle("warn", !!anyWarn && !anyFail);
     if (!sb.box.querySelector(".closex")) {
       var x = document.createElement("button"); x.className = "closex"; x.type = "button"; x.title = "Dismiss"; x.setAttribute("aria-label", "Dismiss"); x.textContent = "×";
       x.addEventListener("click", function () { sb.dismissed = true; sb.box.hidden = true; });
