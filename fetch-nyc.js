@@ -1,13 +1,16 @@
 // Fetches open NYC solicitations from the City Record (NYC Open Data, dataset dg92-zbpx)
 // and writes live-nyc.js. Public data, no API key needed.
 //
-// Usage: node fetch-nyc.js [--max 500]
+// Usage: node fetch-nyc.js [--max N]   (--max is for testing only; see MAX below)
 
 const fs = require("fs");
 const path = require("path");
 
 const maxIdx = process.argv.indexOf("--max");
-const MAX = maxIdx >= 0 ? Number(process.argv[maxIdx + 1]) : 500;
+// NYC is not a windowed source in service/feed.js: a notice missing from the live file is treated as withdrawn.
+// So by default every open solicitation is loaded (only the 200000-row safety cap in socrataAll applies, and it warns).
+// --max is for quick test runs only; a capped file will make the feed tombstone every notice beyond the cap.
+const MAX = maxIdx >= 0 ? Number(process.argv[maxIdx + 1]) : undefined;
 const OUT = path.join(__dirname, "live-nyc.js");
 
 const stripHtml = (s) => String(s || "").replace(/<[^>]*>/g, " ").replace(/&nbsp;/g, " ").replace(/[\u0000-\u001f]/g, "'").replace(/\s+/g, " ").trim();
@@ -115,8 +118,8 @@ async function socrata(params) {
 // Fetch every matching row by paging with $limit/$offset. A single huge $limit can be silently capped
 // by the server, which would drop the oldest rows without any error. A unique tie-break on the sort
 // keeps pages from overlapping or skipping rows.
-// `maxRows` is a hard cap; `capIsLimit` says it is a deliberate limit (no warning when reached).
-async function socrataAll(params, { pageSize = 5000, maxRows = 200000, capIsLimit = false } = {}) {
+// `maxRows` is a hard cap; hitting it always warns, since rows beyond it are treated as withdrawn downstream.
+async function socrataAll(params, { pageSize = 5000, maxRows = 200000 } = {}) {
   const all = [];
   while (all.length < maxRows) {
     const want = Math.min(pageSize, maxRows - all.length);
@@ -124,7 +127,7 @@ async function socrataAll(params, { pageSize = 5000, maxRows = 200000, capIsLimi
     all.push(...page);
     if (page.length < want) return all;
   }
-  if (!capIsLimit) console.warn(`NYC: stopped at ${maxRows} rows (safety cap); older rows were not loaded`);
+  console.warn(`NYC: stopped at ${maxRows} rows (cap); older rows were not loaded and will be treated as withdrawn`);
   return all;
 }
 
@@ -137,7 +140,7 @@ async function inBatches(items, size, fn) {
   const items = await socrataAll({
     $where: `section_name='Procurement' AND type_of_notice_description='Solicitation' AND due_date >= '${today}'`,
     $order: "start_date DESC"
-  }, { maxRows: MAX, capIsLimit: true });
+  }, MAX ? { maxRows: MAX } : {}); // always warns if a cap is hit
   learnAcronyms(items.map((o) => o.short_title));
   // One malformed row must not abort the whole fetch: skip it and say so.
   const rfqs = items.map((o) => {
