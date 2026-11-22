@@ -33,8 +33,38 @@
     { label: "Submittals / samples for approval", sev: "info", note: true, re: /\bsubmittals?\b|samples? (for|must be) (approval|submitted)/i },
     { label: "Local / in-state preference", sev: "info", re: /\b(local|in-state|resident) (vendor|bidder|business|preference)\b/i },
     { label: "Past performance / references", sev: "info", re: /past performance|references|\bCPARS\b|years of experience|similar (projects|contracts)/i },
-    { label: "Multi-year / renewal term",  sev: "info", re: /option (year|period)|base (year|period)|\b\d+[- ]year (contract|term)|renewal/i }
+    { label: "Multi-year / renewal term",  sev: "info", re: /option (year|period)|base (year|period)|\b\d+[- ]year (contract|term)|renewal/i },
+    // Requirement checklist rules (specs, submission, delivery, payment, compliance paperwork). They are shown under Requirements on the details page and as chips on the cards.
+    { label: "Quantities stated",          sev: "info", note: true, re: /\b\d[\d,]*(?:\.\d+)?\s+(?:units?|each|ea\b|items?|pieces?|licen[sc]es?|seats?|users?|vehicles?|gallons?|tons?|pounds?|lbs?\.?|boxes|cases|sets?|pairs?|acres?|sq\.? ?ft\.?|square feet|linear feet|lots?|doors?|windows?|devices?|computers?|laptops?|buses|trucks?|rooms?|buildings?|sites?|locations?|kits?)\b|\bquantity (of|:)\s*\d|estimated (annual )?quantit/i },
+    { label: "Quality / technical standards", sev: "info", note: true, re: /\bASTM\b|\bISO[- ]?\d|\bANSI\b|\bUL[- ]?\d*\s*(listed|certified|approved)|\bNSF\b|\bNFPA\b|\bASHRAE\b|\bIEEE\b|\bFDA[- ](approved|registered)|\bEnergy Star\b|\bMIL-(STD|SPEC)|meets? or exceeds?|conform(s|ing)? to (the )?(specifications?|standards?)/i },
+    { label: "Submission format / method", sev: "info", note: true, re: /sealed (bids?|proposals?|quotes?)|submit(ted)? (your )?(bids?|proposals?|quotes?|offers?)?\s*(electronically|online|by email|via|through)|electronic(ally)? submi|hard copy|original and \d+ (copies|cop(y|ies))|\d+ (hard )?cop(y|ies) of (the |your )?(bid|proposal|quote)|\bnotariz|bids? must be (submitted|received|delivered)|(proposals?|bids?|quotes?) (shall|must) be (submitted|signed|sealed|marked)/i },
+    { label: "Questions / amendment deadline", sev: "info", note: true, re: /(questions?|inquiries|requests? for clarification)[^.]{0,60}(due|must be (submitted|received)|no later than|deadline|by \d)|deadline for (questions|inquiries)/i },
+    { label: "Delivery / completion timeline", sev: "cost", note: true, re: /deliver(y|ed|ies)?[^.]{0,60}within\s+\(?\w+\)?\s*\(?\d*\)?\s*(calendar |business |working )?(days?|weeks?|months?)|within\s+\(?\w+\)?\s*\(?\d*\)?\s*(calendar |business |working )?(days?|weeks?) (of|after|from) (the )?(award|receipt|notice|purchase order|contract|order)|(completion|delivery) (date|time)|completed? (by|within)\s+\w+|period of performance|notice to proceed|\blead[- ]time|\bdelivery schedule/i },
+    { label: "Payment terms", sev: "info", note: true, re: /\bnet[- ]?(10|15|20|30)\b|payment (will be made |is due |shall be made )?(within|in) \w*\s*\(?\d+\)?\s*(calendar )?days|invoices?[^.]{0,40}(monthly|within \d+|upon (completion|delivery))|progress payments?|payment terms|prompt pay|paid (upon|after|monthly)|payment (schedule|will be)/i },
+    { label: "Required forms / compliance documents", sev: "cost", note: true, re: /\bW-?9\b|affidavit|non-?collusion|certificate of insurance|debarment|conflict of interest (form|disclosure|statement)|representations and certifications|\bSF[- ]?\d{2,4}\b|\bMWBE\b[^.]{0,30}(plan|utilization|form)|utilization plan|equal employment|affirmative action|iran (divest|investment)|anti-?kickback|disclosure (form|statement)|signed (and notarized )?(form|certification)|\bsubmit\b[^.]{0,40}\bcertificates?\b|vendor (application|registration form)/i }
   ];
+  // Which checklist group each rule belongs to (shown as one colour per group on the cards, and as sub-headings under Requirements).
+  var GROUPS = [
+    { id: "specs",    title: "Specs, quantities and quality", color: "#ccfbf1", ink: "#0f5c55" },
+    { id: "deadline", title: "Deadlines and submission",      color: "#dbeafe", ink: "#1d4ed8" },
+    { id: "delivery", title: "Delivery and schedule",         color: "#ffedd5", ink: "#9a3412" },
+    { id: "payment",  title: "Payment and financial",         color: "#dcfce7", ink: "#166534" },
+    { id: "certs",    title: "Certifications and compliance", color: "#f3e8ff", ink: "#6b21a8" },
+    { id: "terms",    title: "Other terms",                   color: "#e2e8f0", ink: "#334155" }
+  ];
+  var GROUP_OF = {
+    "Quantities stated": "specs", "Quality / technical standards": "specs", "Brand-name / \"or equal\" spec": "specs", "Submittals / samples for approval": "specs",
+    "Warranty requirement": "specs", "Domestic-content rule (Buy America / TAA)": "specs", "Hazardous materials handling": "specs",
+    "Submission format / method": "deadline", "Questions / amendment deadline": "deadline", "Mandatory site visit / pre-bid": "deadline",
+    "Delivery / completion timeline": "delivery", "Delivery terms (FOB / inside delivery)": "delivery", "24/7 or after-hours": "delivery", "Escorted or restricted site access": "delivery",
+    "Liquidated damages for late work": "delivery", "Multi-year / renewal term": "delivery",
+    "Payment terms": "payment", "Retainage or slow payment terms": "payment", "Bid bond / bid guarantee": "payment", "Bonding capacity minimum": "payment", "Performance / payment bond": "payment",
+    "Insurance minimums": "payment", "Prevailing / living wage": "payment", "Fixed price, no escalation": "payment", "Permits and fees on the contractor": "payment",
+    "TSA-checked workers": "certs", "Security clearance": "certs", "Background checks / fingerprinting": "certs", "License / certification": "certs", "Minimum experience required": "certs",
+    "Required forms / compliance documents": "certs", "Certified payroll / compliance reporting": "certs", "Drug testing of workers": "certs", "Past performance / references": "certs"
+  };
+  function groupOf(label) { return GROUP_OF[label] || "terms"; }
+  var TERM_KEYS = ["specs", "deadline", "delivery", "payment", "certs"]; // the same ids as GROUPS; AI-read lines live in record.terms
   var KEYWORD_ONLY = /^(NY|WY|DE|TXDOT|ID|KS|PA)-/;
   // Short hover text: just the stretch of text around the match, not the whole paragraph.
   function excerpt(text, m) {
@@ -63,7 +93,7 @@
     FACT_RULES.forEach(function (rule) {
       for (var i = 0; i < src.length; i++) {
         var m = rule.re.exec(src[i]);
-        if (m) { var f = { label: rule.label, sev: rule.sev, why: excerpt(src[i], m) }; if (rule.gate) f.gate = true; if (rule.note) f.note = true; if (kw) f.kw = true; out.push(f); return; }
+        if (m) { var f = { label: rule.label, sev: rule.sev, grp: groupOf(rule.label), why: excerpt(src[i], m) }; if (rule.gate) f.gate = true; if (rule.note) f.note = true; if (kw) f.kw = true; out.push(f); return; }
       }
     });
     return out;
@@ -83,6 +113,7 @@
     if (r.scope) src.push(r.scope);
     (r.shall || []).forEach(function (s) { src.push(s.text); });
     (x.requirements || []).forEach(function (q) { src.push(q); });
+    (r.terms ? TERM_KEYS : []).forEach(function (k) { (r.terms[k] || []).forEach(function (q) { src.push(q); }); }); // AI-read requirement lines
     if (x.restriction) src.push(x.restriction);
     var out = scan(src, kw);
     // Facts found in the attached documents' full text fill in what the short summary lines missed.
@@ -121,6 +152,13 @@
     "Submittals / samples for approval": "You must send samples or documents for approval before starting or ordering. This can slow the schedule.",
     "Local / in-state preference": "The buyer may favor local or in-state businesses. Outside bidders can be at a disadvantage.",
     "Past performance / references": "The buyer will check your past jobs or references. Have similar projects and contacts ready.",
+    "Quantities stated": "The notice states how much is wanted. Check you can supply that amount, and price the whole quantity.",
+    "Quality / technical standards": "The product or work must meet named industry standards (such as ASTM, ISO, UL or NFPA). Ask your supplier for proof before you bid.",
+    "Submission format / method": "The notice sets how your bid must be sent (sealed, electronic, a number of copies, signed or notarized). A bid in the wrong format can be rejected.",
+    "Questions / amendment deadline": "Questions about the notice are only accepted until a set date, earlier than the bid deadline. Ask early.",
+    "Delivery / completion timeline": "The work or goods are due within a set time after award. Check you can meet it.",
+    "Payment terms": "The notice says when and how you get paid (for example net 30, or monthly invoices). Check it fits your cash flow.",
+    "Required forms / compliance documents": "You must send extra paperwork with your bid (forms, affidavits, W-9, certificates). Missing one can disqualify the bid.",
     "Multi-year / renewal term": "The contract can run several years or be renewed. That is steady work, but your price is held for a long time."
   };
   var OPEN_ALL = "Open to all businesses";
@@ -156,6 +194,8 @@
   }
   root.explainFact = explainFact;
   root.computeFacts = keyFacts;
+  root.REQ_GROUPS = GROUPS;
+  root.reqGroupOf = function (label) { return GROUP_OF[label] || ""; }; // "" = not a checklist item (e.g. a set-aside)
   root.scanText = scanText;
-  if (typeof module !== "undefined" && module.exports) module.exports = { computeFacts: keyFacts, scanText: scanText, explainFact: explainFact };
+  if (typeof module !== "undefined" && module.exports) module.exports = { computeFacts: keyFacts, scanText: scanText, explainFact: explainFact, GROUPS: GROUPS, groupOf: groupOf };
 })(typeof window !== "undefined" ? window : globalThis);

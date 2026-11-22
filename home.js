@@ -87,6 +87,8 @@
     "@media(min-width:1101px){.hm-fields{grid-template-columns:repeat(6,minmax(0,1fr))}.hm-kw{width:calc((100% - 30px) / 3 + 6px)}}" +
     "@media(max-width:1100px){.hm-bar{flex-wrap:wrap}.hm-kw{flex:1 1 100%!important;max-width:calc(100% - 100px)}.hm-fields{flex:1 1 100%!important;flex-wrap:wrap}.hm-field{flex:1 1 calc(25% - 6px)!important;min-width:110px}.hm-field.rt .hm-dd-panel{left:auto;right:0}.hm-item{grid-template-columns:minmax(0,1fr)}.hm-map{display:none}.hm-dates{grid-column:1;min-width:0;grid-template-columns:auto auto;justify-content:start}}" +
     "@media(max-width:620px){.hm-in{padding:0 14px}.hm-title h1{font-size:22px}.hm-fields{gap:6px}.hm-field{flex-basis:calc(50% - 6px)}.hm-dd-panel{width:92vw}.hm-field:nth-child(odd) .hm-dd-panel{left:0;right:auto}.hm-field:nth-child(even) .hm-dd-panel{left:auto;right:0}.hm-resbar select{min-width:0;width:100%}.hm-item{grid-template-columns:1fr;padding:9px 14px}.hm-ic{display:none}.hm-dates{grid-column:1}}";
+  // One colour per requirement group (facts.js REQ_GROUPS); written after the severity colours so it wins. Hard gates keep a red left edge.
+  css.textContent += (window.REQ_GROUPS || []).map(function (g) { return ".hm-flag.grp-" + g.id + "{background:" + g.color + ";color:" + g.ink + "}"; }).join("") + ".hm-flag.hard.grp-specs,.hm-flag.hard.grp-deadline,.hm-flag.hard.grp-delivery,.hm-flag.hard.grp-payment,.hm-flag.hard.grp-certs,.hm-flag.hard.grp-terms{border-left:3px solid #b3261e}";
   document.head.appendChild(css);
 
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
@@ -404,19 +406,20 @@
   var FLAG_MAX = 6;
   function flagsHtml(raw) {
     var out = [], seen = {};
-    function add(label, cls, why) {
+    function add(label, cls, why, grp) {
       // Every plain small-business set-aside wording ("Small Business Set Aside - Total", "100% Small business set-aside", ...) is one chip.
       if (window.asideLabel) label = window.asideLabel(label);
       var sl = String(label || "").toLowerCase();
       if (/small business/.test(sl) && /set[- ]?aside/.test(sl) && !/partial|veteran|sdvos?b|vosb|wosb|women|hubzone|8\(a\)|minority|mbe|wbe|dbe|sdvob/.test(sl)) label = "Small Business Set Aside";
       var k = String(label).toLowerCase(); if (!label || seen[k]) return; seen[k] = 1;
-      out.push({ label: String(label), cls: cls, why: why || "" });
+      out.push({ label: String(label), cls: cls, why: why || "", grp: grp || (cls !== "elig" && window.reqGroupOf ? window.reqGroupOf(String(label)) : "") });
     }
     (raw.requires || []).forEach(function (q) { add(q, /unless waived/i.test(q) ? "cost" : "elig", "Who can bid"); });
     var rs = raw.details && raw.details.restriction; if (rs) add(rs, "elig", "Who can bid");
     window.titleChips(raw.title).forEach(function (c) { add(c[0], c[1], c[2]); });   // requirements written into the title become chips
     var facts = raw.facts || (window.computeFacts ? (function () { try { return window.computeFacts(raw); } catch (e) { return []; } })() : []);
-    facts.forEach(function (f) { add(f.label, f.sev === "hard" ? "hard" : f.sev === "cost" ? "cost" : "info", f.why); });
+    // Requirement chips are coloured by what kind of requirement they are (specs, deadline, delivery, payment, certification); a red left edge marks a hard gate.
+    facts.forEach(function (f) { add(f.label, f.sev === "hard" ? "hard" : f.sev === "cost" ? "cost" : "info", f.why, f.grp || (window.reqGroupOf ? window.reqGroupOf(f.label) : "")); });
     // Merge near-duplicates: a chip whose words are all contained in another chip's words is dropped (keeps the more specific one).
     var toks = out.map(function (f) { var o = {}; f.label.toLowerCase().replace(/[^a-z0-9 ]+/g, " ").split(/\s+/).forEach(function (w) { if (w && w !== "required") o[w] = 1; }); return o; });
     out = out.filter(function (f, i) {
@@ -425,7 +428,7 @@
     });
     var h = "";
     if (raw.requires == null && !raw.aiRead) h += '<span class="hm-flag unclear" title="Click for explanation" role="button" tabindex="0" data-why="">Eligibility not checked</span>';
-    out.slice(0, FLAG_MAX).forEach(function (f) { h += '<span class="hm-flag ' + f.cls + '" title="Click for explanation" role="button" tabindex="0" data-why="' + esc(f.why) + '">' + esc(f.label) + "</span>"; });
+    out.slice(0, FLAG_MAX).forEach(function (f) { h += '<span class="hm-flag ' + f.cls + (f.grp ? " grp-" + f.grp : "") + '" title="Click for explanation" role="button" tabindex="0" data-why="' + esc(f.why) + '">' + esc(f.label) + "</span>"; });
     if (out.length > FLAG_MAX) h += '<span class="hm-flag more" title="' + esc(out.slice(FLAG_MAX).map(function (f) { return f.label; }).join("; ")) + '">+' + (out.length - FLAG_MAX) + " more</span>";
     return h ? '<div class="hm-flags">' + h + "</div>" : "";
   }

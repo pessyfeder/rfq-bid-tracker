@@ -93,6 +93,8 @@ function normalize(r, source) {
     restriction: (r.details && r.details.restriction) || null,
     requirements: (r.details && r.details.requirements) || [],
     shall: Array.isArray(r.shall) ? r.shall : [],
+    terms: r.terms || null,               // AI-read requirement checklist: { specs, deadline, delivery, payment, certs } arrays of short lines
+    docFacts: Array.isArray(r.docFacts) ? r.docFacts : [], // requirement/bid-factor hits found in the full document text
     amended: !!(r.details && r.details.amended),
     contact: (r.details && r.details.contact) || null, // { name?, email?, phone? } of the buyer / contracting officer
     docAccess: r.aiRead ? "read" : "none", // "none" = documents not read: a thin record, not a complete one

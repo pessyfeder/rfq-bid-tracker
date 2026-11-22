@@ -28,6 +28,7 @@ function applyRead(r, ai, options = {}) {
   } else if (ai.requires !== null || options.forceRequires) r.requires = ai.requires;
   if (ai.scope) r.scope = ai.scope;
   if (ai.shall.length) r.shall = ai.shall;
+  if (ai.terms && Object.values(ai.terms).some((a) => a.length)) r.terms = ai.terms; // requirement checklist lines (specs, deadlines, delivery, payment, certifications)
   if (options.statedFields) {
     if (ai.naics) r.naics = ai.naics;
     if (ai.dueDate) r.docDue = ai.dueDate;
@@ -37,14 +38,17 @@ function applyRead(r, ai, options = {}) {
 }
 
 async function readInto(r, text, key, options = {}) {
-  scanDocs(r, text);
+  scanDocs(r, text, options.pdfs);
   return applyRead(r, await readText(text, key, options.pdfs), options);
 }
 
 // Scan the full text read for a notice (page text plus Word attachments) for bid factors and keep them on the record as
 // docFacts; computeFacts (facts.js) merges them in. An empty scan leaves an earlier docFacts alone.
-function scanDocs(r, text) {
-  const f = require("./facts").scanText(String(text || "").slice(0, 200000));
+function scanDocs(r, text, pdfs) {
+  const { pdfText } = require("./pdf-text");
+  let all = String(text || "").slice(0, 200000);
+  for (const b of pdfs || []) { try { all += "\n\n" + pdfText(b); } catch (e) { /* unreadable PDF: the model still reads it */ } }
+  const f = require("./facts").scanText(all);
   if (f.length) r.docFacts = f;
   return f.length;
 }
