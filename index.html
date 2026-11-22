@@ -501,7 +501,10 @@
     "311999": "All Other Miscellaneous Food Manufacturing", "332999": "All Other Miscellaneous Fabricated Metal Product Manufacturing",
     "334210": "Telephone Apparatus Manufacturing", "334220": "Radio, TV and Wireless Equipment Manufacturing", "334290": "Other Communications Equipment Manufacturing",
     "334310": "Audio and Video Equipment Manufacturing", "334419": "Other Electronic Component Manufacturing", "334510": "Electromedical and Electrotherapeutic Apparatus Manufacturing",
-    "334516": "Analytical Laboratory Instrument Manufacturing", "339113": "Surgical Appliance and Supplies Manufacturing",
+    "334516": "Analytical Laboratory Instrument Manufacturing", "336111": "Automobile Manufacturing", "336112": "Light Truck and Utility Vehicle Manufacturing",
+    "336120": "Heavy Duty Truck Manufacturing", "336211": "Motor Vehicle Body Manufacturing", "336212": "Truck Trailer Manufacturing", "336310": "Motor Vehicle Gasoline Engine and Engine Parts Manufacturing",
+    "336411": "Aircraft Manufacturing", "336413": "Other Aircraft Parts and Auxiliary Equipment Manufacturing", "336414": "Guided Missile and Space Vehicle Manufacturing",
+    "336611": "Ship Building and Repairing", "336612": "Boat Building", "336992": "Military Armored Vehicle, Tank and Tank Component Manufacturing", "339113": "Surgical Appliance and Supplies Manufacturing",
     "423450": "Medical, Dental and Hospital Equipment Wholesalers", "423490": "Other Professional Equipment and Supplies Wholesalers", "423610": "Electrical Apparatus and Equipment Wholesalers",
     "423690": "Other Electronic Parts and Equipment Wholesalers", "423710": "Hardware Wholesalers", "423840": "Industrial Supplies Wholesalers", "424120": "Stationery and Office Supplies Wholesalers",
     "484110": "General Freight Trucking, Local", "485999": "All Other Transit and Ground Passenger Transportation", "488190": "Other Support Activities for Air Transportation",
@@ -542,6 +545,8 @@
   function catLabel(r) {
     var c = r.category || "", m = /^NAICS (\d{6})$/.exec(c);
     if (!m) return tidyCat(c);
+    // The code stated in the solicitation itself beats the one typed into the SAM.gov listing (which is often wrong or not a real code).
+    if (/^\d{6}$/.test(r.naics || "")) { m = [null, r.naics]; c = "NAICS " + r.naics; }
     var t = NAICS_TITLE[m[1]] || NAICS_SECTOR[m[1].slice(0, 2)];
     return t ? c + " \u2013 " + t : c;
   }
