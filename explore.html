@@ -30,6 +30,14 @@
   .items li b { color:#27264f; }
   .na { color:var(--mut); }
   .small { color:var(--mut); font-size:12px; margin-top:6px; }
+  .dates { display:flex; flex-wrap:wrap; gap:10px; margin-top:18px; }
+  .dates > div { flex:1 1 150px; background:var(--soft); border-radius:8px; padding:10px 14px; }
+  .dates .k { display:block; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--mut); }
+  .dates .v { display:block; font-size:18px; font-weight:700; color:#27264f; margin-top:2px; }
+  .dates .v small { font-size:12px; font-weight:400; color:var(--mut); }
+  .dates .v.soon { color:#b42318; }
+  .btn { display:inline-block; background:var(--acc); color:#fff; border-radius:8px; padding:8px 16px; font-weight:600; text-decoration:none; }
+  .btn:hover { background:var(--acc2); }
   .foot { margin-top:36px; font-size:12px; color:var(--mut); }
   html.embed .nav { display:none; }
   html.embed main { max-width:none; padding:20px 22px 48px; }
@@ -98,14 +106,41 @@
     h += '<div class="sub">' + esc([r.agency && nice(r.agency), r.region, r.level].filter(Boolean).join(" · ")) +
       (link ? ' · <a href="' + esc(link) + '" target="_blank" rel="noopener">View original RFQ &#8599;</a>' : "") + "</div>";
 
+    // dates on top: posted, due, days left
+    var dl = daysLeft(r.due), real = r.hasRealDeadline !== false && dl !== null;
+    var dlTxt = !real ? "Unknown" : dl < 0 ? "Closed" : dl === 0 ? "Due today" : dl + (dl === 1 ? " day" : " days");
+    h += '<div class="dates">' +
+      '<div><span class="k">Date posted</span><span class="v">' + esc(mdy(r.posted)) + "</span></div>" +
+      '<div><span class="k">Due date</span><span class="v">' + (real ? esc(mdy(r.due)) + (r.dueTime ? ' <small>' + esc(r.dueTime) + "</small>" : "") : "Not stated") + "</span></div>" +
+      '<div><span class="k">Days left</span><span class="v' + (real && dl >= 0 && dl <= 3 ? " soon" : "") + '">' + esc(dlTxt) + "</span></div></div>";
+
+    // Some sources (e.g. West Virginia) only give "<RFQ number> (<type>). Buyer: name, email, phone" as the text.
+    var scope = String(r.scope || ""), buyerM = /\bBuyer:\s*(.*)$/i.exec(scope), desc = scope.replace(/\s*\bBuyer:.*$/i, "").trim();
+    var restates = !desc || desc.length < 140 && (/^[A-Z0-9][A-Z0-9\-_.\/]*\s*\(.*\)\.?$/.test(desc) || desc.toLowerCase().indexOf(String(r.title || "").toLowerCase()) >= 0 && desc.length < String(r.title || "").length + 40);
+    var contact = r.contact ? { name: r.contact.name, email: r.contact.email, phone: r.contact.phone } : {};
+    if (buyerM && !(contact.name || contact.email || contact.phone)) {
+      var em = /[^\s,;<>"]+@[^\s,;<>"]+/.exec(buyerM[1]), ph = /\(?\d{3}\)?[-.\s]?\d{3}[-.\s]\d{4}/.exec(buyerM[1]);
+      contact = { email: em && em[0].replace(/[.,;]+$/, ""), phone: ph && ph[0], name: buyerM[1].replace(em ? em[0] : "", "").replace(ph ? ph[0] : "", "").replace(/[\s,;]+$/, "").replace(/^[\s,;]+|[\s,;]+(?=[\s,;])/g, "").trim() };
+    }
+
     // 1. description, in full
     h += "<h2>1. Description</h2>";
-    h += r.scope ? '<p class="text">' + esc(r.scope) + "</p>" + (r.aiRead ? '<p class="small">AI-read, verify against the notice.</p>' : "")
-      : '<p class="na">' + (r.aiRead ? "None stated." : "Not checked: the source data has no description.") + "</p>";
+    h += !restates ? '<p class="text">' + esc(desc) + "</p>" + (r.aiRead ? '<p class="small">AI-read, verify against the notice.</p>' : "")
+      : '<p class="na">' + (r.aiRead ? "None stated." : "No description in the source data. See the RFQ document below.") + "</p>";
 
-    // 2. estimated value
+    // 2. contact information
+    var cl = [];
+    if (contact.name) cl.push("<li><b>Name:</b> " + esc(contact.name) + "</li>");
+    if (contact.email && /^[^\s@<>"]+@[^\s@<>"]+$/.test(contact.email)) cl.push('<li><b>Email:</b> <a href="mailto:' + esc(contact.email) + '">' + esc(contact.email) + "</a></li>");
+    if (contact.phone) cl.push("<li><b>Phone:</b> " + esc(contact.phone) + "</li>");
+    h += "<h2>2. Contact Information</h2>" + (cl.length ? '<ul class="items">' + cl.join("") + "</ul>" : '<p class="na">None stated.</p>');
+
+    // 3. RFQ document
+    h += "<h2>3. RFQ Document</h2>" + (link ? '<p><a class="btn" href="' + esc(link) + '" target="_blank" rel="noopener">View RFQ Document &#8599;</a></p>' : '<p class="na">No link available.</p>');
+
+    // 4. estimated value
     var v = r.value || {};
-    h += "<h2>2. Estimated Value</h2>";
+    h += "<h2>4. Estimated Value</h2>";
     if (v.amount != null) {
       h += '<p class="value">' + esc(money(v.amount)) + "</p>";
       if (v.low != null && v.high != null) h += '<p class="small">Typical range ' + esc(money(v.low)) + " – " + esc(money(v.high)) + "</p>";
@@ -138,7 +173,7 @@
     });
     var other = rest.filter(function (f) { return !used[f.label]; });
     if (other.length) tg += "<h3>Other</h3>" + list(other);
-    h += "<h2>3. Important Details</h2>" +
+    h += "<h2>5. Important Details</h2>" +
       (tg || '<p class="na">' + (r.aiRead || r.scope ? "None found in the notice text." : "Not checked: the notice was not read.") + "</p>");
 
     // 4. eligibility
@@ -146,7 +181,7 @@
     (r.requires || []).forEach(function (q) { items.push("<li><b>" + esc(q) + "</b></li>"); });
     if (r.restriction && !(r.requires || []).length) items.push("<li><b>" + esc(r.restriction) + "</b></li>");
     var gl = gates.length ? list(gates).replace(/^<ul class="items">|<\/ul>$/g, "") : "";
-    h += "<h2>4. Eligibility</h2>";
+    h += "<h2>6. Eligibility</h2>";
     if (items.length || gl) h += '<ul class="items">' + items.join("") + gl + "</ul>";
     else if (r.requires == null) h += '<p class="na">Not checked: the notice documents were not read, so eligibility is unknown.</p>';
     else h += '<p class="na">No eligibility conditions found. Open to all, as far as the notice says.</p>';
