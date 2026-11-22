@@ -111,6 +111,8 @@
     var l = label.toLowerCase();
     if (/set-aside|only$/.test(l) || /\b(sdvosb|vosb|wosb|edwosb|hubzone|8\(a\)|small business|mbe|wbe|dbe|mwbe|sdvob)\b/.test(l)) {
       var s = [];
+      // "Service-Disabled Veteran-Owned Small Business" is one category, not "small business" plus "veteran-owned"
+      l = l.replace(/(owned|hubzone|8\(a\)|disadvantaged)\s+small business(es)?/g, "$1");
       if (/small business|\bsb\b/.test(l)) s.push("small businesses");
       if (/sdvosb|sdvob/.test(l)) s.push("service-disabled veteran-owned businesses");
       else if (/\bvosb\b/.test(l)) s.push("veteran-owned businesses");
@@ -123,7 +125,8 @@
       if (/dbe/.test(l)) s.push("disadvantaged businesses");
       var who = s.length ? s.join(", ") : "certain types of businesses";
       if (/subcontracting|goals/.test(l)) return "The winner is expected to give part of the work to " + who + " (shown as goals). Check whether you qualify or can team up with one.";
-      return "Only " + who + " can bid. If your company is not certified as one, you cannot win this.";
+      var whoText = s.length > 1 ? s.slice(0, -1).join(", ") + " or " + s[s.length - 1] : who;
+      return "The buyer set this contract aside: only " + whoText + " can bid. If your company does not officially hold this status, your bid will be rejected, so skip it.";
     }
     if (/optional pre-bid/.test(l)) return "There is a pre-bid meeting, but you do not have to attend. It is still a good chance to ask questions.";
     if (/eligibility not checked/.test(l)) return "The notice documents were not read, so we do not know who is allowed to bid. Open the notice to check.";
