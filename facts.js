@@ -223,6 +223,7 @@
     var l = String(label || "").toLowerCase();
     if (/secretary of state|good standing|registered (to|with|in)|registration/.test(l)) return "Your company must be officially registered with the state, and in good standing (annual reports filed, fees paid), to win or hold this contract. Check your status with the state's Secretary of State office before you bid.";
     if (/licen[sc]e|licensed|permit/.test(l)) return "You need this license or permit to bid or do the work. If you do not hold it, get it first or team up with a company that does.";
+    if (/proprietary|brand.?name|sole.?source|single.?source/.test(l)) return "The buyer specifies a particular brand-name product. Bid only if you are an authorized dealer or reseller of it, or the notice says \"or equal\" and you can offer a comparable product.";
     if (/certif|accredit/.test(l)) return "You need this certification or accreditation. Without it your bid can be rejected.";
     if (/insurance|liability|workers.? comp/.test(l)) return "You must carry this insurance. Confirm your policy meets the stated amounts and ask your broker for a certificate.";
     if (/bond|surety/.test(l)) return "A bond (a guarantee backed by a surety company) is required. It adds cost, and new companies can find it hard to qualify.";
