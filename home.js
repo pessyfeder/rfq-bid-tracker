@@ -6,7 +6,7 @@
   var $app = document.getElementById("app");
   if (!$app) return;
   var DAY = 86400000, PAGE = 25;
-  var st = { kw: "", cats: [], where: [], close: [], posted: [], value: [], vmin: "", vmax: "", aside: [], sort: "new", shown: PAGE, dd: null, more: false, openG: { "My products": true } };
+  var st = { view: (function () { try { return localStorage.getItem("rfq-view") === "grid" ? "grid" : "list"; } catch (e) { return "list"; } })(), kw: "", cats: [], where: [], close: [], posted: [], value: [], vmin: "", vmax: "", aside: [], sort: "new", shown: PAGE, dd: null, more: false, openG: { "My products": true } };
 
   var css = document.createElement("style");
   css.textContent =
@@ -57,6 +57,8 @@
     ".hm-resbar{border-radius:12px 12px 0 0;background:linear-gradient(90deg,#312e81,#4338ca)}.hm-list{border:0;background:transparent;padding:10px 0 0;display:flex;flex-direction:column;gap:8px}" +
     ".hm-item{grid-template-columns:auto minmax(0,1fr) auto}.hm-map{display:flex;align-items:center;justify-content:center}.hm-item,.hm-item:nth-child(even){background:#fff;border:1px solid #e4e4f0;border-left:4px solid #4338ca;border-radius:10px;box-shadow:0 1px 2px rgba(49,46,129,.06);padding:10px 16px 10px 12px;min-height:60px}.hm-item:hover{box-shadow:0 4px 12px rgba(49,46,129,.12)}.hm-item:last-child{border-bottom:1px solid #e4e4f0}" +
     ".hm-ic{width:auto;height:auto;min-height:40px;padding:6px 8px;border-radius:8px;background:#eef0ff;color:#4338ca;font-size:11px;font-weight:600;line-height:1.2;text-align:center;overflow-wrap:anywhere}.hm-item h3{font-weight:600;font-size:14px}.hm-item h3 a{color:#27264f}" +
+    ".hm-bar{position:relative}.hm-view{position:absolute;right:0;top:0;display:inline-flex;height:30px;border:1px solid #d9dee5;border-radius:999px;overflow:hidden;background:#fff}.hm-vb{display:flex;align-items:center;justify-content:center;width:40px;border:0;background:#fff;color:#7b8794;padding:0}.hm-vb.on{background:#1b2540;color:#fff}" +
+    ".hm-list.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.hm-list.grid .hm-item{grid-template-columns:minmax(0,1fr);align-content:start}.hm-list.grid .hm-map{display:none}.hm-list.grid .hm-dates{grid-column:1;min-width:0;justify-content:start}" +
     ".hm-title h1{font-weight:700;letter-spacing:-.02em}.hm-showmore,.hm-btn,.hm-go{border-radius:999px}.hm-chip{background:#eef0ff;border-color:#c7caf5}" +
     /* portal layout: one flat row, wide search box with icon at right, then white bordered dropdowns; chips row below */
     ".hm-bar{flex-direction:row;align-items:center;gap:8px;background:none;border:0;padding:0;margin-top:16px;border-radius:0;width:min(1100px,calc(100vw - 32px))}" +
@@ -80,7 +82,7 @@
     ".hm-dd-btn.on,.hm-field select.on{color:#4a5562;box-shadow:inset 0 0 0 1px #0e5a73}.hm-dd-btn.on span{color:#4a5562}" +
     /* search box ends where the Jurisdiction filter ends: 2 of the 6 equal filter columns */
     "@media(min-width:1101px){.hm-fields{grid-template-columns:repeat(6,minmax(0,1fr))}.hm-kw{width:calc((100% - 30px) / 3 + 6px)}}" +
-    "@media(max-width:1100px){.hm-bar{flex-wrap:wrap}.hm-kw{flex:1 1 100%!important}.hm-fields{flex:1 1 100%!important;flex-wrap:wrap}.hm-field{flex:1 1 calc(25% - 6px)!important;min-width:110px}.hm-field.rt .hm-dd-panel{left:auto;right:0}.hm-item{grid-template-columns:minmax(0,1fr)}.hm-map{display:none}.hm-dates{grid-column:1;min-width:0;grid-template-columns:auto auto;justify-content:start}}" +
+    "@media(max-width:1100px){.hm-bar{flex-wrap:wrap}.hm-kw{flex:1 1 100%!important;max-width:calc(100% - 100px)}.hm-fields{flex:1 1 100%!important;flex-wrap:wrap}.hm-field{flex:1 1 calc(25% - 6px)!important;min-width:110px}.hm-field.rt .hm-dd-panel{left:auto;right:0}.hm-item{grid-template-columns:minmax(0,1fr)}.hm-map{display:none}.hm-dates{grid-column:1;min-width:0;grid-template-columns:auto auto;justify-content:start}}" +
     "@media(max-width:620px){.hm-in{padding:0 14px}.hm-title h1{font-size:22px}.hm-fields{gap:6px}.hm-field{flex-basis:calc(50% - 6px)}.hm-dd-panel{width:92vw}.hm-field:nth-child(odd) .hm-dd-panel{left:0;right:auto}.hm-field:nth-child(even) .hm-dd-panel{left:auto;right:0}.hm-resbar select{min-width:0;width:100%}.hm-item{grid-template-columns:1fr;padding:9px 14px}.hm-ic{display:none}.hm-dates{grid-column:1}}";
   document.head.appendChild(css);
 
@@ -280,6 +282,11 @@
       var title = nice(r.plainTitle || (r.level === "Federal" && window.fedItemTitle ? window.fedItemTitle(r.title, r.scope) : shortTitle(r.title, r.scope)));
       title = cleanTitle(title, r, code);
       var agency = nice(r.agency), region = (r.details && r.details.region) || "";
+      // a vague title ("Various Rail") gets the buyer added so it says something: "Various Rail (Metro-North Railroad)"
+      if (agency && /\bvarious\b/i.test(title) && title.split(/\s+/).length <= 3) {
+        var who = agency.replace(/^.{2,6}\s+[-–]\s+(?=\S)/, "");
+        if (who && title.toLowerCase().indexOf(who.toLowerCase()) < 0) title += " (" + who + ")";
+      }
       return { raw: r, id: r.id, title: title, agency: agency, level: r.level, code: code, noDue: noDue,
         days: noDue ? null : Math.round((pDate(r.due) - today) / DAY), due: r.due, seen: seen[r.id], value: val,
         region: region, url: safeUrl(r.rfqUrl), old: w.indexOf("Posted over a year ago") !== -1, aside: asideOf(r),
@@ -445,6 +452,13 @@
     return "";
   }
 
+  function VIEW_HTML() {
+    var ic = {
+      list: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/></svg>',
+      grid: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="4" y="4" width="6.5" height="6.5" rx="1"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1"/></svg>'
+    };
+    return '<span class="hm-view" role="group" aria-label="View">' + ["list", "grid"].map(function (v) { return '<button type="button" class="hm-vb' + (st.view === v ? " on" : "") + '" data-a="view" data-v="' + v + '" aria-pressed="' + (st.view === v) + '" aria-label="' + v + ' view" title="' + v + ' view">' + ic[v] + "</button>"; }).join("") + "</span>";
+  }
   // ---------- page ----------
   function shell() {
     var prof = P();
@@ -453,7 +467,7 @@
       // Profile button hidden for now: '<button class="hm-btn" data-a="profile">' + (prof ? "Edit my profile" : "Set up my profile") + '</button>' +
       '<button class="hm-btn" data-a="refresh">Refresh</button></div></div>' +
       '<div class="hm-in"><div class="hm-title"><h1>View Open Bids &amp; RFQs</h1><p id="hm-stats"></p></div>' +
-      '<form class="hm-bar" data-form><label class="hm-kw"><input type="search" data-kw placeholder="Search by keyword or bid title" aria-label="Keyword" value="' + esc(st.kw) + '">' + ICON_SEARCH + '</label><div class="hm-fields" id="hm-fields"></div></form>' +
+      '<form class="hm-bar" data-form><label class="hm-kw"><input type="search" data-kw placeholder="Search by keyword or bid title" aria-label="Keyword" value="' + esc(st.kw) + '">' + ICON_SEARCH + '</label>' + VIEW_HTML() + '<div class="hm-fields" id="hm-fields"></div></form>' +
       '<div id="hm-more"></div><div id="hm-res"></div></div></div>';
     fields();
   }
@@ -485,7 +499,7 @@
     h += '<div class="hm-resbar"><span class="hm-cnt">' + list.length.toLocaleString() + (list.length === 1 ? " result" : " results") + '</span><label for="hm-sort">Order By</label><select id="hm-sort" data-sel="sort">' +
       SORT_OPT.map(function (o) { return '<option value="' + o[0] + '"' + (st.sort === o[0] ? " selected" : "") + ">" + esc(o[1]) + "</option>"; }).join("") + "</select></div>";
     if (!list.length) h += '<div class="hm-empty"><h3>No bids match these filters</h3><p class="hm-sub">Try widening the category, jurisdiction or deadline.</p><button class="hm-go" data-a="clear">Clear all filters</button></div>';
-    h += '<div class="hm-list">';
+    h += '<div class="hm-list' + (st.view === "grid" ? " grid" : "") + '">';
     list.slice(0, st.shown).forEach(function (r) {
       var hh = hits(r), ids = Object.keys(hh).filter(function (id) { return ctx.cats.length ? ctx.cats.indexOf(id) >= 0 : true; });
       var matchTag = ids.length ? '<span class="hm-tag match" title="' + esc(ids.map(function (id) { return hh[id].slice(0, 3).join(", "); }).join("; ")) + '">' + esc(ids.slice(0, 2).map(function (id) { return catLabel[id]; }).join(" · ")) + (ids.length > 2 ? " +" + (ids.length - 2) : "") + "</span>" : "";
@@ -526,6 +540,38 @@
   document.addEventListener("keydown", function (e) { if (e.key === "Escape" && st.dd) { st.dd = null; syncOpen(); } });
   function clearKw() { var k = $app.querySelector("[data-kw]"); if (k) k.value = ""; }
 
+  // ---------- details side panel: slides in from the right, blurs the page behind ----------
+  (function () {
+    var css = document.createElement("style");
+    css.textContent =
+      "#dp-back{position:fixed;inset:0;z-index:1000;background:rgba(15,23,42,.35);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);opacity:0;pointer-events:none;transition:opacity .25s}" +
+      "#dp-back.on{opacity:1;pointer-events:auto}" +
+      "#dp{position:fixed;top:0;right:0;bottom:0;width:min(760px,100vw);z-index:1001;background:#fff;box-shadow:-8px 0 30px rgba(15,23,42,.25);transform:translateX(100%);transition:transform .28s ease;display:flex;flex-direction:column}" +
+      "#dp.on{transform:none}" +
+      "#dp .dp-bar{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-bottom:1px solid #e4e4f0;font:600 14px Roboto,system-ui,sans-serif;color:#64748b}" +
+      "#dp .dp-bar a{color:#4338ca;text-decoration:none;margin-right:16px;font-size:13px}" +
+      "#dp .dp-bar button{border:0;background:none;font-size:24px;line-height:1;cursor:pointer;color:#64748b}" +
+      "#dp iframe{flex:1;border:0;width:100%}";
+    document.head.appendChild(css);
+    var back = document.createElement("div"); back.id = "dp-back";
+    var dp = document.createElement("div"); dp.id = "dp";
+    dp.innerHTML = '<div class="dp-bar"><span>Request details</span><span><a id="dp-full" href="#">Open full page &#8599;</a><button id="dp-x" aria-label="Close">&times;</button></span></div><iframe title="Request details"></iframe>';
+    document.body.appendChild(back); document.body.appendChild(dp);
+    var fr = dp.querySelector("iframe");
+    function close() { back.classList.remove("on"); dp.classList.remove("on"); setTimeout(function () { if (!dp.classList.contains("on")) fr.removeAttribute("src"); }, 300); }
+    back.addEventListener("click", close);
+    dp.querySelector("#dp-x").addEventListener("click", close);
+    document.addEventListener("keydown", function (e) { if (e.key === "Escape" && dp.classList.contains("on")) close(); });
+    document.addEventListener("click", function (e) {
+      var a = e.target.closest && e.target.closest(".hm-item h3 a");
+      if (!a || e.ctrlKey || e.metaKey || e.shiftKey || e.button) return;
+      e.preventDefault();
+      dp.querySelector("#dp-full").href = a.getAttribute("href");
+      fr.src = a.getAttribute("href") + "&embed=1";
+      back.classList.add("on"); dp.classList.add("on");
+    });
+  })();
+
   $app.addEventListener("click", function (e) {
     var dd = e.target.closest("[data-dd]");
     if (dd) { st.dd = st.dd === dd.dataset.dd ? null : dd.dataset.dd; return syncOpen(); }
@@ -554,6 +600,12 @@
       if (st[sk].length >= so.length) { st[sk] = []; if (sk === "value") { st.vmin = ""; st.vmax = ""; } } else st[sk] = so.map(function (o) { return o.v; });
     }
     else if (d.a === "more") { st.shown += PAGE; return results(); }
+    else if (d.a === "view") {
+      st.view = d.v === "grid" ? "grid" : "list";
+      try { localStorage.setItem("rfq-view", st.view); } catch (e) {}
+      Array.prototype.forEach.call(document.querySelectorAll("[data-a=view]"), function (b) { b.classList.toggle("on", b.dataset.v === st.view); b.setAttribute("aria-pressed", String(b.dataset.v === st.view)); });
+      return results();
+    }
     else return;
     st.shown = PAGE; refreshAll();
   });

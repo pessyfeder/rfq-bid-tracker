@@ -69,10 +69,13 @@
   dl { margin:0; display:grid; grid-template-columns:max-content 1fr; gap:4px 16px; }
   dt { color:var(--mut); } dd { margin:0; overflow-wrap:anywhere; }
   .foot { margin-top:18px; font-size:12px; color:var(--mut); }
+  html.embed .nav { display:none; }
+  html.embed main { max-width:none; padding:16px 20px 48px; }
   @media (max-width:560px) { main, .nav .in { padding-left:14px; padding-right:14px; } h1 { font-size:20px; } dl { grid-template-columns:1fr; } dd { margin-bottom:6px; } }
 </style>
 </head>
 <body>
+<script>if (/[?&]embed=1/.test(location.search)) document.documentElement.classList.add("embed");</script>
 <div class="nav"><div class="in"><span class="logo">Bid<i>.</i>Finder <span style="white-space:nowrap">&ndash; Discover Group, Inc.</span></span><a class="back" href="/" id="back">&larr; Back to bids</a></div></div>
 <main>
   <div id="page">Loading&hellip;</div>
