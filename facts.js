@@ -193,6 +193,46 @@
     return "";
   }
   root.explainFact = explainFact;
+  // Chip labels cut off mid-phrase by older extraction ("... good standing (corporations and") lose the dangling fragment.
+  root.cleanLabel = function (s) {
+    s = String(s || "").trim();
+    var o = s.lastIndexOf("("), c = s.lastIndexOf(")");
+    if (o > c && o > 8) s = s.slice(0, o);
+    return s.replace(/[\s,;:\-–]+$/, "").replace(/\s+(and|or|for|of|with|in|to|the|a|over|under)$/i, "").trim();
+  };
+  // Short display form of a chip label: drops the legal tail ("under the ...", "to the extent ...", "issued by ...") and a leading state name, caps at ~34 chars.
+  // The full wording stays available through data-key (the click-for-meaning popup).
+  var STATES = "Alabama|Alaska|Arizona|Arkansas|California|Colorado|Connecticut|Delaware|Florida|Georgia|Hawaii|Idaho|Illinois|Indiana|Iowa|Kansas|Kentucky|Louisiana|Maine|Maryland|Massachusetts|Michigan|Minnesota|Mississippi|Missouri|Montana|Nebraska|Nevada|New Hampshire|New Jersey|New Mexico|New York|North Carolina|North Dakota|Ohio|Oklahoma|Oregon|Pennsylvania|Rhode Island|South Carolina|South Dakota|Tennessee|Texas|Utah|Vermont|Virginia|Washington|West Virginia|Wisconsin|Wyoming";
+  var STATE_RE = new RegExp("^(" + STATES + ")\\s+(?=\\w)", "i");
+  root.shortLabel = function (s) {
+    s = root.cleanLabel ? root.cleanLabel(s) : String(s || "").trim();
+    var t = s.replace(/\s*\([^)]*\)?/g, "")
+      .split(/,|;|\s+(?:under|pursuant|per|in accordance|as required|as defined|issued by|granted by|to the extent|that|which|who|if|when|where|with respect|in order|and|naming|including|showing|stating|demonstrating)\b/i)[0]
+      .replace(STATE_RE, "")
+      .replace(/^(?:a|an|the|valid|current|active|proof of|evidence of)\s+/i, "")
+      .replace(/\s+(?:for|of|from|to|in|on|by|the|a|an|and|or|with)$/i, "")
+      .trim();
+    if (t.length < 4) t = s;
+    if (t.length > 34) { t = t.slice(0, 34).replace(/\s+\S*$/, ""); while (/\s+(?:for|of|from|to|in|on|by|the|a|an|and|or|with|at)$/i.test(t)) t = t.replace(/\s+\S+$/, ""); }
+    return t ? t.charAt(0).toUpperCase() + t.slice(1) : s;
+  };
+  // Always returns a real sentence for a chip: a specific explanation when we know one, else one built from the wording itself.
+  root.describeFact = function (label) {
+    var known = explainFact(label);
+    if (known) return known;
+    var l = String(label || "").toLowerCase();
+    if (/secretary of state|good standing|registered (to|with|in)|registration/.test(l)) return "Your company must be officially registered with the state, and in good standing (annual reports filed, fees paid), to win or hold this contract. Check your status with the state's Secretary of State office before you bid.";
+    if (/licen[sc]e|licensed|permit/.test(l)) return "You need this license or permit to bid or do the work. If you do not hold it, get it first or team up with a company that does.";
+    if (/certif|accredit/.test(l)) return "You need this certification or accreditation. Without it your bid can be rejected.";
+    if (/insurance|liability|workers.? comp/.test(l)) return "You must carry this insurance. Confirm your policy meets the stated amounts and ask your broker for a certificate.";
+    if (/bond|surety/.test(l)) return "A bond (a guarantee backed by a surety company) is required. It adds cost, and new companies can find it hard to qualify.";
+    if (/\bsam\b|system for award|uei|cage|vendor regist|supplier regist|w-?9/.test(l)) return "You must be registered as a vendor (or send the stated form) before you can be paid. Registration can take days or weeks, so start early.";
+    if (/gsa|schedule|sewp|contract vehicle|idiq/.test(l)) return "Only companies already on this contract vehicle can bid. If you are not on it, you cannot respond directly.";
+    if (/experience|years|past performance|reference/.test(l)) return "The buyer wants proof of relevant experience. Have similar past jobs and references ready.";
+    if (/clearance|background|fingerprint|citizen/.test(l)) return "Your staff must pass a background or security check before working for this buyer. Plan for the time and cost.";
+    if (/tax|debar|suspen|compliance|affidavit|disclosure|ethic/.test(l)) return "You must be in good legal and tax standing and may need to sign a statement saying so. Gather these documents before the deadline.";
+    return "The buyer requires \"" + String(label || "").trim() + "\" from bidders. Make sure your company meets this before bidding, and read the notice for the exact conditions.";
+  };
   root.computeFacts = keyFacts;
   root.REQ_GROUPS = GROUPS;
   root.reqGroupOf = function (label) { return GROUP_OF[label] || ""; }; // "" = not a checklist item (e.g. a set-aside)

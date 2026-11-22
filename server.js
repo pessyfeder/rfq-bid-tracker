@@ -333,7 +333,7 @@ function statesHealth(sourceId) {
 
 // The human page (index.html + live-*.js) is served to this machine only: statuses and bid interest
 // are private.
-const STATIC_OK = /^\/(index\.html|explore\.html|profile\.html|facts\.js|chips\.js|wizard\.js|home\.js|shared\.js|data\.js|sample-data\.js|live-(nyc|sam|states)\.js)?$/;
+const STATIC_OK = /^\/(index\.html|explore\.html|profile\.html|facts\.js|chips\.js|wizard\.js|quote-ui\.js|home\.js|shared\.js|data\.js|sample-data\.js|live-(nyc|sam|states)\.js)?$/;
 const PAGE_HEADERS = {
   // Defence in depth: no remote scripts or styles, no framing by other sites (our own side panel frames the details page), no base-tag or form hijacking. NOTE: 'unsafe-inline' is still allowed for scripts and styles because the pages use inline <script> blocks and onerror= handlers, so this does NOT stop injected inline script; escaping agency text is the real defence. Tightening that means moving the inline scripts into files and using a nonce or hash.
   "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; frame-ancestors 'self'; base-uri 'none'; form-action 'none'",
@@ -409,6 +409,31 @@ function serveStatic(req, res, pathname) {
   }
   res.writeHead(200, headers);
   res.end(buf);
+}
+
+// Quote helper chat (see quote-helper.js). It spends Anthropic money and sends the vendor's typed costs to Anthropic, so like
+// /api/refresh it is for this machine only and never for a cross-site browser request. Body: { id, messages: [{role, content}] }.
+function quoteHelper(req, res, local) {
+  if (!local) return send(res, 403, { error: "the quote helper is only available from this machine" });
+  const origin = req.headers.origin;
+  if (origin) { let oh = null; try { oh = new URL(origin).host; } catch {} if (oh !== req.headers.host) return send(res, 403, { error: "cross-site request refused" }); }
+  if (!process.env.ANTHROPIC_API_KEY) return send(res, 503, { error: "The quote helper needs ANTHROPIC_API_KEY set on the service (see anthropic-key-setup.md)." });
+  let size = 0; const chunks = [];
+  req.on("data", (c) => { size += c.length; if (size > 200000) { req.destroy(); } else chunks.push(c); });
+  req.on("end", async () => {
+    try {
+      let body; try { body = JSON.parse(Buffer.concat(chunks).toString("utf8")); } catch { return send(res, 400, { error: "malformed request" }); }
+      const id = String(body && body.id || "");
+      const rec = Object.hasOwn(state.records, id) ? state.records[id] : null;
+      if (!rec) return send(res, 404, { error: "no such request" });
+      const text = await require("./quote-helper").reply(feed.publicRecord({ ...rec }), body.messages, process.env.ANTHROPIC_API_KEY);
+      send(res, 200, { reply: text });
+    } catch (e) {
+      if (e.status === 400) return send(res, 400, { error: e.message });
+      log("quote helper error: " + e.message);
+      send(res, 502, { error: "The helper could not answer just now. Try again in a moment." });
+    }
+  });
 }
 
 const server = http.createServer((req, res) => {
@@ -489,6 +514,7 @@ const server = http.createServer((req, res) => {
         runRefresh(portal ? "api request, portal " + portal : only ? "page opened, retrying failed sources" : "api request", only ? { only, states } : {}); // not awaited: a refresh takes minutes; poll /api/status
         return send(res, 202, { started: true, only: only ? [...only] : null });
       }
+      if (p === "/api/quote-helper" && req.method === "POST") return quoteHelper(req, res, local);
       return send(res, 404, { error: "unknown endpoint" });
     }
     if (req.method === "GET" && local && STATIC_OK.test(p)) return serveStatic(req, res, p);

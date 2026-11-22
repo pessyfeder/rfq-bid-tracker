@@ -82,7 +82,7 @@
 </main>
 <script src="facts.js?v=20261122c"></script>
 <script src="sample-data.js"></script>
-<script src="quote-ui.js?v=1"></script>
+<script src="quote-ui.js?v=2"></script>
 <script src="shared.js?v=20261122b"></script>
 <script>
 (function () {
@@ -340,6 +340,8 @@
         fb += li("The notice gives no further description" + (r.docAccess === "none" ? "; its documents could not be opened." : "."));
         req = (fb || li("Not stated in the notice.")) + req;
       }
+      var wh = [r.region, r.level].filter(Boolean).map(nice).join(", ");
+      if (wh) req += li("Where: " + wh);
       var g = '<section class="glance">' + (link ? '<a class="rfqdoc" href="' + esc(link) + '" target="_blank" rel="noopener">View RFQ doc &#8599;</a>' : "") + '<h2>At a glance</h2><ol class="g-list">' + row("Request + Description", req) + row("Registration", reg) + ('<li class="g-sec"><b>Requirements</b>' + reqHtml + "</li>") +row("Contact Information", cinfo) + "</ol>" +
         (!r.aiRead && !r.scope ? '<p class="small">The notice text was not read, so only what the posting itself states is shown.</p>' : "") + "</section>";
       h = h.replace("<!--GLANCE-->", g);

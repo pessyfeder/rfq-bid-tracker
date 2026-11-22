@@ -366,10 +366,34 @@
     var sd = document.getElementById("hm-side"); if (sd) sd.innerHTML = selectHtml("reg");
   }
 
+  // ---------- my status per bid (kept in this browser) ----------
+  var STATUS_KEY = "rfq-status", STATUSES = [["interested", "Interested"], ["bidding", "Bidding"], ["submitted", "Bid submitted"], ["no", "Not interested"]];
+  var stMap = (function () { try { return JSON.parse(localStorage.getItem(STATUS_KEY) || "{}") || {}; } catch (e) { return {}; } })();
+  var showHidden = false;
+  function setStatus(id, v) {
+    if (!v) delete stMap[id]; else stMap[id] = v;
+    try { localStorage.setItem(STATUS_KEY, JSON.stringify(stMap)); } catch (e) {}
+  }
+  function statusHtml(id) {
+    var cur = stMap[id] || "";
+    return '<div class="hm-stat" role="group" aria-label="My status">' + STATUSES.map(function (s) {
+      return '<button type="button" class="hm-st ' + s[0] + (cur === s[0] ? " on" : "") + '" data-st="' + s[0] + '" data-id="' + esc(id) + '" aria-pressed="' + (cur === s[0]) + '">' + s[1] + "</button>";
+    }).join("") + "</div>";
+  }
+  (function () {
+    var css = document.createElement("style");
+    css.textContent = ".hm-stat{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}.hm-st{border:1px solid #cfd5de;background:#fff;color:#475569;border-radius:999px;padding:3px 11px;font:500 12px system-ui,sans-serif;cursor:pointer}.hm-st:hover{background:#f1f5f9}" +
+      ".hm-st.interested.on{background:#dbeafe;border-color:#2563eb;color:#1e40af}.hm-st.bidding.on{background:#fef3c7;border-color:#d97706;color:#92400e}.hm-st.submitted.on{background:#dcfce7;border-color:#16a34a;color:#166534}.hm-st.no.on{background:#e5e7eb;border-color:#6b7280;color:#374151}" +
+      ".hm-item.is-no{opacity:.55}.hm-hid{border:0;background:none;color:#4338ca;cursor:pointer;font:13px system-ui,sans-serif;margin-left:12px;text-decoration:underline}";
+    document.head.appendChild(css);
+  })();
+
   function results() {
     var host = document.getElementById("hm-res"); if (!host) return;
     var ctx = ctxNow(), catLabel = {}; allCats().forEach(function (c) { catLabel[c.id] = c.label; });
     var list = rows.filter(function (r) { return passes(r, ctx); });
+    var hiddenN = list.filter(function (r) { return stMap[r.id] === "no"; }).length;
+    if (!showHidden) list = list.filter(function (r) { return stMap[r.id] !== "no"; });
     list.sort(function (a, b) {
       if (st.sort === "value") return (b.value == null ? -1 : b.value) - (a.value == null ? -1 : a.value);
       if (st.sort === "new") { // posted date, newest first; unknown dates last; first-seen breaks ties
@@ -381,7 +405,7 @@
     });
     var chips = chipList();
     var h = '<div class="hm-filt">' + (chips.length ? "<b>Filtered by</b>" + chips.map(function (c) { return '<button class="hm-chip" data-x="' + c[0] + '" title="Remove this filter">' + esc(c[1]) + ICON_X + "</button>"; }).join("") + '<button class="hm-clear" data-a="clear">Clear All</button>' : "") + "</div>";
-    h += '<div class="hm-resbar"><span class="hm-cnt">' + list.length.toLocaleString() + (list.length === 1 ? " result" : " results") + '</span><label for="hm-sort">Order By</label><select id="hm-sort" data-sel="sort">' +
+    h += '<div class="hm-resbar"><span class="hm-cnt">' + list.length.toLocaleString() + (list.length === 1 ? " result" : " results") + '</span>' + (hiddenN ? '<button type="button" class="hm-hid" data-a="hidden">' + (showHidden ? "Hide" : "Show") + " " + hiddenN + " not interested</button>" : "") + '<label for="hm-sort">Order By</label><select id="hm-sort" data-sel="sort">' +
       SORT_OPT.map(function (o) { return '<option value="' + o[0] + '"' + (st.sort === o[0] ? " selected" : "") + ">" + esc(o[1]) + "</option>"; }).join("") + "</select></div>";
     if (!list.length) h += '<div class="hm-empty"><h3>No bids match these filters</h3><p class="hm-sub">Try widening the category, jurisdiction or deadline.</p><button class="hm-go" data-a="clear">Clear all filters</button></div>';
     h += '<div class="hm-list' + (st.view === "grid" ? " grid" : "") + '">';
@@ -390,10 +414,10 @@
       var matchTag = ids.length ? '<span class="hm-tag match" title="' + esc(ids.map(function (id) { return hh[id].slice(0, 3).join(", "); }).join("; ")) + '">' + esc(ids.slice(0, 2).map(function (id) { return catLabel[id]; }).join(" · ")) + (ids.length > 2 ? " +" + (ids.length - 2) : "") + "</span>" : "";
       var asideTag = r.aside.any ? '<span class="hm-tag aside">' + esc(r.aside.small ? "Small business set-aside" : r.aside.vet ? "Veteran-owned set-aside" : r.aside.women ? "Women-owned set-aside" : "Set-aside") + "</span>" : "";
       var closing = r.days == null ? "No firm deadline" : mdy(r.due);
-      h += '<div class="hm-item">' + mapIcon(r) + '<div><h3><a href="explore.html?id=' + encodeURIComponent(r.id) + '">' + esc(r.title) + "</a>" + valueTag(r) + "</h3>" +
+      h += '<div class="hm-item' + (stMap[r.id] === "no" ? " is-no" : "") + '">' + mapIcon(r) + '<div><h3><a href="explore.html?id=' + encodeURIComponent(r.id) + '">' + esc(r.title) + "</a>" + valueTag(r) + "</h3>" +
         '<div class="hm-sub">' + esc(stateName(r.code)) + " &middot; " + esc(r.ck ? r.ck.slice(2) || "No category" : "No category") + "</div></div>" +
         '<div class="hm-dates"><div>' + ICON_CAL + "<b>Published</b></div><div>" + esc(r.posted ? mdy(r.posted) : "Unknown") + "</div><div>" + ICON_CLOCK + "<b>Closing</b></div><div>" + esc(closing) + (r.days != null && r.days >= 0 ? ' <span class="hm-left">' + (r.days === 0 ? "today" : r.days === 1 ? "tomorrow" : r.days + " days") + "</span>" : "") + "</div></div>" +
-        flagsHtml(r.raw) + "</div>";
+        flagsHtml(r.raw) + statusHtml(r.id) + "</div>";
     });
     h += "</div>";
     if (list.length > st.shown) h += '<button class="hm-showmore" data-a="more">Show more (' + (list.length - st.shown).toLocaleString() + " left)</button>";
@@ -409,10 +433,13 @@
     function add(label, cls, why, grp) {
       // Every plain small-business set-aside wording ("Small Business Set Aside - Total", "100% Small business set-aside", ...) is one chip.
       if (window.asideLabel) label = window.asideLabel(label);
+      if (window.cleanLabel) label = window.cleanLabel(label);
       var sl = String(label || "").toLowerCase();
       if (/small business/.test(sl) && /set[- ]?aside/.test(sl) && !/partial|veteran|sdvos?b|vosb|wosb|women|hubzone|8\(a\)|minority|mbe|wbe|dbe|sdvob/.test(sl)) label = "Small Business Set Aside";
+      var full = String(label);
+      if (window.shortLabel) label = window.shortLabel(label);
       var k = String(label).toLowerCase(); if (!label || seen[k]) return; seen[k] = 1;
-      out.push({ label: String(label), cls: cls, why: why || "", grp: grp || (cls !== "elig" && window.reqGroupOf ? window.reqGroupOf(String(label)) : "") });
+      out.push({ label: String(label), full: full, cls: cls, why: why || "", grp: grp || (cls !== "elig" && window.reqGroupOf ? window.reqGroupOf(String(label)) : "") });
     }
     (raw.requires || []).forEach(function (q) { add(q, /unless waived/i.test(q) ? "cost" : "elig", "Who can bid"); });
     var rs = raw.details && raw.details.restriction; if (rs) add(rs, "elig", "Who can bid");
@@ -428,7 +455,7 @@
     });
     var h = "";
     if (raw.requires == null && !raw.aiRead) h += '<span class="hm-flag unclear" title="Click for explanation" role="button" tabindex="0" data-why="">Eligibility not checked</span>';
-    out.slice(0, FLAG_MAX).forEach(function (f) { h += '<span class="hm-flag ' + f.cls + (f.grp ? " grp-" + f.grp : "") + '" title="Click for explanation" role="button" tabindex="0" data-why="' + esc(f.why) + '">' + esc(f.label) + "</span>"; });
+    out.slice(0, FLAG_MAX).forEach(function (f) { h += '<span class="hm-flag ' + f.cls + (f.grp ? " grp-" + f.grp : "") + '" title="Click for explanation" role="button" tabindex="0" data-key="' + esc(f.full) + '" data-why="' + esc(f.why) + '">' + esc(f.label) + "</span>"; });
     if (out.length > FLAG_MAX) h += '<span class="hm-flag more" title="' + esc(out.slice(FLAG_MAX).map(function (f) { return f.label; }).join("; ")) + '">+' + (out.length - FLAG_MAX) + " more</span>";
     return h ? '<div class="hm-flags">' + h + "</div>" : "";
   }
@@ -473,7 +500,9 @@
       var text = more ? "More factors on this bid: " + (chip.getAttribute("title") || "") : (window.explainFact ? window.explainFact(label) : "");
       var why = chip.getAttribute("data-why");
       pop = document.createElement("div"); pop.id = "hm-pop";
-      pop.innerHTML = "<b>" + esc(label) + "</b>" + esc(text || "This is a condition found in the notice. Open the details to read the exact wording.") +
+      if (!text && window.describeFact) text = window.describeFact(label);
+      if (window.cleanLabel) label = window.cleanLabel(label);
+      pop.innerHTML = "<b>" + esc(label) + "</b>" + esc(text || "The buyer lists this as a condition for bidders. Check that your company meets it before bidding.") +
         (why && why !== "Who can bid" ? "<small>From the notice: " + esc(why) + "</small>" : "");
       document.body.appendChild(pop);
       var r = chip.getBoundingClientRect(), x = Math.max(8, Math.min(r.left + window.scrollX, window.scrollX + document.documentElement.clientWidth - pop.offsetWidth - 8));
@@ -547,6 +576,8 @@
     }
     var b = e.target.closest("button"); if (!b) return;
     var d = b.dataset;
+    if (d.st) { setStatus(d.id, stMap[d.id] === d.st ? "" : d.st); return results(); }
+    if (d.a === "hidden") { showHidden = !showHidden; return results(); }
     if (d.a === "selection") { if (window.RFQProfile) window.RFQProfile.open(); return; }
     if (d.a === "profile") { window.location.href = "/profile.html"; return; }
     if (d.a === "refresh") { var rb = document.getElementById("refreshBtn"); if (rb) rb.click(); syncRefresh(); return; } // the observer keeps the label in step afterwards

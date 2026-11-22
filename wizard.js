@@ -4,7 +4,7 @@
 (function () {
   var KEY = "rfqProfile", SKIP = "rfqProfileSkipped";
 
-  // Product categories offered in the wizard (pre-filled from the vendor's website). Keywords are matched as whole words.
+  // Product categories offered in step 2 (pre-filled from the vendor's website). Keywords are matched as whole words.
   var CATS = [
     { id: "it",      label: "Computers & software",        kw: ["computer", "laptop", "desktop", "tablet", "computer monitor", "software", "workstation"] },
     { id: "print",   label: "Printers, ink & toner",       kw: ["printer", "toner", "ink", "cartridge", "copier", "paper", "fax"] },
@@ -43,9 +43,9 @@
   ].forEach(function (x) { SOURCES.push({ id: x[0].toLowerCase(), label: x[1] + " (" + x[2] + ")", reg: "", url: "", steps: ["Open a bid from this portal and follow its own registration link."] }); });
 
   // Bid value choices, shared with the main page's "Bid value" filter. [min, max] in dollars (null = open-ended).
-  var VALUE_OPTS = [["under50", "Under $50K"], ["mid", "$50K to $500K"], ["over500", "Over $500K"], ["over1m", "Over $1M"], ["over5m", "Over $5M"],
-    ["over10m", "Over $10M"], ["over50m", "Over $50M"], ["over100m", "Over $100M"], ["none", "No stated value"], ["custom", "Custom amount…"]];
-  // Eligibility choices, shared with the main page's set-aside filter. nothing ticked = no restriction.
+  var VALUE_OPTS = [["under50", "Under $50K"], ["mid", "$50K to $500K"], ["over500", "Over $500K"], ["over5m", "Over $5M"],
+    ["none", "No stated value"], ["custom", "Custom amount…"]];
+  // Eligibility choices (step 4), shared with the main page's set-aside filter. nothing ticked = no restriction.
   var ASIDE_OPTS = [["open", "Open to all (no set-aside found)"], ["small", "Small business set-aside"], ["vet", "Veteran-owned (SDVOSB)"], ["women", "Women-owned (WOSB)"], ["other", "HUBZone, 8(a), minority-owned"]];
   var RANGES = { under50: [null, 49999.99], mid: [50000, 500000], over500: [500000.01, null], over1m: [1000000, null], over5m: [5000000, null], over10m: [10000000, null], over50m: [50000000, null], over100m: [100000000, null] };
   function num(x) { x = parseFloat(String(x == null ? "" : x).replace(/[$,\s]/g, "")); return isFinite(x) && x >= 0 ? x : null; }
@@ -147,9 +147,9 @@
     ".wz .wz-step{margin:0 0 6px;font-size:12px;font-weight:600;color:#64748b}" +
     ".wz .wz-note{color:#64748b;font-size:13px}.wz .wz-sum{list-style:none;padding:0}.wz .wz-sum li{margin:8px 0;padding:10px 14px;border-radius:6px;background:#f7f9fb;border:1px solid #e5e9f0}" +
     ".wz a{color:#1e3a5f;font-weight:600}" +
-    ".wz-dd{position:relative;margin-top:8px}.wz-dd-btn{display:flex!important;justify-content:space-between;width:100%;text-align:left}" +
-    ".wz-field{margin-top:20px}.wz-field h3{margin:0;font-size:16px;font-weight:600;color:#0f2742}.wz-field .wz-note{margin:2px 0 0}.wz-cust{display:flex;gap:12px;margin-top:10px}.wz-cust[hidden]{display:none}.wz-cust label{flex:1;font-size:13px;color:#64748b}.wz-cust input{width:100%;font:inherit;padding:8px 10px;border:1px solid #b8c2cf;border-radius:6px;margin-top:3px;color:#1f2937}.wz-sel{width:100%;font:inherit;padding:9px 11px;border:1px solid #b8c2cf;border-radius:6px;background:#fff;color:#1f2937}" +
-    ".wz-dd-list{margin-top:4px;background:#fff;border:1px solid #b8c2cf;border-radius:6px;padding:6px 10px;max-height:50vh;overflow:auto}" +
+    ".wz-dd{position:relative;margin-top:14px}.wz-dd-btn{display:flex!important;justify-content:space-between;width:100%;text-align:left}" +
+    ".wz-dd:has(.wz-dd-list){margin-bottom:calc(85vh + 12px)}.wz-cust{display:flex;gap:12px;margin-top:10px}.wz-cust[hidden]{display:none}.wz-cust label{flex:1;font-size:13px;color:#64748b}.wz-cust input{width:100%;font:inherit;padding:8px 10px;border:1px solid #b8c2cf;border-radius:6px;margin-top:3px;color:#1f2937}.wz-sel{width:100%;font:inherit;padding:9px 11px;border:1px solid #b8c2cf;border-radius:6px;background:#fff;color:#1f2937}" +
+    ".wz-dd-list{position:absolute;left:0;right:0;top:100%;margin-top:4px;background:#fff;border:1px solid #b8c2cf;border-radius:6px;padding:6px 10px;max-height:85vh;overflow:auto;box-shadow:0 4px 12px rgba(15,23,42,.15);z-index:5}" +
     ".wz-gh{display:flex;align-items:center;gap:8px;margin:2px 0;padding:5px 2px;border-bottom:1px solid #eef1f5}.wz-gt{flex:1;cursor:pointer;font-weight:600;font-size:14px;color:#1f2937}.wz-gt em{font-style:normal;font-weight:400;font-size:12px;color:#64748b;margin-left:6px}.wz-arr{display:inline-block;width:14px;color:#64748b}.wz-kids{padding:2px 0 6px 24px}" +
     ".wz-grp{position:sticky;top:-6px;background:#fff;margin:8px 0 2px;padding:4px 2px;font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#64748b}" +
     ".wz-spin{width:34px;height:34px;margin:6px auto 14px;border:4px solid #e5e9f0;border-top-color:#1e3a5f;border-radius:50%;animation:wzspin .8s linear infinite}@keyframes wzspin{to{transform:rotate(360deg)}}" +
@@ -158,7 +158,7 @@
   document.head.appendChild(css);
 
   var back = null;
-  var onPop = null, pushed = 0; // browser Back closes the wizard
+  var onPop = null, pushed = 0; // browser Back walks the wizard steps, then closes it
   function unhook() { if (onPop) { window.removeEventListener("popstate", onPop); onPop = null; } }
   function close() { unhook(); wzClear(); if (back) { back.remove(); back = null; document.body.classList.remove("wz-open"); window.dispatchEvent(new Event("rfqwizardclose")); } }
   function h(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
@@ -178,6 +178,7 @@
     back = document.createElement("div"); back.className = "wz-back";
     document.body.insertBefore(back, document.body.firstChild); document.body.classList.add("wz-open"); window.scrollTo(0, 0);
 
+    var openDd = false;
     // Every category: the product types (pre-selected) plus every category the bids themselves carry (not pre-selected).
     var ALL = [], openG = {};
     // Does a category apply to Discover Group? Its title mentions something Discover sells, or it sits in a goods group it sells from.
@@ -217,7 +218,7 @@
     }
     // Refresh group tick boxes / counts and the button label without redrawing (keeps the scroll position).
     function sync() {
-      var l = back.querySelector("[data-dd='cats'] .wz-dd-btn span"); if (l) l.textContent = label();
+      var l = back.querySelector(".wz-dd-btn span"); if (l) l.textContent = label();
       
       groups().forEach(function (g, i) {
         var n = g.items.filter(function (c) { return d.cats.indexOf(c.v) >= 0; }).length;
@@ -226,58 +227,76 @@
         gb.parentNode.querySelector("em").textContent = n + "/" + g.items.length;
       });
     }
-    // One page, four dropdowns: categories, registrations, jurisdictions, eligibility. Only one is expanded at a time.
-    var step = 1, J = [], openKey = null;
-    if (saved && saved.d) { Object.keys(saved.d).forEach(function (k) { d[k] = saved.d[k]; }); pend = false; openKey = saved.open || null; }
+    // Step 2: which jurisdictions. Everything is ticked by default; all ticked is saved as "no restriction".
+    var step = 1, J = [];
+    if (saved && saved.step >= 1 && saved.step <= 4 && saved.d) { Object.keys(saved.d).forEach(function (k) { d[k] = saved.d[k]; }); step = saved.step; pend = false; }
     function loadJ() { try { J = window.RFQJurisdictions ? window.RFQJurisdictions() : []; } catch (e) { J = []; } }
+    var openJ = false;
     function jLabel() { return d.where.length ? d.where.length + " of " + J.length + " selected" : "All locations"; }
+    function drawJ() {
+      if (!openJ) loadJ();
+      if (!d.where) d.where = (cur.where || []).slice();
+      var gs = [], idx = {};
+      J.forEach(function (o) { if (!(o.group in idx)) { idx[o.group] = gs.length; gs.push({ name: o.group, items: [] }); } gs[idx[o.group]].items.push(o); });
+      back.innerHTML = "<div class='wz' role='dialog' aria-modal='true' aria-label='Setup'><p class='wz-step'>Step 3</p><h2>Which jurisdiction would you like to see?</h2>" +
+        "<p class='wz-note'>Federal, city and state bids. Change them any time.</p>" +
+        "<div class='wz-dd'><button type='button' class='wz-dd-btn' data-a='jtoggle' aria-expanded='" + openJ + "'><span>" + jLabel() + "</span><span>&#9662;</span></button>" +
+        (openJ ? "<div class='wz-dd-list'><div class='wz-dd-tools'><button type='button' class='link' data-a='jnone'>" + ((J.length && d.where.length >= J.length) ? "Clear all" : "Select all") + "</button>" +
+          [["City", "cities", "jcity"], ["States", "states", "jstate"]].map(function (x) {
+            var v = J.filter(function (o) { return o.group === x[0]; });
+            return v.length ? "<button type='button' class='link' data-a='" + x[2] + "'>" + (v.every(function (o) { return d.where.indexOf(o.v) >= 0; }) ? "Clear " : "Select ") + "all " + x[1] + "</button>" : "";
+          }).join("") + "</div>" +
+          gs.map(function (g) {
+            return "<div class='wz-grp'>" + h(g.name) + "</div>" + g.items.map(function (o) {
+              return "<label class='wz-row'><input type='checkbox' data-jur='" + h(o.v) + "'" + (d.where.indexOf(o.v) >= 0 ? " checked" : "") + "> <span>" + h(o.label) + " <em class='wz-note'>(" + o.n + ")</em></span></label>";
+            }).join("");
+          }).join("") + "</div>" : "") + "</div>" +
+        "<div class='wz-btns'><button data-a='prev'>&larr; Back</button><button class='pri' data-a='next'>Next &rarr;</button></div></div>";
+    }
+    // Step 4: which eligibility would you like to see? Which set-aside / eligibility group the vendor belongs to.
+    var openA = false;
     function multiLabel(opts, sel, none) { var o = opts.filter(function (x) { return sel.indexOf(x[0]) >= 0; }); return !o.length ? none : o.length === 1 ? o[0][1] : o.length + " selected"; }
     function aLabel() { return multiLabel(ASIDE_OPTS, d.aside, "Anyone"); }
+    function drawA() {
+      back.innerHTML = "<div class='wz' role='dialog' aria-modal='true' aria-label='Setup'><p class='wz-step'>Step 4</p><h2>Which eligibility criteria would you like to see?</h2>" +
+        "<p class='wz-note'>Some bids are reserved for certain businesses. Pick the eligibility you want to see. Change it any time.</p>" +
+        "<div class='wz-dd'><button type='button' class='wz-dd-btn' data-a='atoggle' aria-expanded='" + openA + "'><span>" + h(aLabel()) + "</span><span>&#9662;</span></button>" +
+        (openA ? "<div class='wz-dd-list'><div class='wz-dd-tools'><button type='button' class='link' data-a='anone'>" + ((d.aside.length >= ASIDE_OPTS.length) ? "Clear all" : "Select all") + "</button></div>" + ASIDE_OPTS.map(function (o) {
+          return "<label class='wz-row'><input type='checkbox' data-apick='" + h(o[0]) + "'" + (d.aside.indexOf(o[0]) >= 0 ? " checked" : "") + "> <span>" + h(o[1]) + "</span></label>";
+        }).join("") + "</div>" : "") + "</div>" +
+        "<div class='wz-btns'><button data-a='prev'>&larr; Back</button><button class='pri' data-a='finish'>Show me my RFQs</button></div></div>";
+    }
+    // Step 2: which entities (registrations) the vendor holds. Nothing ticked = no restriction.
+    var openR = false;
     function rLabel() { var o = SOURCES.filter(function (x) { return d.reg.indexOf(x.id) >= 0; }); return !o.length ? "Not registered / show all" : o.length === 1 ? o[0].label : o.length + " selected"; }
-    function toolBtn(act, on, a, b) { return "<button type='button' class='link' data-a='" + act + "'>" + (on ? a : b) + "</button>"; }
-    // One labelled dropdown; its list (tools row + options) is only drawn while it is the expanded one.
-    function field(key, title, note, btnLabel, tools, inner) {
-      var op = openKey === key;
-      return "<div class='wz-field'><h3>" + title + "</h3><p class='wz-note'>" + note + "</p><div class='wz-dd' data-dd='" + key + "'>" +
-        "<button type='button' class='wz-dd-btn' data-a='toggle' data-k='" + key + "' aria-expanded='" + op + "'><span>" + h(btnLabel) + "</span><span>&#9662;</span></button>" +
-        (op ? "<div class='wz-dd-list'><div class='wz-dd-tools'>" + tools + "</div>" + inner + "</div>" : "") + "</div></div>";
+    function drawR() {
+      back.innerHTML = "<div class='wz' role='dialog' aria-modal='true' aria-label='Setup'><p class='wz-step'>Step 2</p><h2>Which entities are you registered with?</h2>" +
+        "<p class='wz-note'>Pick the portals where your company is already registered as a vendor. Bids from those sources are shown. Leave empty to see every source. Change it any time.</p>" +
+        "<div class='wz-dd'><button type='button' class='wz-dd-btn' data-a='rtoggle' aria-expanded='" + openR + "'><span>" + h(rLabel()) + "</span><span>&#9662;</span></button>" +
+        (openR ? "<div class='wz-dd-list'><div class='wz-dd-tools'><button type='button' class='link' data-a='rnone'>" + (d.reg.length >= SOURCES.length ? "Clear all" : "Select all") + "</button></div>" + SOURCES.map(function (o) {
+          return "<label class='wz-row'><input type='checkbox' data-rpick='" + h(o.id) + "'" + (d.reg.indexOf(o.id) >= 0 ? " checked" : "") + "> <span>" + h(o.label) + " " + (o.reg ? "<em class='wz-note'>(" + h(o.reg) + ")</em>" : "") + "</span></label>";
+        }).join("") + "</div>" : "") + "</div>" +
+        "<div class='wz-btns'><button data-a='prev'>&larr; Back</button><button class='pri' data-a='next'>Next &rarr;</button></div></div>";
     }
     function collectJ() {
       var boxes = back.querySelectorAll("[data-jur]");
       if (boxes.length) { d.where = []; Array.prototype.forEach.call(boxes, function (el) { if (el.checked) d.where.push(el.dataset.jur); }); }
     }
     function draw() {
-      try { sessionStorage.setItem(WZKEY, JSON.stringify({ step: 1, d: d, open: openKey })); } catch (e) {}
+      try { sessionStorage.setItem(WZKEY, JSON.stringify({ step: step, d: d })); } catch (e) {}
       drawStep();
     }
     function drawStep() {
-      if (openKey !== "cats") loadAll(); // pick up bid categories that arrived after the page loaded (live data)
-      if (openKey !== "where") loadJ();
-      if (!d.where) d.where = (cur.where || []).slice();
-      var gs = [], idx = {};
-      J.forEach(function (o) { if (!(o.group in idx)) { idx[o.group] = gs.length; gs.push({ name: o.group, items: [] }); } gs[idx[o.group]].items.push(o); });
-      var jTools = toolBtn("jnone", J.length && d.where.length >= J.length, "Clear all", "Select all") + [["City", "cities", "jcity"], ["States", "states", "jstate"]].map(function (x) {
-        var v = J.filter(function (o) { return o.group === x[0]; });
-        return v.length ? toolBtn(x[2], v.every(function (o) { return d.where.indexOf(o.v) >= 0; }), "Clear all " + x[1], "Select all " + x[1]) : "";
-      }).join("");
-      var jList = gs.map(function (g) {
-        return "<div class='wz-grp'>" + h(g.name) + "</div>" + g.items.map(function (o) {
-          return "<label class='wz-row'><input type='checkbox' data-jur='" + h(o.v) + "'" + (d.where.indexOf(o.v) >= 0 ? " checked" : "") + "> <span>" + h(o.label) + " <em class='wz-note'>(" + o.n + ")</em></span></label>";
-        }).join("");
-      }).join("");
-      var rList = SOURCES.map(function (o) {
-        return "<label class='wz-row'><input type='checkbox' data-rpick='" + h(o.id) + "'" + (d.reg.indexOf(o.id) >= 0 ? " checked" : "") + "> <span>" + h(o.label) + " " + (o.reg ? "<em class='wz-note'>(" + h(o.reg) + ")</em>" : "") + "</span></label>";
-      }).join("");
-      var aList = ASIDE_OPTS.map(function (o) {
-        return "<label class='wz-row'><input type='checkbox' data-apick='" + h(o[0]) + "'" + (d.aside.indexOf(o[0]) >= 0 ? " checked" : "") + "> <span>" + h(o[1]) + "</span></label>";
-      }).join("");
-      back.innerHTML = "<div class='wz' role='dialog' aria-modal='true' aria-label='Setup'><p class='wz-step'>Setup</p><h2>What would you like to see?</h2>" +
-        "<p class='wz-note'>Everything on one page. Change any of it, any time.</p>" +
-        field("cats", "Request categories", "Every category is listed; the ones that apply to Discover Group, Inc. are pre-selected.", label(), toolBtn("none", d.cats.length >= ALL.length, "Clear all", "Select all"), listHtml()) +
-        field("reg", "Entities you are registered with", "Bids from the portals where your company is registered are shown. Leave empty to see every source.", rLabel(), toolBtn("rnone", d.reg.length >= SOURCES.length, "Clear all", "Select all"), rList) +
-        field("where", "Jurisdictions", "Federal, city and state bids.", jLabel(), jTools, jList) +
-        field("aside", "Eligibility criteria", "Some bids are reserved for certain businesses. Pick the eligibility you want to see.", aLabel(), toolBtn("anone", d.aside.length >= ASIDE_OPTS.length, "Clear all", "Select all"), aList) +
-        "<div class='wz-btns'><button class='pri' data-a='finish'>Show me my RFQs</button></div></div>";
+      if (step === 4) return drawA();
+      if (step === 3) return drawJ();
+      if (step === 2) return drawR();
+      if (!openDd) loadAll(); // pick up bid categories that arrived after the page loaded (live data)
+      back.innerHTML = "<div class='wz' role='dialog' aria-modal='true' aria-label='Setup'><p class='wz-step'>Step 1</p><h2>Which request categories would you like to see?</h2>" +
+        "<p class='wz-note'>Every category is listed; the ones that apply to Discover Group, Inc. are pre-selected. Change them any time.</p>" +
+        "<div class='wz-dd'><button type='button' class='wz-dd-btn' data-a='toggle' aria-expanded='" + openDd + "'><span>" + label() + "</span><span>&#9662;</span></button>" +
+        (openDd ? "<div class='wz-dd-list'><div class='wz-dd-tools'><button type='button' class='link' data-a='none'>" + ((d.cats.length >= ALL.length) ? "Clear all" : "Select all") + "</button></div>" +
+          listHtml() + "</div>" : "") + "</div>" +
+        "<div class='wz-btns'><button class='pri' data-a='next'>Next &rarr;</button></div></div>";
     }
     function collect() {
       var boxes = back.querySelectorAll("[data-cat]");
@@ -291,13 +310,13 @@
       } else if (t.dataset.cat) { collect(); sync(); }
       else if (t.dataset.apick != null) {
         d.aside = Array.prototype.map.call(back.querySelectorAll("[data-apick]:checked"), function (el) { return el.dataset.apick; });
-        var ab = back.querySelector("[data-dd='aside'] .wz-dd-btn span"); if (ab) ab.textContent = aLabel();
+        var ab = back.querySelector(".wz-dd-btn span"); if (ab) ab.textContent = aLabel();
       }
       else if (t.dataset.rpick != null) {
         d.reg = Array.prototype.map.call(back.querySelectorAll("[data-rpick]:checked"), function (el) { return el.dataset.rpick; });
-        var rb = back.querySelector("[data-dd='reg'] .wz-dd-btn span"); if (rb) rb.textContent = rLabel();
+        var rb = back.querySelector(".wz-dd-btn span"); if (rb) rb.textContent = rLabel();
       }
-      else if (t.dataset.jur) { collectJ(); var jl = back.querySelector("[data-dd='where'] .wz-dd-btn span"); if (jl) jl.textContent = jLabel(); }
+      else if (t.dataset.jur) { collectJ(); var jl = back.querySelector(".wz-dd-btn span"); if (jl) jl.textContent = jLabel(); }
     });
     back.addEventListener("click", function (e) {
       var g = e.target.closest("[data-g]"); if (!g) return;
@@ -305,20 +324,26 @@
       openG[gr.name] = kids.hidden; kids.hidden = !kids.hidden;
       g.setAttribute("aria-expanded", String(!kids.hidden)); g.querySelector(".wz-arr").innerHTML = kids.hidden ? "&#9656;" : "&#9662;";
     });
-    try { history.pushState({ wz: 1 }, ""); pushed = 1; } catch (x) { pushed = 0; }
+    try { for (var k = 1; k <= step; k++) history.pushState({ wz: k }, ""); pushed = step; } catch (x) { pushed = 0; }
     onPop = function (ev) {
       var s = ev.state && ev.state.wz;
-      if (!s) { close(); return; } // Back: leave the wizard
-      collect(); collectJ(); draw();
+      if (!s) { close(); return; } // Back past step 1: leave the wizard
+      if (step === 3) collectJ(); else if (step === 1) collect();
+      step = s; openJ = openA = openR = false; draw();
     };
     window.addEventListener("popstate", onPop);
     back.addEventListener("click", function (e) {
       var a = e.target.closest("[data-a]"); if (!a) return;
       var act = a.dataset.a;
-      collect(); collectJ();
-      if (act === "toggle") openKey = openKey === a.dataset.k ? null : a.dataset.k;
+      if (step === 3) collectJ(); else if (step === 1) collect();
+      if (pushed && act === "prev") { history.back(); return; }
+      var before = step;
+      if (act === "toggle") openDd = !openDd;
       else if (act === "none") d.cats = d.cats.length >= ALL.length ? [] : ALL.map(function (o) { return o.v; });
+      else if (act === "rtoggle") openR = !openR;
       else if (act === "rnone") d.reg = d.reg.length >= SOURCES.length ? [] : SOURCES.map(function (o) { return o.id; });
+      else if (act === "jtoggle") openJ = !openJ;
+      else if (act === "atoggle") openA = !openA;
       else if (act === "anone") d.aside = d.aside.length >= ASIDE_OPTS.length ? [] : ASIDE_OPTS.map(function (o) { return o[0]; });
       else if (act === "jnone") d.where = d.where.length >= J.length ? [] : J.map(function (o) { return o.v; });
       else if (act === "jcity" || act === "jstate") {
@@ -326,16 +351,19 @@
         var allOn = gv.every(function (x) { return d.where.indexOf(x) >= 0; });
         d.where = d.where.filter(function (x) { return gv.indexOf(x) < 0; }).concat(allOn ? [] : gv);
       }
+      else if (act === "prev") { step = Math.max(1, step - 1); openJ = openA = openR = false; }
+      else if (act === "next") { step = Math.min(4, step + 1); openJ = openA = openR = false; }
       else if (act === "finish") {
         var every = !d.where.length || (J.length && J.every(function (o) { return d.where.indexOf(o.v) >= 0; }));
         save({ catsV: 2, cats: d.cats, where: every ? [] : d.where, value: d.value, aside: d.aside, reg: d.reg.length >= SOURCES.length ? [] : d.reg, vmin: d.vmin, vmax: d.vmax, extra: d.extra.trim(), src: d.src, saved: new Date().toISOString() });
         try { localStorage.removeItem(SKIP); } catch (x) {}
         // Show a "working" message, let it paint, then do the (possibly slow) list compile.
         back.innerHTML = "<div class='wz' role='status' aria-live='polite' style='text-align:center'><div class='wz-spin'></div><h2>Compiling your RFQ list&hellip;</h2><p class='wz-note'>Matching bids to your choices. This can take a moment.</p></div>";
-        unhook(); if (pushed) { var n = pushed; pushed = 0; history.go(-n); } // drop the wizard's history entries
+        unhook(); if (pushed) { var n = step; pushed = 0; history.go(-n); } // drop the wizard's history entries
         setTimeout(function () { close(); window.dispatchEvent(new Event("rfqprofilechange")); }, 60);
         return;
       }
+      if (pushed && step > before) { try { history.pushState({ wz: step }, ""); pushed++; } catch (x) {} }
       draw();
     });
     draw();

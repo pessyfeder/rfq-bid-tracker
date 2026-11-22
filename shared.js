@@ -83,7 +83,7 @@
     "335": "Goods - Electronics & electrical", "336": "Transportation & vehicles", "337": "Goods - Furniture & misc", "339": "Goods - Furniture & misc",
     "423": "Goods - Wholesale & supplies", "424": "Goods - Wholesale & supplies", "721": "Goods - Food & beverage", "722": "Goods - Food & beverage" };
   var GROUP_RULES = [
-    ["Goods - Furniture & misc", /chair|furniture|leased space|minivan|vans?/],
+    ["Goods - Furniture & misc", /chair|furniture|leased space|minivan|\bvans?\b/],
     ["General / procurement type", /^(rfp|rfq|rfi|rfx|ifb|invitation|request for|single feasible|hybrid|grant|committee|no data|miscellaneous|misc\b|goods( and| &|&|$)|services$|commodities|service - misc|equipment$|municipality|quasi|reques)/],
     ["Construction", /construct|highway|bridge|roadway|structures|sidewalk|seal coat|overlay|building and/],
     ["Agriculture", /agricultur|farming|forestry|wildlife|live plant|landscap|feed, bedding/],
@@ -397,8 +397,8 @@
     title = cleanTitle(title, r, code);
     var agency = nice(r.agency);
     // a vague title ("Various Rail") gets the buyer added so it says something: "Various Rail (Metro-North Railroad)"
-    if (agency && /various/i.test(title) && title.split(/s+/).length <= 3) {
-      var who = agency.replace(/^.{2,6}s+[-–]s+(?=S)/, "");
+    if (agency && /\bvarious\b/i.test(title) && title.split(/\s+/).length <= 3) {
+      var who = agency.replace(/^.{2,6}\s+[-–]\s+(?=\S)/, "");
       if (who && title.toLowerCase().indexOf(who.toLowerCase()) < 0) title += " (" + who + ")";
     }
     return title;

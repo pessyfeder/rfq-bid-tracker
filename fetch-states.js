@@ -92,7 +92,7 @@ async function addDocumentReads(list, prevById, adapter, ctl) {
     if (amended) { newSig.set(r, r.aiSig); r.aiSig = p.aiSig; } // keep the old fingerprint until the re-read succeeds, so a failed one is retried next run
     // Version 4: shared-folder links (Box etc.) are now listed, so every read row without any saved document links is read once more.
     const stale = (p && p.requires == null && (p.docsV || 0) < DOCS_VERSION && REREAD_STATES.has(adapter.code)) || (p && p.aiRead && (p.docsV || 0) < DOCS_VERSION && !(p.docs && p.docs.length)) || amended;
-    if (p && p.aiRead) { r.requires = p.requires; r.scope = p.scope; r.shall = p.shall; if (p.docFacts) r.docFacts = p.docFacts; if (p.naics) r.naics = p.naics; if (p.docDue) r.docDue = p.docDue; if (p.docs) r.docs = p.docs; r.aiRead = true; if (p.docsV) r.docsV = p.docsV; if (p.details && p.details.contact && !r.details.contact) r.details.contact = p.details.contact; } // a failed re-read keeps this
+    if (p && p.aiRead) { r.requires = p.requires; r.scope = p.scope; r.shall = p.shall; if (p.terms) r.terms = p.terms; if (p.docFacts) r.docFacts = p.docFacts; if (p.naics) r.naics = p.naics; if (p.docDue) r.docDue = p.docDue; if (p.docs) r.docs = p.docs; r.aiRead = true; if (p.docsV) r.docsV = p.docsV; if (p.details && p.details.contact && !r.details.contact) r.details.contact = p.details.contact; } // a failed re-read keeps this
     if (p && p.aiRead && !stale) reused++;
     else if (stale) todo.push(r);
     else if (process.env.STATE_REREAD_ONLY && !(p && p.aiRead)) continue; // re-read only notices that were already read once
@@ -102,7 +102,7 @@ async function addDocumentReads(list, prevById, adapter, ctl) {
   // Portals with a bot check (adapter.readPaceMs): one notice at a time with a pause, and stop for this run at the first refusal.
   const pace = (adapter && adapter.readPaceMs) || 0, step = pace ? 1 : 3;
   let botStop = false;
-  for (let i = 0; i < todo.length && budget > 0 && !botStop && !(ctl && ctl.cancelled); i += step) { // stop reading (and spending) once the state was cut off
+  for (let i = 0; i < todo.length && budget > 0 && !botStop && !(ctl && ctl.cancelled) && !(ctl && ctl.readUntil && Date.now() > ctl.readUntil); i += step) { // stop reading (and spending) once the state was cut off
     if (pace && i > 0) await new Promise((res) => setTimeout(res, pace));
     const batch = todo.slice(i, i + step);
     budget -= batch.length;
@@ -115,7 +115,7 @@ async function addDocumentReads(list, prevById, adapter, ctl) {
         // An amended notice's old restriction no longer applies, so an unclear new read must not keep it.
         require("./notice-reader").applyRead(r, res, { forceRequires: newSig.has(r) }); // NAICS comes from a regex below, not the model
         if (newSig.has(r)) r.aiSig = newSig.get(r);
-        require("./notice-reader").scanDocs(r, doc.text);
+        require("./notice-reader").scanDocs(r, doc.text, doc.pdfs);
         if (doc.docs && doc.docs.length) r.docs = doc.docs;
         { const n = naicsIn(doc.text); if (n) r.naics = n; } // regex on the page/Word text, not the model (PDF text is not scanned)
         if (!r.details.contact) r.details.contact = require("./contacts").fromText(doc.text); // contact named in the page / Word text
@@ -183,6 +183,10 @@ function readPrevious() {
       return;
     }
     const limit = Math.min(STATE_TIMEOUT_MS, left), ctl = { cancelled: false };
+    // Slow portals (about 40 s per page) cannot read every notice in one run. Stop reading at 70% of the state's time so the state finishes
+    // and KEEPS the reads done (they are reused next run, which continues with the next-soonest notices). Before this, the timeout
+    // threw the whole state away, so MA/IL/OR never kept a single read.
+    ctl.readUntil = Date.now() + limit * 0.7;
     let timer;
     const cut = new Promise((_, rej) => { timer = setTimeout(() => { ctl.cancelled = true; rej(new Error(`Timed out after ${Math.round(limit / 60000)} min`)); }, limit); });
     try { await Promise.race([runAdapterInner(a, ctl), cut]); }

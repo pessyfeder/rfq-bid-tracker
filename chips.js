@@ -24,7 +24,9 @@
     var why = (chip.getAttribute("data-why") || "").replace(/^Possible, keyword match: /, "");
     if (!text && /^(Who can bid|Restriction in the notice|Requirement noted in the notice|Stated in the notice title)$/.test(why)) why = "";
     pop = document.createElement("div"); pop.id = "chip-pop";
-    pop.innerHTML = "<b>" + esc(label) + "</b>" + esc(text || "This is a condition found in the notice. Open the notice to read the exact wording.") +
+    if (!text && window.describeFact) text = window.describeFact(label);
+    if (window.cleanLabel) label = window.cleanLabel(label);
+    pop.innerHTML = "<b>" + esc(label) + "</b>" + esc(text || "The buyer lists this as a condition for bidders. Check that your company meets it before bidding.") +
       (why ? "<small>From the notice: " + esc(why) + "</small>" : "") +
       (chip.classList.contains("possible") ? "<small>Possible: matched by keyword only, the documents were not read.</small>" : "");
     document.body.appendChild(pop);
