@@ -548,8 +548,11 @@
     // The code stated in the solicitation itself beats the one typed into the SAM.gov listing (which is often wrong or not a real code).
     if (/^\d{6}$/.test(r.naics || "")) { m = [null, r.naics]; c = "NAICS " + r.naics; }
     var t = NAICS_TITLE[m[1]] || NAICS_SECTOR[m[1].slice(0, 2)];
-    return t ? c + " \u2013 " + t : c;
+    if (!t) return c;
+    if (!TITLE_CODE[t]) TITLE_CODE[t] = m[1]; // remember the code so catGroup can still group by it
+    return t; // title only - the code isn't shown
   }
+  var TITLE_CODE = {};
 
   // Broad group for a category label, so the Category dropdown can show ~15 groups that expand into the exact categories.
   var NAICS_GROUP = { "11": "Agriculture", "21": "Utilities & energy", "22": "Utilities & energy", "23": "Construction", "31": "Goods & equipment",
@@ -589,8 +592,8 @@
     ["Goods - Wholesale & supplies", /equipment|supplies|products|materials|distribution|bldg equip/]
   ];
   function catGroup(label) {
-    var m = /^NAICS (\d{2})/.exec(label);
-    if (m) return NAICS3_GROUP[label.slice(6, 9)] || NAICS_GROUP[m[1]] || "Other";
+    var code = TITLE_CODE[label] || (/^NAICS (\d{2})/.test(label) ? label.slice(6) : "");
+    if (code) return NAICS3_GROUP[code.slice(0, 3)] || NAICS_GROUP[code.slice(0, 2)] || "Other";
     var s = label.split(";")[0].toLowerCase().trim();
     for (var i = 0; i < GROUP_RULES.length; i++) if (GROUP_RULES[i][1].test(s)) return GROUP_RULES[i][0];
     return "Other";
