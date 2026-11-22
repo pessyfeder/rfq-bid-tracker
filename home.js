@@ -555,7 +555,7 @@
     document.head.appendChild(css);
     var back = document.createElement("div"); back.id = "dp-back";
     var dp = document.createElement("div"); dp.id = "dp";
-    dp.innerHTML = '<div class="dp-bar"><span>Request details</span><span><a id="dp-full" href="#">Open full page &#8599;</a><button id="dp-x" aria-label="Close">&times;</button></span></div><iframe title="Request details"></iframe>';
+    dp.innerHTML = '<div class="dp-bar"><span>Request details</span><span><button id="dp-x" aria-label="Close">&times;</button></span></div><iframe title="Request details"></iframe>';
     document.body.appendChild(back); document.body.appendChild(dp);
     var fr = dp.querySelector("iframe");
     function close() { back.classList.remove("on"); dp.classList.remove("on"); setTimeout(function () { if (!dp.classList.contains("on")) fr.removeAttribute("src"); }, 300); }
@@ -566,7 +566,6 @@
       var a = e.target.closest && e.target.closest(".hm-item h3 a");
       if (!a || e.ctrlKey || e.metaKey || e.shiftKey || e.button) return;
       e.preventDefault();
-      dp.querySelector("#dp-full").href = a.getAttribute("href");
       fr.src = a.getAttribute("href") + "&embed=1";
       back.classList.add("on"); dp.classList.add("on");
     });
