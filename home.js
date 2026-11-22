@@ -6,7 +6,7 @@
   var $app = document.getElementById("app");
   if (!$app) return;
   var DAY = 86400000, PAGE = 25;
-  var st = { kw: "", cats: [], where: [], close: [], posted: [], value: [], vmin: "", vmax: "", aside: [], reg: "any", sort: "new", shown: PAGE, dd: null, more: false, regOpen: {}, openG: { "My products": true } };
+  var st = { kw: "", cats: [], where: [], close: [], posted: [], value: [], vmin: "", vmax: "", aside: [], sort: "new", shown: PAGE, dd: null, more: false, openG: { "My products": true } };
 
   var css = document.createElement("style");
   css.textContent =
@@ -50,7 +50,6 @@
     ".hm-ic{width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:#6b7683;color:#fff}.hm-ic svg{width:15px;height:15px}" +
     ".hm-item h3{margin:0;font-size:13.5px;font-weight:500;line-height:1.3}.hm-item h3 a{color:#1d2b3a;text-decoration:none}.hm-item h3 a:hover{text-decoration:underline}.hm-val{color:#1b7a34;font-weight:700;margin-left:6px;white-space:nowrap}.hm-val.none{font-weight:400}.hm-sub{color:#6b7280;font-size:12px;margin-top:1px}" +
     ".hm-dates{display:grid;grid-template-columns:auto auto;gap:2px 12px;font-size:12px;align-content:center;min-width:170px;color:#2a3644}.hm-dates div{display:flex;align-items:center;gap:7px}.hm-dates svg{color:#7b8794;flex:none;width:15px;height:15px}.hm-dates b{font-weight:600}.hm-dates .hm-left{color:#c62828;font-weight:600;white-space:nowrap}" +
-    ".hm-reg{grid-column:1 / -1;margin:4px 0 0;padding:8px 12px;background:#fdf6e9;border:1px solid #ecd9b0;border-left:3px solid #b45309;border-radius:6px;font-size:13px}.hm-reg ol{margin:6px 0;padding-left:20px}.hm-reg a{color:#3730a3;font-weight:600}" +
     ".hm-more{border:0;background:none;color:#4338ca;font-weight:500;text-decoration:underline;padding:2px 8px}" +
     ".hm-go{display:inline-block;background:#4338ca;color:#fff;border:0;border-radius:6px;padding:6px 12px;font-weight:500;font-size:13px}" +
     ".hm-empty{text-align:center;padding:48px 16px;border:1px solid #d9dfe7;border-top:0}.hm-empty h3{margin:0 0 6px}" +
@@ -82,7 +81,7 @@
     /* search box ends where the Jurisdiction filter ends: 2 of the 6 equal filter columns */
     "@media(min-width:1101px){.hm-fields{grid-template-columns:repeat(6,minmax(0,1fr))}.hm-kw{width:calc((100% - 30px) / 3 + 6px)}}" +
     "@media(max-width:1100px){.hm-bar{flex-wrap:wrap}.hm-kw{flex:1 1 100%!important}.hm-fields{flex:1 1 100%!important;flex-wrap:wrap}.hm-field{flex:1 1 calc(25% - 6px)!important;min-width:110px}.hm-field.rt .hm-dd-panel{left:auto;right:0}.hm-item{grid-template-columns:minmax(0,1fr)}.hm-map{display:none}.hm-dates{grid-column:1;min-width:0;grid-template-columns:auto auto;justify-content:start}}" +
-    "@media(max-width:620px){.hm-in{padding:0 14px}.hm-title h1{font-size:22px}.hm-fields{gap:6px}.hm-field{flex-basis:calc(50% - 6px)}.hm-dd-panel{width:92vw}.hm-field:nth-child(odd) .hm-dd-panel{left:0;right:auto}.hm-field:nth-child(even) .hm-dd-panel{left:auto;right:0}.hm-resbar select{min-width:0;width:100%}.hm-item{grid-template-columns:1fr;padding:9px 14px}.hm-ic{display:none}.hm-reg,.hm-dates{grid-column:1}}";
+    "@media(max-width:620px){.hm-in{padding:0 14px}.hm-title h1{font-size:22px}.hm-fields{gap:6px}.hm-field{flex-basis:calc(50% - 6px)}.hm-dd-panel{width:92vw}.hm-field:nth-child(odd) .hm-dd-panel{left:0;right:auto}.hm-field:nth-child(even) .hm-dd-panel{left:auto;right:0}.hm-resbar select{min-width:0;width:100%}.hm-item{grid-template-columns:1fr;padding:9px 14px}.hm-ic{display:none}.hm-dates{grid-column:1}}";
   document.head.appendChild(css);
 
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
@@ -306,10 +305,9 @@
   var POSTED_OPT = [["3", "Last 3 days"], ["7", "Last 7 days"], ["30", "Last 30 days"]];
   var VALUE_OPT = window.RFQProfile ? window.RFQProfile.valueOpts.slice() : [];
   var ASIDE_OPT = [["open", "Open to all (no set-aside found)"], ["small", "Small business set-aside"], ["vet", "Veteran-owned (SDVOSB)"], ["women", "Women-owned (WOSB)"], ["other", "HUBZone, 8(a), minority-owned"]];
-  var REG_OPT = [["any", "Any"], ["yes", "Only where I'm registered"]];
   var SORT_OPT = [["new", "Newest first"], ["soon", "Closing date (soonest first)"], ["value", "Value (biggest first)"]];
-  var SELECTS = { close: "Status", posted: "Published", value: "Bid value", aside: "Who can bid", reg: "Registration" };
-  var OPTS = { close: CLOSE_OPT, posted: POSTED_OPT, value: VALUE_OPT, aside: ASIDE_OPT, reg: REG_OPT, sort: SORT_OPT };
+  var SELECTS = { close: "Status", posted: "Published", value: "Bid value", aside: "Who can bid" };
+  var OPTS = { close: CLOSE_OPT, posted: POSTED_OPT, value: VALUE_OPT, aside: ASIDE_OPT, sort: SORT_OPT };
 
   function passes(r, ctx) {
     var i;
@@ -321,12 +319,11 @@
     if (st.posted.length) { var age = r.posted ? (today - new Date(r.posted.slice(0, 10) + "T00:00:00")) / DAY : null; if (age == null || !st.posted.some(function (k) { return age <= +k; })) return false; }
     if (st.value.length && window.RFQProfile && !window.RFQProfile.valueOk({ value: st.value, vmin: st.vmin, vmax: st.vmax }, r.value)) return false;
     if (st.aside.length && !st.aside.some(function (k) { return k === "open" ? r.aside.any : r.aside[k]; })) return false;
-    if (st.reg === "yes") { var info = window.RFQProfile && window.RFQProfile.regInfo(window.RFQProfile.sourceFor(r.level, r.code)); if (!info || !info.registered) return false; }
     return true;
   }
   function ctxNow() { return { words: st.kw.toLowerCase().split(/\s+/).filter(Boolean), cats: selCats() }; }
 
-  function resetFilters(keepCats) { st.kw = ""; st.cats = []; st.where = []; st.close = []; st.posted = []; st.value = []; st.vmin = ""; st.vmax = ""; st.aside = []; st.reg = "any"; st.shown = PAGE; }
+  function resetFilters(keepCats) { st.kw = ""; st.cats = []; st.where = []; st.close = []; st.posted = []; st.value = []; st.vmin = ""; st.vmax = ""; st.aside = []; st.shown = PAGE; }
   function lab(key, v) { var o = OPTS[key].filter(function (o) { return o[0] === v; })[0]; return o ? o[1] : v; }
   function money(x) { x = +x; return x >= 1e6 ? "$" + +(x / 1e6).toFixed(2) + "M" : x >= 1e3 ? "$" + +(x / 1e3).toFixed(1) + "K" : "$" + x; }
   function customLabel() {
@@ -343,7 +340,6 @@
       var names = st[k].map(function (v) { return k === "value" && v === "custom" ? customLabel() : lab(k, v); });
       out.push([k, SELECTS[k] + ": " + (names.length <= 2 ? names.join(", ") : names.length + " selected")]);
     });
-    if (st.reg !== "any") out.push(["reg", SELECTS.reg + ": " + lab("reg", st.reg)]);
     return out;
   }
 
@@ -471,17 +467,6 @@
     var m = document.getElementById("hm-more"); if (m) m.innerHTML = moreHtml();
   }
 
-  function regBlock(r) {
-    return ""; // banner hidden by request
-    var RP = window.RFQProfile, info = RP && RP.regInfo && RP.regInfo(RP.sourceFor(r.level, r.code));
-    if (!info || info.registered || !RP.get()) return ""; // no saved profile yet: we can't know their status
-    var open = st.regOpen[info.id];
-    return '<div class="hm-reg"><b>Registration needed:</b> ' + esc(info.reg) + ' <button class="hm-more" data-r="' + info.id + '" data-v="1">I am registered</button>' +
-      '<button class="hm-more" data-ro="' + info.id + '">' + (open ? "Hide how" : "How to register") + "</button>" +
-      (open ? "<ol>" + info.steps.map(function (x) { return "<li>" + esc(x) + "</li>"; }).join("") + "</ol>" +
-        (info.url ? '<a href="' + esc(info.url) + '" target="_blank" rel="noopener">Open the registration page &rarr;</a>' : "") : "") + "</div>";
-  }
-
   function results() {
     var host = document.getElementById("hm-res"); if (!host) return;
     var ctx = ctxNow(), catLabel = {}; allCats().forEach(function (c) { catLabel[c.id] = c.label; });
@@ -509,7 +494,7 @@
       h += '<div class="hm-item">' + mapIcon(r) + '<div><h3><a href="/explore.html?id=' + encodeURIComponent(r.id) + '">' + esc(r.title) + "</a>" + valueTag(r) + "</h3>" +
         '<div class="hm-sub">' + esc(stateName(r.code)) + " &middot; " + esc(r.ck ? r.ck.slice(2) || "No category" : "No category") + "</div></div>" +
         '<div class="hm-dates"><div>' + ICON_CAL + "<b>Published</b></div><div>" + esc(r.posted ? mdy(r.posted) : "Unknown") + "</div><div>" + ICON_CLOCK + "<b>Closing</b></div><div>" + esc(closing) + (r.days != null && r.days >= 0 ? ' <span class="hm-left">' + (r.days === 0 ? "today" : r.days === 1 ? "tomorrow" : r.days + " days") + "</span>" : "") + "</div></div>" +
-        regBlock(r) + "</div>";
+        "</div>";
     });
     h += "</div>";
     if (list.length > st.shown) h += '<button class="hm-showmore" data-a="more">Show more (' + (list.length - st.shown).toLocaleString() + " left)</button>";
@@ -552,7 +537,7 @@
     var x = e.target.closest("[data-x]");
     if (x) {
       var k = x.dataset.x;
-      if (k === "kw") { st.kw = ""; clearKw(); } else if (k === "cats") st.cats = []; else if (k === "reg") st.reg = "any"; else st[k] = [];
+      if (k === "kw") { st.kw = ""; clearKw(); } else if (k === "cats") st.cats = []; else st[k] = [];
       st.shown = PAGE; return refreshAll();
     }
     var b = e.target.closest("button"); if (!b) return;
@@ -569,8 +554,6 @@
       if (st[sk].length >= so.length) { st[sk] = []; if (sk === "value") { st.vmin = ""; st.vmax = ""; } } else st[sk] = so.map(function (o) { return o.v; });
     }
     else if (d.a === "more") { st.shown += PAGE; return results(); }
-    else if (d.ro) { st.regOpen[d.ro] = !st.regOpen[d.ro]; return results(); }
-    else if (d.r) { window.RFQProfile.setReg(d.r, d.v === "1"); return results(); }
     else return;
     st.shown = PAGE; refreshAll();
   });
@@ -602,7 +585,7 @@
   // Apply every wizard choice to the page's filters. st.cats = null means "the categories saved in the wizard".
   function applyProfile() {
     st.cats = P() ? null : []; st.where = profWhere(); st.value = profValue(); st.aside = profAside(); profRange();
-    st.kw = ""; st.close = []; st.posted = []; st.reg = "any"; st.shown = PAGE;
+    st.kw = ""; st.close = []; st.posted = []; st.shown = PAGE;
   }
   applyProfile();
   window.addEventListener("rfqprofilechange", function () { applyProfile(); render(); });

@@ -151,7 +151,7 @@
     if (restore === true) { try { saved = JSON.parse(sessionStorage.getItem(WZKEY) || "null"); } catch (e) {} }
     var cur = load() || {};
     var d = { cats: (cur.cats || []).slice(), extra: cur.extra || "",
-      src: (cur.src || SOURCES.map(function (s) { return s.id; })).slice(), reg: Object.assign({}, cur.reg || {}), value: toArr(cur.value), aside: toArr(cur.aside), vmin: cur.vmin || "", vmax: cur.vmax || "" };
+      src: (cur.src || SOURCES.map(function (s) { return s.id; })).slice(), value: toArr(cur.value), aside: toArr(cur.aside), vmin: cur.vmin || "", vmax: cur.vmax || "" };
     close();
     back = document.createElement("div"); back.className = "wz-back";
     document.body.insertBefore(back, document.body.firstChild); document.body.classList.add("wz-open"); window.scrollTo(0, 0);
@@ -323,7 +323,7 @@
       }
       else if (act === "finish") {
         var every = !d.where.length || (J.length && J.every(function (o) { return d.where.indexOf(o.v) >= 0; }));
-        save({ cats: d.cats, where: every ? [] : d.where, value: d.value, aside: d.aside, vmin: d.vmin, vmax: d.vmax, extra: d.extra.trim(), src: d.src, reg: d.reg, saved: new Date().toISOString() });
+        save({ cats: d.cats, where: every ? [] : d.where, value: d.value, aside: d.aside, vmin: d.vmin, vmax: d.vmax, extra: d.extra.trim(), src: d.src, saved: new Date().toISOString() });
         try { localStorage.removeItem(SKIP); } catch (x) {}
         // Show a "working" message, let it paint, then do the (possibly slow) list compile.
         back.innerHTML = "<div class='wz' role='status' aria-live='polite' style='text-align:center'><div class='wz-spin'></div><h2>Compiling your RFQ list&hellip;</h2><p class='wz-note'>Matching bids to your choices. This can take a moment.</p></div>";
@@ -337,20 +337,11 @@
     draw();
   }
 
-  // Which source a bid belongs to, plus its registration info and the vendor's saved status for it.
+  // Which source a bid belongs to.
   function sourceFor(level, code) {
     return level === "Federal" ? "fed" : code === "TX" ? "tx" : code === "PA" ? "pa" : code === "NYC" ? "nyc" : "other";
   }
-  function regInfo(id) {
-    var p = load() || {}, s = SOURCES.filter(function (x) { return x.id === id; })[0];
-    return s ? { id: id, label: s.label, reg: s.reg, url: s.url, steps: s.steps, registered: (p.reg || {})[id] === "yes" } : null;
-  }
-  function setReg(id, yes) {
-    var p = load() || { cats: CATS.map(function (c) { return c.id; }), extra: "", src: ["fed", "tx", "pa", "nyc"], reg: {} };
-    p.reg = p.reg || {}; if (yes) p.reg[id] = "yes"; else delete p.reg[id];
-    save(p);
-  }
-  window.RFQProfile = { get: load, match: match, categories: categories, catHits: catHits, open: open, sourceFor: sourceFor, regInfo: regInfo, setReg: setReg, valueOpts: VALUE_OPTS, asideOpts: ASIDE_OPTS, valueOk: valueOk };
+  window.RFQProfile = { get: load, match: match, categories: categories, catHits: catHits, open: open, sourceFor: sourceFor, valueOpts: VALUE_OPTS, asideOpts: ASIDE_OPTS, valueOk: valueOk };
   // First visit: offer the setup once. (Skipping is remembered; the toolbar button reopens it.)
   // Opened immediately (not on window "load") so the main page never paints before the wizard hides it.
   // The bid-category list comes from home.js, which loads after this file, so wait until every script has run.
