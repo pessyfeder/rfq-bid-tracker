@@ -169,4 +169,238 @@
     return group ? s + " (" + group + ")" : s;
   }
   function decodeText(s) { try { return new DOMParser().parseFromString(String(s), "text/html").documentElement.textContent; } catch (e) { return String(s); } }
+  // ---- Plain-language bid titles: ONE pipeline for the list (home.js) and the detail page (explore.html) ----
+  function nice(t) { // ALL-CAPS titles become readable
+    t = String(t || "").replace(/[ -]+/g, " ").trim();
+    if (t.length > 8 && t === t.toUpperCase()) t = t.toLowerCase().replace(/(^|[.:-]s*)([a-z])/g, function (m, a, b) { return a + b.toUpperCase(); });
+    return t;
+  }
+  // Keyless fallback for rows with no AI headline: agencies paste whole notices into the title field. Drop the
+  // deadline / contact tail, turn "X invites vendors to submit bids for Y" into "Y", and cut long text at a word.
+  function shortTitle(orig, scope) {
+    var t = String(orig || "").replace(/\s+/g, " ").trim();
+    // a title cut off with "..." is completed from the scope text when that starts with the same words
+    if (/(\.\.\.|…)$/.test(t) && scope) {
+      var sc = String(scope).replace(/^[A-Z]{2,6} - RFx\.\s*/, "").replace(/\s+/g, " ").trim();
+      if (sc.length > t.length && sc.toLowerCase().indexOf(t.slice(0, 40).toLowerCase()) === 0) t = sc.replace(/\s+\S*$/, "");
+    }
+    t = t.replace(/[\s\-:;,.(]*\b(quote deadline|bid deadline|proposals? (are )?due|bids? (are )?due|deadline|due date|submit (your )?(quotes?|bids?|proposals?)? ?to|contact|questions? (should be )?(directed )?to|e-?mail)\b[\s\S]*$/i, "");
+    t = t.replace(/\S+@\S+/g, "").replace(/\s+/g, " ").trim();
+    var m = /\b(?:bids?|quotes?|proposals?|responses?)\s+(?:for|on)\s+(?:the\s+)?(?:purchase and installation of|purchase of|provision of|supply of|installation of)?\s*(.{12,})$/i.exec(t);
+    if (m && /\b(invites?|requests?|seeks?|solicits?)\b/i.test(t.slice(0, m.index))) t = m[1].charAt(0).toUpperCase() + m[1].slice(1);
+    t = t.replace(/(\.\.\.|…)\s*$/, "").trim();
+    if (t.length > 110) t = t.slice(0, 110).replace(/\s+\S*$/, "").replace(/[,;:\s]+$/, "") + "…";
+    return t || String(orig || "");
+  }
+
+  // Final tidy for every headline (AI-written or rule-built):
+  //  - never shows the buyer's own jurisdiction (state, "New York City", "City of X"): the row already has a location tag
+  //  - drops solicitation numbers, status labels ("Bid Extension:", "*REBID*") and the "Not clear from the listing:" hedge
+  //  - a notice / contact line or a bare code is replaced by what the description says is wanted, when it says
+  function scopeHeadline(scope) {
+    var s = String(scope || "").replace(/<[^>]+>/g, " ").replace(/^[A-Z]{2,6} - RFx\.\s*/, "").replace(/\s+/g, " ").trim();
+    var m = /\b(?:seeks?|seeking|requests?|invites?|solicits?|will receive|anticipates?)\s+(?:sealed\s+|competitive\s+)?(?:bids?|proposals?|quotes?|quotations?|qualifications|responses?|applications?|purchasing)\s+(?:for|to|from[^,]{0,60}\bto)\s+(?:the\s+)?(?:purchase of|provide|furnish(?:ing)?)?\s*(.{12,}?)(?:[.;]|$)/i.exec(s);
+    if (!m) m = /\b(?:plans?|intends?|proposes?)\s+(?:a\s+|an\s+|to\s+)?(?:sole[- ]source\s+)?(?:purchase of|to purchase|to buy|procurement of)\s+(.{8,}?)(?:,|[.;]|$)/i.exec(s);
+    if (!m) return "";
+    var t = m[1].replace(/\s+(until|by|no later than)\b[\s\S]*$/i, "").replace(/[,\s]+(?:funded|financed|paid|sponsored)$/i, "").trim();
+    if (t.length > 110) t = t.slice(0, 110).replace(/\s+\S*$/, "") + "…";
+    return t.length >= 12 ? t.charAt(0).toUpperCase() + t.slice(1) : "";
+  }
+  // Applies to every headline (AI or rule-built), any level of government: drop state names / postal codes, county
+  // names, solicitation / facility / project codes and fiscal-year tags, and turn leftover ALL-CAPS words into words.
+  var KEEP_CAPS = /^(SDVOSB|HUBZONE|MWBE|USAFA|USCG|NAVFAC|NASA|AMTRAK|FEMA|USDA|NOAA|HVAC|IDIQ|COVID|OSHA|USACE|UNICOR|DODEA|WOSB|NNSA)$/;
+  function stripNoise(t) {
+    var N = window.STATE_NAMES || {}, abbr = [], names = ["District of Columbia", "Washington,? D.?C.?"];
+    Object.keys(N).forEach(function (k) { if (/^[A-Z]{2}$/.test(k) && k !== "US") { abbr.push(k); names.push(String(N[k]).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")); } });
+    var nm = names.join("|"), ab = abbr.join("|");
+    function rx(re, f) { return new RegExp(re.source.replace("@NM@", nm).replace("@AB@", ab), f); }
+    t = t.replace(/\b\w+_(?:solicitation|notice|rfq|rfp|ifb)\w*?_/gi, "")                       // 36C25627R0012_solicitation_notice_
+      .replace(rx(/\s*(?:,|\bin\b|\bfor\b|\s[-–])\s*(?:the\s+)?(?:State of\s+)?(?:@NM@)\b(?=\s*[,;.)(]|\s*$)/, "gi"), "")
+      .replace(rx(/\s*,?\s*\(?\b(?:@AB@)\b\)?\.?\s*$/, ""), "")
+      .replace(rx(/,\s*(?:@AB@)\b(?=\s*[,;)])/, "g"), "")
+      .replace(/\b(?:(?:in|for|of|at)\s+)?(?:the\s+)?County of [A-Z][\w.'-]*(?: [A-Z][\w.'-]*)?/g, "")
+      .replace(/\b(?:[A-Z][\w.'-]*|[a-z]{3,})(?: [A-Z][\w.'-]*)?\s+County\b(?!\s+(?:Route|Road|Rd|Highway|Hwy|Line|Fair))/g, function (m) { return /^(?:the|in|for|of|at|and|a|an|by|to|each|every|any)\b/i.test(m) ? m : ""; })
+      .replace(/[,\s]+\d{2,}(?:-\d+){2,}\s*$/, "")                                                      // trailing part / stock number: ", 01-24-3106"
+      .replace(/\bTrk\s*:?\s*/g, "Track ").replace(/\bFOR\b/g, "for")
+      .replace(/\bFY\s?'?\d{2,4}\b/gi, "").replace(/\bFiscal Year\s*\(FY\)\s*\d{2,4}\b/gi, "")
+      .replace(/\b(\d)(?:st|nd|rd|th)?\s*QTR\b\.?/gi, function (m, d) { return ({ 1: "1st", 2: "2nd", 3: "3rd", 4: "4th" })[d] + " quarter"; })
+      .replace(/\bQTR\b\.?/gi, "quarter")
+      .split(/(\s+)/).map(function (w) {
+        var core = w.replace(/^[^A-Za-z0-9]+|[^A-Za-z0-9]+$/g, "");
+        if (!core || /^\s+$/.test(w)) return w;
+        if (/^\d{5,}$/.test(core) || (/\d/.test(core) && /[A-Za-z]/.test(core) && core.length >= 5 && !/[a-z]{3,}/.test(core) && !/^\d+(st|nd|rd|th)$/i.test(core) && !/^\d+(lbs?|in|ft|mm|cm|kv|hp|gal|oz|kg|psi|gpm|amp|volt)$/i.test(core))) return "";
+        return w;
+      }).join("")
+      .replace(/\b(?:Project|Proj\.?|Contract|Solicitation|Bid|No\.?|Number|#)\s*[A-Z0-9][\w-]*\d[\w-]*(?:\s+\d{1,4}\b)*/g, "")
+      .replace(rx(/\s*,?\s*\(?\b(?:@AB@)\b\)?\.?\s*$/, ""), "")
+      .replace(/[A-Z]{2,}(?:-[A-Z]{2,})+/g, function (w) { return w.charAt(0) + w.slice(1).toLowerCase(); })
+      .replace(/[A-Za-z]{5,}/g, function (w, off, str) {   // ALL-CAPS words become words; acronyms (in brackets, no vowels, listed) stay
+        if (w !== w.toUpperCase() || KEEP_CAPS.test(w) || !/[AEIOU]/.test(w) || /\([^)]*$/.test(str.slice(0, off))) return w;
+        return w.charAt(0) + w.slice(1).toLowerCase();
+      })
+      .replace(/\b(?:FOR|AND|THE|OF|TO|IN|ON|AT|BY|WITH|FROM)\b(?=\s+\S)/g, function (w, off, str) { return off > 0 ? w.toLowerCase() : w; })
+      .replace(/,(?=[A-Za-z])/g, ", ");
+    return t.replace(/\s{2,}/g, " ").replace(/\s+([,.;:)])/g, "$1").replace(/\b(?:project|no\.?|number|solicitation|contract|facility|bldg|building)\s*#?\s*$/i, "").replace(/\(\s*\)/g, "").trim();
+  }
+  // Requirements written into a notice title ("- Site Visit Required", "SDVOSB - ...", "Mandatory Prebid/Site Visit, 5% Security, ...",
+  // "MBE, WBE and Sdvob Subcontractor Procurement for ...") are NOT part of what is being bought. ONE table drives both sides, so
+  // they cannot drift apart: cleanTitle() cuts each phrase out of the headline and flagsHtml() turns the same match into a chip.
+  // To cover a new phrase, add a rule here. chips(m) returns [label, cls, why] triples; labels reuse facts.js wording so they merge.
+  var SA_TOK = "(?:small business|sdvosb|vosb|wosb|edwosb|hubzone|8\\(a\\))";
+  var MW_TOK = "(?:M\\/)?(?:MBE|WBE|DBE|MWBE|SDVOB|SDVOSB)(?:\\s+(\\d+)%)?";
+  var MW_LIST = MW_TOK + "(?:\\s*(?:,\\s*and|,|\\/|&|\\||and)\\s*" + MW_TOK + ")*";
+  function saLabel(pct, tok) { return (pct ? pct + "% " : "") + (/small business|^sb$/i.test(tok) ? "Small business" : tok.toUpperCase()) + " set-aside"; }
+  function mwChip(txt) {
+    var toks = [], pct = false, re = /(?:M\/)?(MBE|WBE|DBE|MWBE|SDVOB|SDVOSB)(?:\s+(\d+)%)?/gi, m;
+    while ((m = re.exec(txt))) { if (m[2]) pct = true; var t = m[0].toUpperCase().replace(/^M\//, "M/"); if (toks.indexOf(t) < 0) toks.push(t); }
+    return toks.length ? [[toks.join(" / ") + (pct ? " goals" : " subcontracting"), "elig", "Who can bid"]] : [];
+  }
+  var TITLE_RULES = [
+    // "SDVOSB - Roof repair", "Total Small Business Set-Aside: Paving"
+    { re: /^(?:(?:total\s+|partial\s+)?(?:SDVOSB|VOSB|WOSB|EDWOSB|HUBZone|8\(a\)|small business|SB)(?:\s+set[- ]aside)?)(?:\s*[-–:|]\s*|\s+)(?=[A-Za-z0-9(])/i,
+      chips: function (m) { var t = /(SDVOSB|VOSB|WOSB|EDWOSB|HUBZone|8\(a\)|small business|SB)/i.exec(m[0])[1]; return [[saLabel("", t), "elig", "Who can bid"]]; } },
+    // "... - 100% Small Business Set-Aside", "(SDVOSB Set-Aside)" anywhere in the title
+    { re: new RegExp("\\s*[-–,|(]*\\s*(?:(?:total|partial)\\s+)?(?:(\\d+)%\\s*)?(" + SA_TOK + ")\\s+set[- ]?aside\\)?", "i"),
+      chips: function (m) { return [[saLabel(m[1], m[2]), "elig", "Who can bid"]]; } },
+    // "... - SDVOSB" (just the tag after a separator)
+    { re: new RegExp("\\s*[-–,|]\\s*(?:(?:total|partial)\\s+)?(?:(\\d+)%\\s*)?(" + SA_TOK + ")(?=\\s*[-–,|]|\\s*$)", "i"),
+      chips: function (m) { return [[saLabel(m[1], m[2]), "elig", "Who can bid"]]; } },
+    // "... - Site Visit Required"
+    { re: /\s*[-–,|]\s*(?:(?:mandatory\s+)?(?:pre-?bid\s+)?site\s+(?:visit|walk-?through)s?(?:\s+(?:is\s+)?(?:required|mandatory))?)(?=\s*[-–,|]|\s*$)/i,
+      chips: function () { return [["Mandatory site visit / pre-bid", "cost", "Stated in the notice title"]]; } },
+    // "Site visit required" / "mandatory site walk" in the middle of a title
+    { re: /\s*\b(?:site\s+(?:visit|walk-?through)s?\s+(?:is\s+)?(?:required|mandatory)|(?:required|mandatory)\s+site\s+(?:visit|walk))\b/i,
+      chips: function () { return [["Mandatory site visit / pre-bid", "cost", "Stated in the notice title"]]; } },
+    // Pre-bid logistics glued to the end: "... Mandatory Prebid/Site Visit, 5% Security, Performance/Payment Bond",
+    // "... Mandatory Pre bid 11/16/2026, 10:00 am", "... There is a non-mandatory pre-bid meeting on 11/20/26". All of it is a tail.
+    { re: /(?<=\S[^]{7,}?)[\s,;:.–-]*(?:there is an?\s+|an?\s+)?(?:(?:non-?\s?mandatory|mandatory)\s+pre-?\s?bid|pre-?\s?bid\s+(?:conference|meeting|\/\s*site))[^]*$/i,
+      guard: function (t) { return !/^pre-?\s?bid/i.test(t); },   // a title that IS the pre-bid notice has no job left to name
+      chips: function (m) {
+        var x = m[0], o = [];
+        o.push(/non-?\s?mandatory/i.test(x) ? ["Optional pre-bid meeting", "info", "Stated in the notice title"] : ["Mandatory site visit / pre-bid", "cost", "Stated in the notice title"]);
+        if (/\d+\s*%\s*(?:bid\s+)?security|bid (?:bond|security)/i.test(x)) o.push(["Bid bond / bid guarantee", "hard", "Stated in the notice title"]);
+        if (/performance\s*\/?\s*(?:and\s*)?payment\s+bond/i.test(x)) o.push(["Performance / payment bond", "cost", "Stated in the notice title"]);
+        return o;
+      } },
+    // "Parks M/WBE-Only Site Work ..."
+    { re: /\s*\b(?:M\/)?(?:MBE|WBE|DBE|MWBE)(?:\s*[\/,&]\s*(?:M\/)?(?:MBE|WBE|DBE))*[- ]only\b/i,
+      chips: function (m) { return [[m[0].replace(/[- ]only$/i, "").trim().toUpperCase() + " only", "elig", "Who can bid"]]; } },
+    // "(Small Business Concerns and Minority Business Concerns only)"
+    { re: /\s*\((?=[^()]*\b(?:small business|minority business|women|veteran|sdvosb|mbe|wbe)\b)[^()]*?\bonly\)\s*$/i,
+      chips: function (m) { return [[/small/i.test(m[0]) && /minority/i.test(m[0]) ? "Small / minority business only" : /small/i.test(m[0]) ? "Small business only" : "Restricted bidders", "elig", "Who can bid"]]; } },
+    // NY subcontracting calls: "MBE, WBE and Sdvob Subcontractor Procurement for ...", "PCI: MP/PW: MBE 20% WBE 10% Sdvob 5%: GC - ..."
+    { re: new RegExp("^(?:[A-Z]{2,5}:\\s*[A-Z\\/]{2,6}:\\s*)?(?:opportunity for\\s+)?(?:" + MW_LIST + "(?:\\s+(?=\\d))?\\s*)+(?:\\s*(?:contracting\\s+)?opportunit(?:y|ies))?(?:\\s*subcontractors?(?:\\s+and\\/or\\s+suppliers)?\\s+for the following bid\\s*:)?\\s*[-–:]?\\s*(?=\\S)", "i"),
+      guard: function (t) { return /[A-Za-z]{4,}\s+[A-Za-z]{3,}/.test(t); },   // keep the prefix when nothing readable would be left
+      chips: function (m) { return mwChip(m[0]); } }
+  ];
+  function applyTitleRule(rule, t) { // -> { t: title without the phrase, m: the match } (m null when the rule does not apply)
+    var m = rule.re.exec(t);
+    if (!m || !m[0]) return { t: t, m: null };
+    var out = t.slice(0, m.index) + t.slice(m.index + m[0].length);
+    if (rule.guard && !rule.guard(out)) return { t: t, m: null };
+    return { t: out, m: m };
+  }
+  function titleChips(title) { // the chips a title's requirement phrases stand for
+    var t = String(title || "").replace(/\s+/g, " ").trim(), o = [];
+    TITLE_RULES.forEach(function (rule) { for (var i = 0; i < 4; i++) { var a = applyTitleRule(rule, t); if (!a.m) break; o = o.concat(rule.chips(a.m)); t = a.t; } });
+    return o;
+  }
+
+  function cleanTitle(t, r, code) {
+    var orig = t = String(t || "").replace(/\s+/g, " ").trim(), m;
+    if (t.length > 8 && /[A-Z]/.test(t) && t === t.toUpperCase()) t = t.toLowerCase().replace(/(^|[\s\-\/(])([a-z])/g, function (m, a, b) { return a + b.toUpperCase(); }).replace(/\b(?:Of|For|And|The|To|In|On|At|By|With|From)\b(?=\s+\S)/g, function (w, off) { return off > 0 ? w.toLowerCase() : w; });
+    t = t.replace(/^(?:invitation (?:for|to) bids?|invitation to quote|request for (?:quotes?|quotations?|proposals?|bids?)|notice of (?:intent to )?(?:bid|award))\s*[-–:]\s*(?=\S)/i, "");
+    t = t.replace(/^not clear from the listing:\s*/i, "").replace(/^\*?\s*re-?bid\s*\*?[\s:–-]*/i, "")
+      .replace(/^(?:\*[^*]{2,30}\*\s*[-:–]?\s*)+(?=\S)/, "")                                   // "*Fax Bid* ..." status labels
+      .replace(/^(?:General\s+)?(?:RFP|RFQ|IFB|ITB|RFB|RFI)\s*#?\s*\d[\w-]*\s*[:–-]\s*(?=[A-Za-z])/i, "")   // "General RFP 5026: ..."
+      .replace(/(?<=\S{4,}.{6,})\s+[-–]\s+[A-Z]{3,5}$/, "")                                       // trailing agency tag " - DOC"
+      .replace(/(?<=[A-Za-z].{5,}),?\s+\d+(?:-\d+)+$/, "")                                        // trailing item code ", 01-20-0100"
+      .replace(/^addendum\s+(?:no\.?\s*)?#?\d+\s*[-:–]?\s*(?=[A-Za-z]{3})/i, "")                 // "Addendum No 1Mainframe ..." (separator may be missing)
+      .replace(/^(bid extension|correction|addendum( no\.? ?\d+)?|amendment|open-ended|cancell?ed|re-?issued?)\s*[-:–]\s*/i, "")
+      .replace(/^(?:[^-–:|]{0,40}\|\s*)?(?:(?:m\/?wbe|sdvob|dbe|mbe|wbe)\b[\s|,\/&]*)+(?:and\s+)?(?:subcontractors?|suppliers?|[&\/]|and|\s)*(?:opportunit(?:y|ies)|solicitations?)\s*(?:for\s*)?[-–:]\s*(?=\S)/i, "")   // "MWBE | Sdvob Subcontractor & Supplier Opportunity - ..."
+      .replace(/^(?:[A-Z\/&]+\s+)*(?:opportunity)\s*[-–]\s*/i, function (x) { return /m\/?wbe|sdvob|mwbe/i.test(x) ? "" : x; })
+      .replace(/^(?:(?:attn:?|m\/?wbe|sdvob|opp|subcontractors|suppliers|&|\/|and)\s*)+(?:opportunit(?:y|ies)|solicitations?)?\s*(?:for\s*)?[-–:]\s*(?=\S)/i, function (x) { return /m\/?wbe|sdvob/i.test(x) ? "" : x; })
+      // buyer named as a prefix: "NYS DEC - ...", "Albany Port District Commission - ..." (second pass also catches it after the label above)
+      .replace(/^(?:(?:NYS|NYC)\s+[A-Z]{2,6}|[A-Z][\w.&']*(?: [A-Z][\w.&']*){0,5} (?:Commission|Authority|Department|Dept\.?|Agency|Bureau|Office|Port District|Thruway))\s+[-–]\s+(?=[A-Za-z]{3}.{8,})/, "");
+    var dash = /^(.{3,45}?)\s*[-–:]\s+(?=\S)/.exec(t);
+    // a label made only of codes and solicitation words ("IFB 26-083 -", "Smd_a&cm_ rfq's 523158 -"), never real words ("FY 27 Tree Removal -")
+    if (dash && /[A-Za-z]/.test(dash[1]) && /[\d_#]/.test(dash[1]) && t.length - dash[0].length >= 8 &&
+        dash[1].split(/\s+/).every(function (w) { return /[\d_#]/.test(w) || /^(bid|rfp|rfq|rfb|ifb|itb|rfi|project|no\.?|number|pin|fy|&)('?s)?$/i.test(w) || /^[A-Z&\/]{2,6}('S)?$/.test(w); })) t = t.slice(dash[0].length);
+    t = t.replace(/^(RFP|RFQ|IFB|ITB|RFB|RFI|ITN)\s*[-–:]\s*(?=[A-Za-z])/i, "").replace(/\s*[-–]\s*addendum\s*\d*\s*$/i, "");
+    t = t.replace(/^(?:RFP|RFQ|IFB|ITB|RFB|RFI|ITN|ARFQ|CRFQ|PB)\b[\s#:.-]*[A-Za-z0-9][\w\/.-]*\d[\w\/.-]*[\s:–-]+(?=[A-Za-z])/i, "");
+    t = t.replace(/^(?=[A-Z0-9-]*\d)[A-Z0-9][A-Z0-9-]{4,}\s*[-:–]?\s+(?=[A-Za-z])/, "");
+    var words = (t.match(/\b[A-Za-z]{3,}\b/g) || []).length;
+    var boiler = /^(notice\b|submit to\b|email\b|sealed (bids|proposals)\b|written sealed\b|notice of (proposed|intent|sole)|the .{3,70}?\b(will receive|requests|invites|anticipates|is (hereby )?seeking)\b)/i.test(t) ||
+      /^[A-Z][^.]{3,90}?\b(is|are) (hereby )?(soliciting|seeking|requesting|inviting|accepting)\b/.test(t) || /\bnotice of (proposed|intent)\b/i.test(t);
+    var rq = /^[A-Z][^.]{3,90}?\b(?:requests?|invites?|seeks?|solicits?)\s+(?:sealed\s+)?(?:bids?|quotes?|proposals?|quotations?)\s+(?:for|on)\s+(?:the\s+)?(?:purchase of\s+)?(.{12,})$/.exec(t);
+    if (rq) {   // "KDMC requests quotes for 53 new computers ... KDM..." -> what is wanted
+      boiler = false;
+      t = rq[1].replace(/(\.\.\.|…)\s*$/, "").replace(/\.\s[\s\S]*$/, "").replace(/\s+(?:in|of) the \w+ (?:groups?|lots?|items?) (?:below|above|listed)\b[\s\S]*$/i, "");
+      var sp = /^(.{20,}?)\s+to\s+/.exec(t); if (sp) t = sp[1];
+      if (t.length > 110) t = t.slice(0, 110).replace(/\s+\S*$/, "") + "…";
+      t = t.charAt(0).toUpperCase() + t.slice(1);
+    }
+    var codey = /\d/.test(t) && words < 2 && t.length < 40;
+    t = t.replace(/^\d{4}\s*[-–]\s*\d{4}\s+(?=[A-Za-z])/, "");
+    if ((boiler || codey) && r) { var sh = scopeHeadline(r.scope); if (sh) t = sh; else if (boiler) t = "Bid notice (no description given)"; }
+    if (r && r.level !== "Federal" && code) {
+      var N = window.STATE_NAMES || {}, S = N[code];
+      var tail = "(?=\\s*[,;(:]|\\s*$)", lead = "\\s*(?:,|\\b(?:in|for|at|across|within|statewide in))\\s+(?:the\\s+)?";
+      if (code === "NYC") {
+        t = t.replace(new RegExp(lead + "(?:City of )?(?:New York City|NYC|Five Boroughs of New York City)(?:\\s+(?:city )?government)?" + tail, "gi"), "")
+          .replace(new RegExp("\\s*,\\s*New York" + tail, "gi"), "")
+          .replace(/\b(?:the\s+)?(?:City of New York|New York City|NYC)(?:'s)?\s+(?=\S)/gi, "");
+      } else if (code === "NY") {
+        t = t.replace(new RegExp(lead + "(?:State of )?New York(?: State)?" + tail, "gi"), "").replace(/\b(?:the\s+)?(?:State of )?New York State(?:'s)?\s+(?=\S)/gi, "");
+      } else if (S && S !== "New York") {
+        var q = S.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        t = t.replace(new RegExp(lead + "(?:State of )?" + q + tail, "gi"), "").replace(new RegExp("\\s*\\(" + q + "\\)", "gi"), "")
+          .replace(new RegExp("\\b(?:the\\s+)?State of " + q + "(?:'s)?\\s+", "gi"), "state ")
+          .replace(new RegExp("\\b" + q + "'s\\s+", "gi"), "")
+          .replace(new RegExp("\\b" + q + "\\s+(?=state (?:government|agenc|employee))", "gi"), "")
+          .replace(new RegExp("(?<!\\bof )(?<!\\bState of )\\b" + q + "\\s+(?!State\\b)(?=[A-Za-z])", "gi"), "");
+      }
+      // a city or town named only as the buyer: ", City of Lowell" / "for City of Salem" / "the City of Medford's ordinances"
+      t = t.replace(/\s*,\s*(?:City|Town) of [A-Z][\w.' -]*?$/, "").replace(/\s+for\s+(?:the\s+)?(?:City|Town) of [A-Z][\w.' -]*?$/, "")
+        .replace(/\b(?:the\s+)?(?:City|Town) of [A-Z][\w.-]*(?: [A-Z][\w.-]*)?'s\s+/g, "the city's ");
+      t = t.replace(/\b(for|at|by|with|from) (Department|Dept|Division|Office|Commission|Board|Bureau|Agency|Authority)\b/g, "$1 the $2");
+    }
+    // tails and labels that say nothing about what is wanted: place of performance, street addresses, option-year terms, set-aside prefixes (shown as tags already)
+    t = t.replace(/\s*\|\s*(?:POP|Period of Performance|PoP)\b[\s\S]*$/i, "").replace(/\s*\|\s*$/, "")
+      .replace(/\s*\(?\bPOP:?[^)|]*\)?\s*$/i, "")
+      .replace(/\s*[-–,]\s*(?:base\s+(?:year\s+)?plus\s+\w+\s+option\s+years?|base\s+(?:year\s+)?(?:and|\+)\s+\w+\s+option\s+years?|\w+\s+option\s+years?)\s*$/i, "")
+      .replace(/\s*\((?:brand|brand name|brand name or equal)\)/gi, "")
+      .replace(/,\s*\d{1,6}\s+(?:[NSEW]\.?\s+)?[A-Z][\w.' -]*?(?:street|st|road|rd|avenue|ave|boulevard|blvd|drive|dr|lane|ln|highway|hwy|way|parkway|pkwy)\b\.?[\s\S]*$/i, "")
+      .replace(/,\s*[A-Z][\w.' -]{2,50}\s+(?:Health Care|Healthcare|VA|Veterans)\s+(?:System|Network|Medical Center|VISN)\s*$/i, "")
+      .replace(/,\s*(?:VISN\s*\d+|[A-Z][\w.' -]{2,40}\s+(?:VA Medical Center|VAMC|Air Force Base|AFB|Naval Station|Army Depot))\s*$/i, "");
+    t = t.replace(/(?<=\S{4,}.{8,}),\s*(?:[A-Z][\w.&']*\s+){1,4}(?:Port District|Commission|Authority)$/, "");   // buyer named at the tail
+    // requirement phrases glued onto the title are cut out here and shown as chips (see TITLE_RULES)
+    TITLE_RULES.forEach(function (rule) { for (var i = 0; i < 4; i++) { var a = applyTitleRule(rule, t); if (!a.m) break; t = a.t; } });
+    t = stripNoise(t);
+    t = t.replace(/\s*(?:\.{2,}|…)+\s*$/, "");   // headlines never end in a trailing "..." (the dangling "for the" is dropped below)
+    t = t.replace(/\s+([,.;:])/g, "$1").replace(/(^|\s)[,;:]+\s*/g, "$1").replace(/\s{2,}/g, " ").replace(/^[-–|]\s*/, "").replace(/(?:\s+(?:for|in|at|of|the|and|to|by|with|-|–))+\s*$/i, "").replace(/[,;:\s-]+$/, "").trim();
+    t = t.replace(/&(?=[A-Za-z])/g, "& ");
+    if ((t.match(/\(/g) || []).length > (t.match(/\)/g) || []).length) t += ")";   // title cut off mid-parenthesis
+    if (t.length < 8) t = orig.replace(/^not clear from the listing:\s*/i, "");
+    // an acronym that opens the title (STC, SCDOT, IT) stays in capitals when the source wrote it that way
+    var fw = /^[A-Za-z]{2,6}\b/.exec(t), ow = /^[A-Z]{2,6}\b/.exec(orig);
+    if (fw && ow && fw[0].toUpperCase() === ow[0] && !/^(THE|FOR|AND|NEW|OFF|ONE|TWO|OUR|ALL|ANY|USE|OIL|AIR|CAR|BUS|PAY|WEB|BID|RFQ|RFP|IFB|ITB|RFB|RFI|ITN|OF|TO|IN|ON|AT|BY|AS|AN|OR|IS|NO)$/.test(ow[0]) &&
+        (ow[0].length <= 3 || !/[AEIOUY]/.test(ow[0]) || /(?:DOT|DOC|DOH|DHS)$/.test(ow[0]) || KEEP_CAPS.test(ow[0]))) t = ow[0] + t.slice(fw[0].length);
+    return t.charAt(0).toUpperCase() + t.slice(1);
+  }
+  window.titleChips = titleChips;
+  window.cleanBidTitle = function (t, raw) { return cleanTitle(t, raw, raw && raw.level === "Federal" ? "US" : String((raw && raw.id) || "").split("-")[0].replace("TXDOT", "TX")); };
+  // The headline shown for a record: AI headline, else the federal catalogue / keyless cleanup, then the shared cleanup.
+  window.listTitle = function (r) {
+    var code = r.level === "Federal" ? "US" : String(r.id).split("-")[0].replace("TXDOT", "TX");
+    var title = nice(r.plainTitle || (r.level === "Federal" && window.fedItemTitle ? window.fedItemTitle(r.title, r.scope) : shortTitle(r.title, r.scope)));
+    title = cleanTitle(title, r, code);
+    var agency = nice(r.agency);
+    // a vague title ("Various Rail") gets the buyer added so it says something: "Various Rail (Metro-North Railroad)"
+    if (agency && /various/i.test(title) && title.split(/s+/).length <= 3) {
+      var who = agency.replace(/^.{2,6}s+[-–]s+(?=S)/, "");
+      if (who && title.toLowerCase().indexOf(who.toLowerCase()) < 0) title += " (" + who + ")";
+    }
+    return title;
+  };
 })();
