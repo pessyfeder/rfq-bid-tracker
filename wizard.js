@@ -152,7 +152,7 @@
     var cur = load() || {};
     // Only real bid categories ("c:..." ids) are listed. Older saves held the retired "My products" ids; those, or no save at all,
     // mean "start from the categories that apply to Discover Group".
-    var oldCats = cur.cats || [], pend = !cur.cats || oldCats.some(function (i) { return String(i).slice(0, 2) !== "c:"; });
+    var oldCats = cur.cats || [], pend = !oldCats.length || oldCats.some(function (i) { return String(i).slice(0, 2) !== "c:"; }); // a saved empty list (older "all categories" save) also starts from the defaults
     var d = { cats: oldCats.filter(function (i) { return String(i).slice(0, 2) === "c:"; }), extra: cur.extra || "",
       src: (cur.src || SOURCES.map(function (s) { return s.id; })).slice(), value: toArr(cur.value), aside: toArr(cur.aside), vmin: cur.vmin || "", vmax: cur.vmax || "" };
     close();
