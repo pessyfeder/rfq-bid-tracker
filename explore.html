@@ -5,34 +5,49 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Explore this request</title>
 <style>
-  :root { --ink:#1f3347; --mut:#64748b; --line:#e3e8ef; --acc:#4338ca; --green:#1b7a34; }
+  :root { --ink:#1f3347; --mut:#64748b; --line:#e4e4f0; --acc:#4338ca; --acc2:#312e81; --soft:#eef0ff; --green:#1b7a34; }
   * { box-sizing: border-box; }
-  body { margin:0; font:14px/1.5 Roboto, system-ui, -apple-system, "Segoe UI", sans-serif; background:#f6f7fb; color:var(--ink); }
-  main { max-width:900px; margin:0 auto; padding:18px 16px 60px; }
+  body { margin:0; font:14px/1.5 Roboto, system-ui, -apple-system, "Segoe UI", sans-serif; background:#fff; color:var(--ink); }
   a { color:var(--acc); }
-  .back { display:inline-block; margin-bottom:10px; font-weight:600; text-decoration:none; }
-  .back:hover { text-decoration:underline; }
-  h1 { margin:0; font-size:24px; font-weight:600; line-height:1.3; color:#1f3a56; overflow-wrap:anywhere; }
-  .sub { color:var(--mut); margin-top:4px; }
+  .nav { border-bottom:1px solid #e3e8ef; background:#fff; }
+  .nav .in { max-width:980px; margin:0 auto; padding:0 24px; height:46px; display:flex; align-items:center; gap:10px; }
+  .logo { font-weight:800; font-size:17px; letter-spacing:-.02em; color:var(--acc2); margin-right:auto; }
+  .logo i { font-style:normal; color:#f59e0b; }
+  .back { border:1px solid var(--acc); background:#fff; color:var(--acc); border-radius:999px; padding:5px 14px; font-weight:600; font-size:13px; text-decoration:none; }
+  .back:hover { background:var(--soft); }
+  main { max-width:980px; margin:0 auto; padding:20px 24px 64px; }
+  .hero { border:1px solid var(--line); border-radius:12px; overflow:hidden; box-shadow:0 1px 2px rgba(49,46,129,.06); }
+  .hero-bar { display:flex; justify-content:space-between; align-items:center; gap:12px; background:linear-gradient(90deg,#312e81,#4338ca); color:#fff; padding:7px 20px; font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; }
+  .hero-body { padding:18px 20px 20px; }
+  h1 { margin:0; font-size:24px; font-weight:700; line-height:1.28; letter-spacing:-.02em; color:#27264f; overflow-wrap:anywhere; }
+  .sub { color:var(--mut); margin-top:5px; font-size:13px; }
   .tags { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
-  .tag { font-size:12px; font-weight:600; padding:2px 9px; border-radius:999px; background:#eef0ff; color:var(--acc); }
+  .tag { font-size:12px; font-weight:600; padding:2px 10px; border-radius:999px; background:var(--soft); color:var(--acc); }
   .tag.warn { background:#fdf6e9; color:#b45309; }
   .tag.red { background:#fdecec; color:#b42318; }
-  .banner { margin-top:12px; padding:9px 14px; border-radius:6px; background:#fdf6e9; border:1px solid #ecd9b0; border-left:3px solid #b45309; }
-  .facts { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:10px; margin-top:16px; }
-  .fact { background:#fff; border:1px solid var(--line); border-radius:8px; padding:10px 14px; }
-  .fact .k { font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--mut); }
-  .fact .v { font-size:17px; font-weight:600; margin-top:2px; }
+  .banner { margin-top:12px; padding:9px 14px; border-radius:8px; background:#fdf6e9; border:1px solid #ecd9b0; border-left:4px solid #b45309; font-size:13px; }
+  .hero-bar .orig { background:#fff; color:var(--acc2); text-decoration:none; font-size:12px; font-weight:700; letter-spacing:0; text-transform:none; padding:3px 12px; border-radius:999px; }
+  .hero-bar .orig:hover { background:var(--soft); }
+  .grp { margin-top:12px; } .grp:first-of-type { margin-top:0; }
+  .grp h3 { margin:0 0 6px; font-size:12.5px; font-weight:700; color:#27264f; }
+  .num { display:inline-grid; place-items:center; width:20px; height:20px; border-radius:6px; background:var(--acc); color:#fff; font-size:11px; margin-right:8px; letter-spacing:0; }
+  .cta { margin-top:0; }
+  .brief { margin-top:16px; padding:14px 16px; background:var(--soft); border-left:4px solid var(--acc); border-radius:8px; }
+  .brief .k { font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--acc); }
+  .brief p { margin:4px 0 0; font-size:16px; line-height:1.5; color:#27264f; font-weight:500; }
+  .brief small { display:block; margin-top:4px; color:var(--mut); font-size:12px; }
+  .facts { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin-top:12px; }
+  .fact { background:#fff; border:1px solid var(--line); border-left:4px solid var(--acc); border-radius:10px; padding:9px 14px; box-shadow:0 1px 2px rgba(49,46,129,.06); }
+  .fact .k { font-size:10.5px; font-weight:700; letter-spacing:.07em; text-transform:uppercase; color:var(--mut); }
+  .fact .v { font-size:18px; font-weight:700; margin-top:1px; color:#27264f; }
   .fact .s { font-size:12px; color:var(--mut); }
-  .green { color:var(--green); }
-  .warn { color:#b45309; }
-  .red { color:#b42318; }
-  .none { color:var(--mut); font-weight:500; }
-  .cta { display:inline-block; margin-top:16px; background:var(--acc); color:#fff; text-decoration:none; font-weight:600; padding:9px 18px; border-radius:6px; }
-  .cta:hover { background:#3730a3; }
-  section { background:#fff; border:1px solid var(--line); border-radius:8px; padding:14px 18px; margin-top:14px; }
-  section h2 { margin:0 0 8px; font-size:15px; font-weight:700; color:#1f3a56; }
-  section h2 small { font-weight:500; color:var(--mut); font-size:12px; margin-left:6px; }
+  .green { color:var(--green) !important; } .warn { color:#b45309 !important; } .red { color:#c62828 !important; }
+  .none { color:var(--mut); font-weight:500; font-size:14px; }
+  .cta { display:inline-block; margin-top:14px; background:var(--acc); color:#fff; text-decoration:none; font-weight:600; padding:10px 22px; border-radius:999px; }
+  .cta:hover { background:var(--acc2); }
+  section { background:#fff; border:1px solid var(--line); border-left:4px solid var(--acc); border-radius:10px; padding:14px 18px; margin-top:12px; box-shadow:0 1px 2px rgba(49,46,129,.06); }
+  section h2 { margin:0 0 8px; font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--acc2); }
+  section h2 small { font-weight:500; letter-spacing:0; text-transform:none; color:var(--mut); font-size:12px; margin-left:8px; }
   .chips { display:flex; flex-wrap:wrap; gap:6px; }
   .chip { font-size:13px; font-weight:500; padding:3px 10px; border-radius:6px; border:1px solid; cursor:help; }
   .chip.gate { background:#fdecec; color:#b42318; border-color:#f3c0bb; }
@@ -40,22 +55,26 @@
   .chip.info { background:#e8f1fd; color:#1a56a8; border-color:#b9d3f3; }
   .chip.possible { background:transparent; border-style:dashed; }
   .why { margin:8px 0 0; padding:0; list-style:none; font-size:13px; color:#3a4a5c; }
-  .why li { padding:3px 0; border-top:1px solid #f0f2f6; }
+  .why li { padding:4px 0; border-top:1px solid #f0f2f6; }
   .why li:first-child { border-top:0; }
   .scope { white-space:pre-wrap; overflow-wrap:anywhere; }
+  details.full summary { cursor:pointer; color:var(--acc); font-weight:600; font-size:13px; }
+  details.full .scope { margin-top:8px; }
   .na { color:var(--mut); }
-  .shall { margin:0; padding-left:20px; }
-  .shall li { margin:6px 0; overflow-wrap:anywhere; }
+  .shall { margin:0; padding:0; list-style:none; counter-reset:s; }
+  .shall li { counter-increment:s; position:relative; padding:7px 0 7px 34px; border-top:1px solid #f0f2f6; overflow-wrap:anywhere; }
+  .shall li:first-child { border-top:0; }
+  .shall li::before { content:counter(s); position:absolute; left:0; top:7px; width:22px; height:22px; border-radius:6px; background:var(--soft); color:var(--acc); font-size:11px; font-weight:700; display:grid; place-items:center; }
   .ref { color:var(--mut); font-size:12px; }
   dl { margin:0; display:grid; grid-template-columns:max-content 1fr; gap:4px 16px; }
   dt { color:var(--mut); } dd { margin:0; overflow-wrap:anywhere; }
   .foot { margin-top:18px; font-size:12px; color:var(--mut); }
-  @media (max-width:560px) { h1 { font-size:20px; } dl { grid-template-columns:1fr; } dd { margin-bottom:6px; } }
+  @media (max-width:560px) { main, .nav .in { padding-left:14px; padding-right:14px; } h1 { font-size:20px; } dl { grid-template-columns:1fr; } dd { margin-bottom:6px; } }
 </style>
 </head>
 <body>
+<div class="nav"><div class="in"><span class="logo">Bid<i>.</i>Finder <span style="white-space:nowrap">&ndash; Discover Group, Inc.</span></span><a class="back" href="/" id="back">&larr; Back to bids</a></div></div>
 <main>
-  <a class="back" href="/" id="back">&larr; Back to bids</a>
   <div id="page">Loading&hellip;</div>
 </main>
 <script src="facts.js"></script>
@@ -76,6 +95,15 @@
     var p = String(due || "").slice(0, 10).split("-"); if (p.length !== 3) return null;
     var n = new Date(); n = new Date(n.getFullYear(), n.getMonth(), n.getDate());
     return Math.round((new Date(+p[0], +p[1] - 1, +p[2]) - n) / 86400000);
+  }
+  // Short summary: the first sentence(s) of the description, about 220 characters at most, cut at a word.
+  function brief(t) {
+    t = String(t || "").replace(/\s+/g, " ").trim(); if (!t) return "";
+    var out = "", parts = t.match(/[^.!?]+[.!?]+(\s|$)|[^.!?]+$/g) || [t];
+    for (var i = 0; i < parts.length; i++) { if (out && (out + parts[i]).length > 220) break; out += parts[i]; if (out.length >= 110) break; }
+    out = out.trim();
+    if (out.length > 240) out = out.slice(0, 237).replace(/\s+\S*$/, "") + "…";
+    return out;
   }
   function fail(msg) { $.innerHTML = '<h1>Explore this request</h1><section>' + esc(msg) + "</section>"; }
 
@@ -104,8 +132,10 @@
     var warnings = r.warnings || [];
     var h = "";
 
-    // 1. header
-    h += "<h1>" + esc(plain || title) + "</h1>";
+    // 1. header with a short summary of the work
+    var sum = brief(r.scope);
+    var link = safeUrl(r.sourceUrl || r.url);
+    h += '<div class="hero"><div class="hero-bar"><span>Request for quote</span>' + (link ? '<a class="orig" href="' + esc(link) + '" target="_blank" rel="noopener">View original RFQ &#8599;</a>' : "") + '</div><div class="hero-body"><h1>' + esc(plain || title) + "</h1>";
     if (plain) h += '<div class="sub">Original title: ' + esc(title) + "</div>";
     h += '<div class="sub">' + esc([r.agency && nice(r.agency), r.region, r.level, r.category].filter(Boolean).join(" · ")) + "</div>";
     var tags = [];
@@ -114,6 +144,8 @@
     if (r.active === false) tags.push('<span class="tag warn">No longer listed at source</span>');
     if (tags.length) h += '<div class="tags">' + tags.join("") + "</div>";
     warnings.forEach(function (w) { h += '<div class="banner">' + esc(w) + "</div>"; });
+    h += '<div class="brief"><div class="k"><span class="num">1</span>The work in brief</div>' + (sum ? "<p>" + esc(sum) + "</p>" + (r.aiRead ? "<small>AI-read, verify against the notice.</small>" : "") :
+      '<p class="na" style="font-weight:400;font-size:14px">' + (r.aiRead ? "None stated." : "Not checked: the source data has no description.") + "</p>") + "</div>";
 
     // 2. key facts
     var v = r.value || {}, vHtml, vSub = "";
@@ -121,18 +153,16 @@
       vHtml = '<span class="green">' + esc(money(v.amount)) + "</span>";
       if (v.low != null && v.high != null) vSub = "Typical range " + money(v.low) + " – " + money(v.high);
     } else vHtml = '<span class="none">' + (r.aiRead ? "Value not specified" : "Couldn't determine value") + "</span>";
-    var dlCls = dl == null ? "" : dl < 0 ? "red" : dl <= 7 ? "red" : dl <= 14 ? "warn" : "green";
+    var dlCls = dl == null ? "" : dl <= 7 ? "red" : dl <= 14 ? "warn" : "green";
     h += '<div class="facts">' +
       '<div class="fact"><div class="k">Days left</div><div class="v ' + dlCls + '">' + (dl == null ? '<span class="none">n/a</span>' : dl < 0 ? "Closed" : dl) + "</div></div>" +
-      '<div class="fact"><div class="k">Municipality</div><div class="v">' + esc(r.level || "Unknown") + "</div>" + (r.category ? '<div class="s">' + esc(r.category) + "</div>" : "") + "</div>" +
       '<div class="fact"><div class="k">Closing</div><div class="v">' + (r.hasRealDeadline ? esc(mdy(r.due)) : '<span class="none">No firm deadline</span>') + "</div>" +
         '<div class="s">' + esc([left, r.hasRealDeadline && r.dueTime].filter(Boolean).join(" · ")) + "</div></div>" +
       '<div class="fact"><div class="k">Published</div><div class="v">' + esc(r.posted ? mdy(r.posted) : "Unknown") + "</div></div>" +
+      '<div class="fact"><div class="k">Municipality</div><div class="v">' + esc(r.level || "Unknown") + "</div>" + (r.category ? '<div class="s">' + esc(r.category) + "</div>" : "") + "</div>" +
       '<div class="fact"><div class="k">Estimated value</div><div class="v">' + vHtml + '</div><div class="s">' + esc(vSub) + "</div></div></div>";
 
-    // 9 (shown early so it is not missed). link to the notice
-    var link = safeUrl(r.sourceUrl || r.url);
-    if (link) h += '<a class="cta" href="' + esc(link) + '" target="_blank" rel="noopener">Open RFQ document &rarr;</a>';
+    h += "</div></div>";
 
     // facts from the notice text (same rules as the table)
     var facts = [];
@@ -146,53 +176,47 @@
       return w.length ? '<ul class="why">' + w.map(function (f) { return "<li><b>" + esc(f.label) + ":</b> " + esc(f.why) + "</li>"; }).join("") + "</ul>" : "";
     }
 
-    // 3. can I bid
+    // 2. eligibility
     var gates = facts.filter(function (f) { return f.gate; });
     var gateChips = [];
     (r.requires || []).forEach(function (q) { gateChips.push('<span class="chip gate">' + esc(q) + "</span>"); });
     if (r.restriction && !(r.requires || []).length) gateChips.push('<span class="chip gate">' + esc(r.restriction) + "</span>");
     gates.forEach(function (f) { gateChips.push(chip(f, "gate")); });
-    h += "<section><h2>Can I bid?</h2>";
+    h += '<section><h2><span class="num">2</span>Eligibility</h2>';
     if (gateChips.length) h += '<div class="chips">' + gateChips.join("") + "</div>" + whyList(gates);
     else if (r.requires == null) h += '<span class="na">Not checked: the notice documents were not read, so eligibility is unknown.</span>';
     else h += '<span class="na">No eligibility conditions found. Open to all, as far as the notice says.</span>';
     h += "</section>";
 
-    // 4. bid factors
-    var rest = facts.filter(function (f) { return !f.gate; });
-    if (rest.length) h += "<section><h2>Bid factors<small>cost, effort and attractiveness. Hover a chip for the source sentence.</small></h2>" +
-      '<div class="chips">' + rest.map(function (f) { return chip(f, f.sev === "info" ? "info" : "cost"); }).join("") + "</div>" + whyList(rest) + "</section>";
+    // 3. trip-up factors, grouped by type
+    var TYPE = {
+      "Money and payment": ["Performance / payment bond", "Insurance minimums", "Prevailing / living wage", "Retainage or slow payment terms", "Liquidated damages for late work", "Fixed price, no escalation", "Permits and fees on the contractor", "Certified payroll / compliance reporting"],
+      "Site, schedule and logistics": ["Mandatory site visit / pre-bid", "24/7 or after-hours", "Delivery terms (FOB / inside delivery)", "Escorted or restricted site access", "Hazardous materials handling", "Drug testing of workers"],
+      "Sourcing and specification": ["Domestic-content rule (Buy America / TAA)", "Brand-name / \"or equal\" spec", "Submittals / samples for approval", "Warranty requirement"],
+      "Contract terms and preferences": ["Local / in-state preference", "Past performance / references", "Multi-year / renewal term", "Owner can terminate for convenience"]
+    };
+    var rest = facts.filter(function (f) { return !f.gate; }), used = {}, tg = "";
+    Object.keys(TYPE).forEach(function (name) {
+      var items = rest.filter(function (f) { return TYPE[name].indexOf(f.label) >= 0; });
+      items.forEach(function (f) { used[f.label] = 1; });
+      if (items.length) tg += '<div class="grp"><h3>' + esc(name) + '</h3><div class="chips">' + items.map(function (f) { return chip(f, f.sev === "info" ? "info" : "cost"); }).join("") + "</div>" + whyList(items) + "</div>";
+    });
+    var other = rest.filter(function (f) { return !used[f.label]; });
+    if (other.length) tg += '<div class="grp"><h3>Other</h3><div class="chips">' + other.map(function (f) { return chip(f, f.sev === "info" ? "info" : "cost"); }).join("") + "</div>" + whyList(other) + "</div>";
+    h += '<section><h2><span class="num">3</span>Trip-up factors<small>what costs money or time, or narrows the field. Hover a chip for the source sentence.</small></h2>' +
+      (tg || '<span class="na">' + (r.aiRead || r.scope ? "None found in the notice text." : "Not checked: the notice was not read.") + "</span>") + "</section>";
 
-    // 4b. details from the original table: region, restriction, amended, requirement chips
-    var dets = [];
-    if (r.restriction) dets.push('<span class="chip gate" style="cursor:default">Restricted: ' + esc(r.restriction) + "</span>");
-    if (r.amended) dets.push('<span class="chip cost" style="cursor:default">Amended</span>');
-    (r.requirements || []).forEach(function (q) { dets.push('<span class="chip info" style="cursor:default">' + esc(q) + "</span>"); });
-    h += "<section><h2>Details</h2>" +
-      (r.region ? '<div style="margin-bottom:' + (dets.length ? "8px" : "0") + '"><b>Region:</b> ' + esc(r.region) + "</div>" : "") +
-      (dets.length ? '<div class="chips">' + dets.join("") + "</div>" : (r.region ? "" : '<span class="na">None listed</span>')) + "</section>";
-
-    // 5. scope
-    h += "<section><h2>What the work is" + (r.aiRead ? "<small>AI-read, verify</small>" : "") + "</h2>" +
-      (r.scope ? '<div class="scope">' + esc(r.scope) + "</div>" : '<span class="na">' + (r.aiRead ? "None stated" : "Not checked: the source data has no description.") + "</span>") + "</section>";
-
-    // 6. shall list
-    if (shall.length) h += "<section><h2>Key requirements<small>" + shall.length + " from the notice</small></h2><ol class=\"shall\">" +
-      shall.map(function (s) { return "<li>" + esc(s.text) + (s.ref ? ' <span class="ref">(' + esc(s.ref) + ")</span>" : "") + "</li>"; }).join("") + "</ol></section>";
-
-    // 7. value detail
-    if (v.amount != null && (v.note || v.basis)) h += "<section><h2>How the value was estimated</h2><dl>" +
-      "<dt>Basis</dt><dd>" + esc({ similar_awards: "Similar past awards", stated: "Stated in the notice" }[v.basis] || v.basis) + "</dd>" +
-      (v.note ? "<dt>Detail</dt><dd>" + esc(v.note) + "</dd>" : "") + "</dl></section>";
-
-    // 8. contact
+    // 4. contact
     var c = r.contact, parts = [];
     if (c) {
       if (c.name) parts.push("<dt>Name</dt><dd>" + esc(c.name) + "</dd>");
       if (c.email && /^[^\s@<>"]+@[^\s@<>"]+$/.test(c.email)) parts.push('<dt>Email</dt><dd><a href="mailto:' + esc(c.email) + '">' + esc(c.email) + "</a></dd>");
       if (c.phone) parts.push("<dt>Phone</dt><dd>" + esc(c.phone) + "</dd>");
     }
-    h += "<section><h2>Contact</h2>" + (parts.length ? "<dl>" + parts.join("") + "</dl>" : '<span class="na">None stated</span>') + "</section>";
+    h += '<section><h2><span class="num">4</span>Contact</h2>' + (parts.length ? "<dl>" + parts.join("") + "</dl>" : '<span class="na">None stated</span>') + "</section>";
+
+    // 5. link to the bid page
+    h += '<section><h2><span class="num">5</span>Bid page</h2>' + (link ? '<a class="cta" href="' + esc(link) + '" target="_blank" rel="noopener">Open the bid page &rarr;</a>' : '<span class="na">No link available.</span>') + "</section>";
 
     // 10. footer
     h += '<div class="foot">ID ' + esc(r.id) + " · first seen " + esc(mdy(r.firstSeen)) + " · last updated " + esc(mdy(r.updatedAt)) + "</div>";
