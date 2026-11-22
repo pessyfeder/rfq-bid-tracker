@@ -366,43 +366,11 @@
     var sd = document.getElementById("hm-side"); if (sd) sd.innerHTML = selectHtml("reg");
   }
 
-  // ---------- my status per bid (kept in this browser) ----------
-  var STATUS_KEY = "rfq-status", STATUSES = [["interested", "Interested"], ["bidding", "Bidding"], ["submitted", "Bid submitted"], ["no", "Not interested"]];
-  var stMap = (function () { try { return JSON.parse(localStorage.getItem(STATUS_KEY) || "{}") || {}; } catch (e) { return {}; } })();
-  var showHidden = false;
-  function setStatus(id, v) {
-    if (!v) delete stMap[id]; else stMap[id] = v;
-    try { localStorage.setItem(STATUS_KEY, JSON.stringify(stMap)); } catch (e) {}
-  }
-  function statusHtml(id) {
-    var cur = stMap[id] || "";
-    return '<div class="hm-stat" role="group" aria-label="My status">' + STATUSES.map(function (s) {
-      return '<button type="button" class="hm-st ' + s[0] + (cur === s[0] ? " on" : "") + '" data-st="' + s[0] + '" data-id="' + esc(id) + '" aria-pressed="' + (cur === s[0]) + '" title="' + s[1] + '" aria-label="' + s[1] + '">' + ST_ICON[s[0]] + "</button>";
-    }).join("") + "</div>";
-  }
-  var ST_SVG = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">';
-  var ST_ICON = {
-    interested: ST_SVG + '<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/></svg>',
-    bidding: ST_SVG + '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg>',
-    submitted: ST_SVG + '<circle cx="12" cy="12" r="9"/><path d="M8 12.5l3 3 5-6"/></svg>',
-    no: ST_SVG + '<path d="M17.9 17.9A10.5 10.5 0 0112 20c-7 0-10-8-10-8a17 17 0 014.1-5.4M9.9 4.2A9.8 9.8 0 0112 4c7 0 10 8 10 8a17 17 0 01-2.2 3.2"/><path d="M2 2l20 20"/></svg>'
-  };
-  (function () {
-    var css = document.createElement("style");
-    css.textContent = ".hm-stat{display:grid;grid-template-columns:repeat(2,24px);gap:3px;align-self:center}.hm-st{display:flex;align-items:center;justify-content:center;width:24px;height:24px;padding:0;border:1px solid #cfd5de;background:#fff;color:#64748b;border-radius:7px;cursor:pointer}.hm-st:hover{background:#f1f5f9}" +
-      ".hm-item{grid-template-columns:auto auto minmax(0,1fr) auto}.hm-list.grid .hm-item{grid-template-columns:minmax(0,1fr)}.hm-list.grid .hm-stat{grid-template-columns:repeat(4,24px);justify-content:start}" +
-      "@media(max-width:1100px){.hm-item{grid-template-columns:minmax(0,1fr)}.hm-stat{grid-template-columns:repeat(4,24px);justify-content:start}}" +
-      ".hm-st.interested.on{background:#dbeafe;border-color:#2563eb;color:#1e40af}.hm-st.bidding.on{background:#fef3c7;border-color:#d97706;color:#92400e}.hm-st.submitted.on{background:#dcfce7;border-color:#16a34a;color:#166534}.hm-st.no.on{background:#e5e7eb;border-color:#6b7280;color:#374151}" +
-      ".hm-item.is-no{opacity:.55}.hm-hid{border:0;background:none;color:#fff;cursor:pointer;font:600 13px system-ui,sans-serif;padding:0;margin-right:auto;margin-left:6px;text-decoration:underline}.hm-hid:hover{opacity:.85}";
-    document.head.appendChild(css);
-  })();
 
   function results() {
     var host = document.getElementById("hm-res"); if (!host) return;
     var ctx = ctxNow(), catLabel = {}; allCats().forEach(function (c) { catLabel[c.id] = c.label; });
     var list = rows.filter(function (r) { return passes(r, ctx); });
-    var hiddenN = list.filter(function (r) { return stMap[r.id] === "no"; }).length;
-    if (!showHidden) list = list.filter(function (r) { return stMap[r.id] !== "no"; });
     list.sort(function (a, b) {
       if (st.sort === "value") return (b.value == null ? -1 : b.value) - (a.value == null ? -1 : a.value);
       if (st.sort === "new") { // posted date, newest first; unknown dates last; first-seen breaks ties
@@ -414,7 +382,7 @@
     });
     var chips = chipList();
     var h = '<div class="hm-filt">' + (chips.length ? "<b>Filtered by</b>" + chips.map(function (c) { return '<button class="hm-chip" data-x="' + c[0] + '" title="Remove this filter">' + esc(c[1]) + ICON_X + "</button>"; }).join("") + '<button class="hm-clear" data-a="clear">Clear All</button>' : "") + "</div>";
-    h += '<div class="hm-resbar"><span class="hm-cnt"' + (hiddenN ? ' style="margin-right:0"' : "") + '>' + list.length.toLocaleString() + (list.length === 1 ? " result" : " results") + '</span>' + (hiddenN ? '<button type="button" class="hm-hid' + (showHidden ? " on" : "") + '" data-a="hidden" title="Requests you marked Not interested">' + (showHidden ? "Hide " : "Show ") + hiddenN + " not interested</button>" : "") + '<label for="hm-sort">Order By</label><select id="hm-sort" data-sel="sort">' +
+    h += '<div class="hm-resbar"><span class="hm-cnt">' + list.length.toLocaleString() + (list.length === 1 ? " result" : " results") + '</span><label for="hm-sort">Order By</label><select id="hm-sort" data-sel="sort">' +
       SORT_OPT.map(function (o) { return '<option value="' + o[0] + '"' + (st.sort === o[0] ? " selected" : "") + ">" + esc(o[1]) + "</option>"; }).join("") + "</select></div>";
     if (!list.length) h += '<div class="hm-empty"><h3>No bids match these filters</h3><p class="hm-sub">Try widening the category, jurisdiction or deadline.</p><button class="hm-go" data-a="clear">Clear all filters</button></div>';
     h += '<div class="hm-list' + (st.view === "grid" ? " grid" : "") + '">';
@@ -423,7 +391,7 @@
       var matchTag = ids.length ? '<span class="hm-tag match" title="' + esc(ids.map(function (id) { return hh[id].slice(0, 3).join(", "); }).join("; ")) + '">' + esc(ids.slice(0, 2).map(function (id) { return catLabel[id]; }).join(" · ")) + (ids.length > 2 ? " +" + (ids.length - 2) : "") + "</span>" : "";
       var asideTag = r.aside.any ? '<span class="hm-tag aside">' + esc(r.aside.small ? "Small business set-aside" : r.aside.vet ? "Veteran-owned set-aside" : r.aside.women ? "Women-owned set-aside" : "Set-aside") + "</span>" : "";
       var closing = r.days == null ? "No firm deadline" : mdy(r.due);
-      h += '<div class="hm-item' + (stMap[r.id] === "no" ? " is-no" : "") + '">' + statusHtml(r.id) + mapIcon(r) + '<div><h3><a href="explore.html?id=' + encodeURIComponent(r.id) + '">' + esc(r.title) + "</a>" + valueTag(r) + "</h3>" +
+      h += '<div class="hm-item">' + mapIcon(r) + '<div><h3><a href="explore.html?id=' + encodeURIComponent(r.id) + '">' + esc(r.title) + "</a>" + valueTag(r) + "</h3>" +
         '<div class="hm-sub">' + esc(stateName(r.code)) + " &middot; " + esc(r.ck ? r.ck.slice(2) || "No category" : "No category") + "</div></div>" +
         '<div class="hm-dates"><div>' + ICON_CAL + "<b>Published</b></div><div>" + esc(r.posted ? mdy(r.posted) : "Unknown") + "</div><div>" + ICON_CLOCK + "<b>Closing</b></div><div>" + esc(closing) + (r.days != null && r.days >= 0 ? ' <span class="hm-left">' + (r.days === 0 ? "today" : r.days === 1 ? "tomorrow" : r.days + " days") + "</span>" : "") + "</div></div>" +
         flagsHtml(r.raw) + "</div>";
@@ -595,8 +563,6 @@
     }
     var b = e.target.closest("button"); if (!b) return;
     var d = b.dataset;
-    if (d.st) { setStatus(d.id, stMap[d.id] === d.st ? "" : d.st); return results(); }
-    if (d.a === "hidden") { showHidden = !showHidden; return results(); }
     if (d.a === "selection") { if (window.RFQProfile) window.RFQProfile.open(); return; }
     if (d.a === "profile") { window.location.href = "/profile.html"; return; }
     if (d.a === "refresh") { var rb = document.getElementById("refreshBtn"); if (rb) rb.click(); syncRefresh(); return; } // the observer keeps the label in step afterwards
