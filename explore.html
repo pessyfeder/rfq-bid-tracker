@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Explore this request</title>
+<title>RFQ Details</title>
 <style>
-  :root { --ink:#1f3347; --mut:#64748b; --line:#e4e4f0; --acc:#4338ca; --acc2:#312e81; --soft:#eef0ff; --green:#1b7a34; }
+  :root { --ink:#1f3347; --mut:#64748b; --line:#e4e4f0; --acc:#4338ca; --acc2:#312e81; --soft:#eef0ff; --green:#1b7a34; --navy:#14284b; --navy2:#0c1b36; }
   * { box-sizing: border-box; }
   body { margin:0; font:14px/1.5 Roboto, system-ui, -apple-system, "Segoe UI", sans-serif; background:#fff; color:var(--ink); }
   a { color:var(--acc); }
@@ -19,25 +19,30 @@
   h1 { margin:0; font-size:26px; font-weight:700; line-height:1.28; letter-spacing:-.02em; color:#27264f; overflow-wrap:anywhere; }
   .sub { color:var(--mut); margin-top:4px; font-size:13px; }
   .sub a { font-weight:600; }
-  h2 { margin:30px 0 8px; font-size:17px; font-weight:700; color:#27264f; }
-  h3 { margin:16px 0 4px; font-size:14px; font-weight:700; color:var(--acc2); }
+  h2 { margin:26px 0 8px; font-size:16px; font-weight:700; color:#27264f; }
+  h3 { margin:14px 0 4px; font-size:14px; font-weight:700; color:var(--acc2); }
   p { margin:0; }
-  .text { white-space:pre-wrap; overflow-wrap:anywhere; font-size:15px; line-height:1.6; }
-  .value { font-size:22px; font-weight:700; color:var(--green); }
-  .value.none { font-size:15px; font-weight:400; color:var(--mut); }
+  .text { white-space:pre-wrap; overflow-wrap:anywhere; font-size:15px; line-height:1.65; color:#3b4a5c; }
   .items { margin:0; padding:0 0 0 20px; }
   .items li { margin:4px 0; padding-left:2px; overflow-wrap:anywhere; }
   .items li b { color:#27264f; }
   .na { color:var(--mut); }
   .small { color:var(--mut); font-size:12px; margin-top:6px; }
-  .dates { display:flex; flex-wrap:wrap; gap:10px; margin-top:18px; }
-  .dates > div { flex:1 1 150px; background:var(--soft); border-radius:8px; padding:10px 14px; }
-  .dates .k { display:block; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--mut); }
-  .dates .v { display:block; font-size:18px; font-weight:700; color:#27264f; margin-top:2px; }
-  .dates .v small { font-size:12px; font-weight:400; color:var(--mut); }
-  .dates .v.soon { color:#b42318; }
-  .btn { display:inline-block; background:var(--acc); color:#fff; border-radius:8px; padding:8px 16px; font-weight:600; text-decoration:none; }
-  .btn:hover { background:var(--acc2); }
+  .head { display:flex; gap:16px; align-items:center; }
+  .tile { flex:none; width:56px; height:56px; border-radius:14px; background:var(--soft); border:1px solid #d9dcf5; display:grid; place-items:center; color:var(--navy); }
+  .eyebrow { font-size:12px; font-weight:600; color:var(--mut); }
+  .pills { display:flex; flex-wrap:wrap; align-items:center; gap:10px 12px; margin-top:20px; }
+  .pill { display:inline-flex; align-items:center; gap:6px; padding:7px 14px; border-radius:10px; font-weight:600; font-size:14px; border:1px solid #d9dcf5; background:var(--soft); color:var(--navy); }
+  .pill.val { background:#eaf6ee; border-color:#c4e3cd; color:var(--green); }
+  .pill.val.none { background:#f3f5f8; border-color:var(--line); color:var(--mut); font-weight:500; }
+  .pill.soon { background:#fdecea; border-color:#f4c7c2; color:#b42318; }
+  .pill.plain { background:none; border:0; padding:0; font-weight:500; color:var(--mut); }
+  .where { margin-top:12px; color:var(--mut); font-size:14px; display:flex; flex-wrap:wrap; gap:4px 16px; }
+  .bid { display:block; width:100%; margin-top:20px; background:var(--navy); color:#fff; border-radius:10px; padding:13px 18px; font-weight:700; font-size:16px; text-align:center; text-decoration:none; }
+  .bid:hover { background:var(--navy2); }
+  .bid.off { background:#c9d1dc; cursor:not-allowed; }
+  .src { margin-top:10px; font-size:13px; text-align:center; }
+  .sub { color:var(--mut); margin-top:6px; font-size:13px; }
   .foot { margin-top:36px; font-size:12px; color:var(--mut); }
   html.embed .nav { display:none; }
   html.embed main { max-width:none; padding:20px 22px 48px; }
@@ -79,7 +84,7 @@
     if (out.length > 240) out = out.slice(0, 237).replace(/\s+\S*$/, "") + "…";
     return out;
   }
-  function fail(msg) { $.innerHTML = '<h1>Explore this request</h1><section>' + esc(msg) + "</section>"; }
+  function fail(msg) { $.innerHTML = '<h1>RFQ Details</h1><section>' + esc(msg) + "</section>"; }
 
   if (!id) return fail("No request was chosen. Go back to the list and click a title.");
   if (history.length > 1 && document.referrer) document.getElementById("back").onclick = function (e) { e.preventDefault(); history.back(); }; // keeps Home's filters and scroll
@@ -96,7 +101,7 @@
     if (!r.ok) throw new Error("The service answered with an error (" + r.status + ").");
     return r.json();
   }).then(function (r) {
-    document.title = nice(r.title) + " - Explore this request";
+    document.title = nice(r.title) + " - RFQ Details";
     draw(r, null);
     if (demo) return;
     return fetch("/shall/" + encodeURIComponent(id)).then(function (x) { return x.ok ? x.json() : null; }).then(function (j) {
@@ -110,18 +115,26 @@
     var shall = shallFull || r.shall || [];
     var title = nice(r.title), plain = r.plainTitle && r.plainTitle !== r.title ? r.plainTitle : "";
     var link = safeUrl(r.sourceUrl || r.url);
-    var h = "<h1>" + esc(plain || title) + "</h1>";
-    if (plain) h += '<div class="sub">Original title: ' + esc(title) + "</div>";
-    h += '<div class="sub">' + esc([r.agency && nice(r.agency), r.region, r.level].filter(Boolean).join(" · ")) +
-      (link ? ' · <a href="' + esc(link) + '" target="_blank" rel="noopener">View original RFQ &#8599;</a>' : "") + "</div>";
-
-    // dates on top: posted, due, days left
     var dl = daysLeft(r.due), real = r.hasRealDeadline !== false && dl !== null;
-    var dlTxt = !real ? "Unknown" : dl < 0 ? "Closed" : dl === 0 ? "Due today" : dl + (dl === 1 ? " day" : " days");
-    h += '<div class="dates">' +
-      '<div><span class="k">Date posted</span><span class="v">' + esc(mdy(r.posted)) + "</span></div>" +
-      '<div><span class="k">Due date</span><span class="v">' + (real ? esc(mdy(r.due)) + (r.dueTime ? ' <small>' + esc(r.dueTime) + "</small>" : "") : "Not stated") + "</span></div>" +
-      '<div><span class="k">Days left</span><span class="v' + (real && dl >= 0 && dl <= 3 ? " soon" : "") + '">' + esc(dlTxt) + "</span></div></div>";
+    var dlTxt = !real ? "" : dl < 0 ? "Closed" : dl === 0 ? "Due today" : dl + (dl === 1 ? " day left" : " days left");
+    var v = r.value || {};
+    var ICON = '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg>';
+    var agency = r.agency && nice(r.agency);
+    var h = '<div class="head"><div class="tile">' + ICON + '</div><div><div class="eyebrow">' + esc(agency || "Request for quotation") + "</div><h1>" + esc(plain || title) + "</h1></div></div>";
+    if (plain) h += '<div class="sub">Original title: ' + esc(title) + "</div>";
+
+    // key facts: due date, value, posted
+    h += '<div class="pills">' +
+      '<span class="pill' + (real && dl >= 0 && dl <= 3 ? " soon" : "") + '">Due ' + (real ? esc(mdy(r.due)) + (r.dueTime ? " " + esc(r.dueTime) : "") + " &middot; " + esc(dlTxt) : "date not stated") + "</span>" +
+      (v.amount != null ? '<span class="pill val">' + esc(money(v.amount)) + (v.low != null && v.high != null ? " <small>(typical " + esc(money(v.low)) + " – " + esc(money(v.high)) + ")</small>" : "") + "</span>"
+        : '<span class="pill val none">' + (r.aiRead ? "Value not specified" : "Value not determined") + "</span>") +
+      '<span class="pill plain">Posted ' + esc(mdy(r.posted)) + "</span></div>";
+    var where = [r.region, r.level].filter(Boolean);
+    if (where.length) h += '<div class="where">' + where.map(function (w) { return "<span>&#128205; " + esc(w) + "</span>"; }).join("") + "</div>";
+
+    // navy Bid Now button: opens the original notice, where bids are submitted
+    h += link ? '<a class="bid" href="' + esc(link) + '" target="_blank" rel="noopener">Bid Now</a><div class="small src">Opens the original RFQ document on the agency site.</div>'
+      : '<span class="bid off">Bid Now (no link available)</span>';
 
     // Some sources (e.g. West Virginia) only give "<RFQ number> (<type>). Buyer: name, email, phone" as the text.
     var scope = String(r.scope || ""), buyerM = /\bBuyer:\s*(.*)$/i.exec(scope), desc = scope.replace(/\s*\bBuyer:.*$/i, "").trim();
@@ -132,28 +145,12 @@
       contact = { email: em && em[0].replace(/[.,;]+$/, ""), phone: ph && ph[0], name: buyerM[1].replace(em ? em[0] : "", "").replace(ph ? ph[0] : "", "").replace(/[\s,;]+$/, "").replace(/^[\s,;]+|[\s,;]+(?=[\s,;])/g, "").trim() };
     }
 
-    // 1. description, in full
-    h += "<h2>1. Description</h2>";
-    h += !restates ? '<p class="text">' + esc(desc) + "</p>" + (r.aiRead ? '<p class="small">AI-read, verify against the notice.</p>' : "")
-      : '<p class="na">' + (r.aiRead ? "None stated." : "No description in the source data. See the RFQ document below.") + "</p>";
-
-    // 2. contact information
+    // contact information
     var cl = [];
     if (contact.name) cl.push("<li><b>Name:</b> " + esc(contact.name) + "</li>");
     if (contact.email && /^[^\s@<>"]+@[^\s@<>"]+$/.test(contact.email)) cl.push('<li><b>Email:</b> <a href="mailto:' + esc(contact.email) + '">' + esc(contact.email) + "</a></li>");
     if (contact.phone) cl.push("<li><b>Phone:</b> " + esc(contact.phone) + "</li>");
-    h += "<h2>2. Contact Information</h2>" + (cl.length ? '<ul class="items">' + cl.join("") + "</ul>" : '<p class="na">None stated.</p>');
-
-    // 3. RFQ document
-    h += "<h2>3. RFQ Document</h2>" + (link ? '<p><a class="btn" href="' + esc(link) + '" target="_blank" rel="noopener">View RFQ Document &#8599;</a></p>' : '<p class="na">No link available.</p>');
-
-    // 4. estimated value
-    var v = r.value || {};
-    h += "<h2>4. Estimated Value</h2>";
-    if (v.amount != null) {
-      h += '<p class="value">' + esc(money(v.amount)) + "</p>";
-      if (v.low != null && v.high != null) h += '<p class="small">Typical range ' + esc(money(v.low)) + " – " + esc(money(v.high)) + "</p>";
-    } else h += '<p class="value none">' + (r.aiRead ? "Value not specified" : "Couldn't determine value") + "</p>";
+    var contactHtml = "<h2>Contact Information</h2>" + (cl.length ? '<ul class="items">' + cl.join("") + "</ul>" : '<p class="na">None stated.</p>');
 
     // facts from the notice text (same rules as the table)
     var facts = [];
@@ -182,7 +179,7 @@
     });
     var other = rest.filter(function (f) { return !used[f.label]; });
     if (other.length) tg += "<h3>Other</h3>" + list(other);
-    h += "<h2>5. Important Details</h2>" +
+    h += contactHtml + "<h2>Important Details</h2>" +
       (tg || '<p class="na">' + (r.aiRead || r.scope ? "None found in the notice text." : "Not checked: the notice was not read.") + "</p>");
 
     // 4. eligibility
@@ -190,10 +187,15 @@
     (r.requires || []).forEach(function (q) { items.push("<li><b>" + esc(q) + "</b></li>"); });
     if (r.restriction && !(r.requires || []).length) items.push("<li><b>" + esc(r.restriction) + "</b></li>");
     var gl = gates.length ? list(gates).replace(/^<ul class="items">|<\/ul>$/g, "") : "";
-    h += "<h2>6. Eligibility</h2>";
+    h += "<h2>Eligibility</h2>";
     if (items.length || gl) h += '<ul class="items">' + items.join("") + gl + "</ul>";
     else if (r.requires == null) h += '<p class="na">Not checked: the notice documents were not read, so eligibility is unknown.</p>';
     else h += '<p class="na">No eligibility conditions found. Open to all, as far as the notice says.</p>';
+
+    // full description at the bottom
+    h += "<h2>Description</h2>";
+    h += !restates ? '<p class="text">' + esc(desc) + "</p>" + (r.aiRead ? '<p class="small">AI-read, verify against the notice.</p>' : "")
+      : '<p class="na">' + (r.aiRead ? "None stated." : "No description in the source data. See the RFQ document.") + "</p>";
 
     h += '<div class="foot">ID ' + esc(r.id) + " · first seen " + esc(mdy(r.firstSeen)) + " · last updated " + esc(mdy(r.updatedAt)) + "</div>";
     $.innerHTML = h;
