@@ -51,15 +51,9 @@
   .chip.due { background:#eaf6ee; border-color:#c4e3cd; color:var(--green); }
   .chip.due.soon { background:#fdecea; border-color:#f4c7c2; color:#b42318; }
   .glance { margin-top:8px; padding:2px 16px 14px; border:1px solid #d9dcf5; border-radius:12px; background:#fafbff; }
-  .g-what { margin:0 0 8px; font-size:15px; line-height:1.55; color:#27264f; }
-  .g-row { margin-top:10px; } .g-lab { font-size:11.5px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--mut); }
-  .glance .chip { font-size:13px; padding:4px 11px; }
-  .chip.cost { background:#fdecea; border-color:#f4c7c2; color:#b42318; }
-  .chip.info { background:#e8f1fd; border-color:#bcd4f5; color:#1d4f91; }
-  .chip.qty { background:#e3f6f4; border-color:#b4e3dd; color:#0f6b61; }
-  .chip.open { background:#eaf6ee; border-color:#c4e3cd; color:var(--green); }
-  .chip.unk { background:#f3f5f8; border-color:var(--line); color:var(--mut); font-weight:500; }
-  .chip.kw { border-style:dashed; }
+  .g-list { margin:0; padding-left:22px; } .g-sec { margin:12px 0 0; } .g-sec > b { color:#27264f; }
+  .g-ul { margin:4px 0 0; padding-left:20px; list-style:disc; } .g-ul li { margin:3px 0; overflow-wrap:anywhere; }
+  .g-why { color:var(--mut); font-size:13px; }
   .xl { font-weight:600; font-size:13px; background:#fff; border:1px solid #d9dcf5; border-radius:8px; padding:4px 10px; text-decoration:none; }
   .xl:hover { background:var(--soft); }
   .info { margin-top:6px; font-weight:600; color:#27264f; overflow-wrap:anywhere; }
@@ -81,7 +75,6 @@
 </main>
 <script src="facts.js"></script>
 <script src="sample-data.js"></script>
-<script src="chips.js"></script>
 <script>
 (function () {
   var id = new URLSearchParams(location.search).get("id") || "";
@@ -233,37 +226,37 @@
     (function () {
       var MONEY = /\$\s?[\d,.]+(?:\s?(?:million|billion|thousand|[MKB])\b)?(?:\s+(?:per|each)\s+(?:occurrence|person|claim|accident|incident))?|\b\d{1,2}(?:\.\d+)?\s?%/i;
       var WITH_AMOUNT = /^(Insurance minimums|Bid bond|Performance|Bonding capacity|Liquidated)/;
-      function gc(f, cls) {
-        var t = (f.kw ? "Possible: " : "") + f.label, key = t;
+      function li(t, why) { return "<li>" + esc(t) + (why ? ' <span class="g-why">&ndash; ' + esc(why) + "</span>" : "") + "</li>"; }
+      function gc(f) {
+        var t = (f.kw ? "Possible: " : "") + f.label;
         if (WITH_AMOUNT.test(f.label) && f.why) { var m = MONEY.exec(f.why); if (m) t += " · " + m[0].replace(/\s+/g, " ").trim(); }
-        return '<span class="chip ' + cls + (f.kw ? " kw" : "") + '" data-key="' + esc(key) + '" data-why="' + esc(f.why || "") + '">' + esc(t) + "</span>";
+        return li(t, window.explainFact ? window.explainFact(f.label) : "");
       }
-      function row(label, inner) { return inner ? '<div class="g-row"><div class="g-lab">' + label + '</div><div class="chips">' + inner + "</div></div>" : ""; }
-      // quantities and scope-size figures from the text
+      // numbered sections, each with bullet points
+      function row(label, inner) { return inner ? '<li class="g-sec"><b>' + label + '</b><ul class="g-ul">' + inner + "</ul></li>" : ""; }
       var qtxt = [r.title, r.scope].concat((shall || []).map(function (s) { return s.text; })).join(" . ");
-      var QTY = /\b(\d[\d,]*(?:\.\d+)?)\s+(units?|each|ea\b|items?|pieces?|licen[sc]es?|seats?|users?|vehicles?|gallons?|tons?|pounds?|lbs?\.?|boxes|cases|sets?|pairs?|hours?|months?|years?|acres?|miles?|sq\.? ?ft\.?|square feet|linear feet|lots?|doors?|windows?|devices?|computers?|laptops?|buses|trucks?|cars?|rooms?|buildings?|sites?|locations?|students?|meals?|kits?)\b/gi;
+      var QTY = /(\d[\d,]*(?:\.\d+)?)\s+(units?|each|ea|items?|pieces?|licen[sc]es?|seats?|users?|vehicles?|gallons?|tons?|pounds?|lbs?\.?|boxes|cases|sets?|pairs?|hours?|months?|years?|acres?|miles?|sq\.? ?ft\.?|square feet|linear feet|lots?|doors?|windows?|devices?|computers?|laptops?|buses|trucks?|cars?|rooms?|buildings?|sites?|locations?|students?|meals?|kits?)/gi;
       var qs = [], seen = {}, qm;
       while ((qm = QTY.exec(qtxt)) && qs.length < 4) {
         var q = qm[1] + " " + qm[2].toLowerCase(); if (!seen[q] && +qm[1].replace(/,/g, "") > 0) { seen[q] = 1; qs.push(q); }
       }
-      var what = "";
-      if (!restates && desc) what = '<p class="g-what">' + esc(brief(desc)) + "</p>";
-      var rowWhat = what + (qs.length ? row("Quantity", qs.map(function (q) { return '<span class="chip qty" data-key="Quantity" data-why="Quantity stated in the notice">' + esc(q) + "</span>"; }).join("")) : "");
-      // who can bid
+      var req = "";
+      if (!restates && desc) req += li(brief(desc));
+      qs.forEach(function (q) { req += li("Quantity: " + q); });
       var who = "";
-      (r.requires || []).forEach(function (q) { who += '<span class="chip gate" data-why="Who can bid">' + esc(q) + "</span>"; });
-      if (r.restriction && !(r.requires || []).length) who += '<span class="chip gate" data-why="Restriction in the notice">' + esc(window.asideLabel ? window.asideLabel(r.restriction) : r.restriction) + "</span>";
-      gates.forEach(function (f) { who += gc(f, "gate"); });
-      if (!who) who = r.requires == null ? '<span class="chip unk">Eligibility not checked</span>' : '<span class="chip open">Open to all bidders</span>';
-      var costs = rest.filter(function (f) { return f.sev === "cost"; }).map(function (f) { return gc(f, "cost"); }).join("");
-      var info = rest.filter(function (f) { return f.sev !== "cost"; }).map(function (f) { return gc(f, "info"); }).join("");
-      var g = '<section class="glance"><h2>At a glance</h2>' + rowWhat + row("Who can bid", who) + row("Costs, insurance &amp; terms", costs) + row("Good to know", info) +
+      (r.requires || []).forEach(function (q) { who += li(q); });
+      if (r.restriction && !(r.requires || []).length) who += li(window.asideLabel ? window.asideLabel(r.restriction) : r.restriction);
+      gates.forEach(function (f) { who += gc(f); });
+      if (!who) who = li(r.requires == null ? "Eligibility not checked: the notice documents were not read." : "Open to all bidders, as far as the notice says.");
+      var costs = rest.filter(function (f) { return f.sev === "cost"; }).map(gc).join("");
+      var info = rest.filter(function (f) { return f.sev !== "cost"; }).map(gc).join("");
+      var g = '<section class="glance"><h2>At a glance</h2><ol class="g-list">' + row("What is requested", req) + row("Who can bid", who) + row("Costs, insurance &amp; terms", costs) + row("Good to know", info) + "</ol>" +
         (!r.aiRead && !r.scope ? '<p class="small">The notice text was not read, so only what the posting itself states is shown.</p>' : "") + "</section>";
       h = h.replace("<!--GLANCE-->", g);
     })();
 
     // Bid Now walk-through: each step carries the link / information it needs
-    function chips(arr, cls) { return '<div class="chips">' + arr.map(function (c) { return '<span class="chip' + (cls ? " " + cls : "") + '">' + esc(c) + "</span>"; }).join("") + "</div>"; }
+    function chips(arr) { return '<ul class="items">' + arr.map(function (c) { return "<li>" + esc(c) + "</li>"; }).join("") + "</ul>"; }
     function lnk(u, t) { return '<a class="xl" href="' + esc(u) + '" target="_blank" rel="noopener">' + esc(t) + " &#8599;</a>"; }
     var host = ""; try { host = link ? new URL(link).hostname.replace(/^www\./, "") : ""; } catch (e) {}
     var gateChips = [];
@@ -281,7 +274,7 @@
       ["Read the RFQ documents", "The key points (what is requested, quantities, eligibility, insurance and costs) are already summarized under &ldquo;At a glance&rdquo; above. Open the notice" + (docs.length > 1 ? " and its attachments" : "") + " only to confirm the exact wording and fill in the forms.",
         docs.length ? '<div class="links">' + docs.map(function (d) { return lnk(d.url, d.label); }).join("") + "</div>" : '<div class="na">No document link available.</div>'],
       ["Check that you qualify", "Compare these eligibility conditions with your business: set-aside status, licences, registrations and bonding.",
-        gateChips.length ? chips(gateChips, "gate") : '<div class="na">' + (r.requires == null && !gates.length ? "Not checked: the notice documents were not read." : "No eligibility conditions found. Open to all, as far as the notice says.") + "</div>"],
+        gateChips.length ? chips(gateChips) : '<div class="na">' + (r.requires == null && !gates.length ? "Not checked: the notice documents were not read." : "No eligibility conditions found. Open to all, as far as the notice says.") + "</div>"],
       ["Register on the posting site", "Create or sign in to your vendor account on the agency's portal. Some sites also need a government registration (for federal bids, SAM.gov).",
         '<div class="links">' + (link ? lnk(link, "Posting site" + (host ? " (" + host + ")" : "")) : "") + (federal ? lnk("https://sam.gov/content/entity-registration", "Register on SAM.gov") : "") + "</div>"],
       ["Ask questions before the deadline", "Use this contact to clarify anything unclear. Questions are often only accepted until a few days before the due date.",
@@ -289,7 +282,7 @@
       ["Prepare your quote", "Price every line item, include any required forms, certifications or references, and sign where the notice asks.",
         prepChips.length ? '<div class="small">Watch for:</div>' + chips(prepChips) : ""],
       ["Submit before the deadline", "Submit the way the notice says (portal upload, email or sealed delivery). Late bids are normally rejected. Keep your confirmation.",
-        '<div class="links">' + (real ? '<span class="chip due' + (dl >= 0 && dl <= 3 ? " soon" : "") + '">Due ' + esc(dueTxt) + (dlTxt ? " &middot; " + esc(dlTxt) : "") + "</span>" : '<span class="chip">Due date not stated</span>') + (link ? lnk(link, "Go to the posting site") : "") + "</div>"]
+        '<div class="links">' + (real ? "<b>Due " + esc(dueTxt) + (dlTxt ? " &middot; " + esc(dlTxt) : "") + "</b>" : "<b>Due date not stated</b>") + (link ? lnk(link, "Go to the posting site") : "") + "</div>"]
     ];
     var walk = '<section class="walk" id="walk" hidden><h2>How to bid: step by step</h2><ol class="steps">' + steps.map(function (st) { return "<li><b>" + esc(st[0]) + "</b><div>" + esc(st[1]) + "</div>" + st[2] + "</li>"; }).join("") + "</ol>" +
       (link ? '<a class="go" href="' + esc(link) + '" target="_blank" rel="noopener">Go to the posting site</a>' : '<p class="na">No posting link is available for this request.</p>') + "</section>";
