@@ -8,6 +8,14 @@ Base URL: `http://<service-machine>:8765` (port set by `PORT`). Schema version: 
 
 None. The data is not private. Traffic is plain HTTP. The service listens on `127.0.0.1` (this machine only) unless `HOST` is set (for example `HOST=0.0.0.0`) to open it to another machine.
 
+**Sharing with another machine needs two settings, not one.** `HOST=0.0.0.0` only makes the service reachable. As a guard against DNS-rebinding attacks, the service also checks the request's `Host` header and answers `403` (`{"error": "unrecognized Host header (set ALLOWED_HOSTS to add this name)"}`) unless it is `localhost`, `127.0.0.1`, `[::1]`, or a name listed in `ALLOWED_HOSTS` (comma-separated, no port, case-insensitive). Set it to whatever name or address the other machine types in the URL, for example:
+
+```
+HOST=0.0.0.0 ALLOWED_HOSTS=my-pc,my-pc.local,192.168.1.20 node server.js
+```
+
+If the second machine gets that 403, the name in its URL is missing from `ALLOWED_HOSTS`.
+
 ## Endpoints
 
 | Call | Purpose |
