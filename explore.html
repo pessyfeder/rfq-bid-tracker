@@ -48,7 +48,7 @@
   .bid:hover { background:var(--navy2); }
   .bid.off { background:#c9d1dc; cursor:not-allowed; }
   .bid { border:0; cursor:pointer; font-family:inherit; }
-  .trk { display:block; width:100%; margin-top:10px; background:#fff; color:#4338ca; border:2px solid #4338ca; border-radius:10px; padding:11px 18px; font-weight:700; font-size:15px; cursor:pointer; font-family:inherit; }
+  .trk { flex:none; align-self:flex-start; white-space:nowrap; background:#fff; color:#4338ca; border:2px solid #4338ca; border-radius:999px; padding:8px 16px; font-weight:700; font-size:14px; cursor:pointer; font-family:inherit; }
   .trk:hover { background:#eef0ff; }
   .trk.on { color:#1b7a34; border-color:#1b7a34; }
   .trkm { margin-top:6px; font-size:13px; }
@@ -146,7 +146,8 @@
     var ICON = '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg>';
     var agency = r.agency && nice(r.agency);
     var h = '<div class="head"><div class="tile">' + ICON + '</div><div class="grow"><div class="eyebrow">' + esc(agency || "Request for quotation") + "</div><h1>" + esc(plain || title) + "</h1></div>" +
-      "</div>";
+      (window.RFQBids ? '<button type="button" class="trk" id="trkbtn"></button>' : "") + "</div>" +
+      (window.RFQBids ? '<div class="small trkm" id="trkmsg"></div>' : "");
     if (plain) h += '<div class="sub">Original title: ' + esc(title) + "</div>";
 
     // key facts: due date, value, posted
@@ -167,7 +168,6 @@
 
     // navy Bid Now button: goes to the posting site
     h += link ? '<a class="bid" id="bidnow" href="' + esc(link) + '" target="_blank" rel="noopener">Bid Now</a><div class="small src">Opens the posting site, where you submit your bid.</div>' : '<button type="button" class="bid off" disabled>Bid Now</button><div class="small src">No posting link is available for this request.</div>';
-    if (window.RFQBids) h += '<button type="button" class="trk" id="trkbtn"></button><div class="small trkm" id="trkmsg"></div>';
 
     // Some sources (e.g. West Virginia) only give "<RFQ number> (<type>). Buyer: name, email, phone" as the text.
     var scope = String(r.scope || ""), buyerM = /\bBuyer:\s*(.*)$/i.exec(scope), desc = scope.replace(/\s*\bBuyer:.*$/i, "").trim();
