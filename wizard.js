@@ -18,21 +18,29 @@
   ];
 
   var SOURCES = [
-    { id: "fed", label: "Federal (SAM.gov)", reg: "SAM.gov entity registration",
+    { id: "fed", label: "SAM.gov (Federal)", reg: "entity registration",
       url: "https://sam.gov/content/entity-registration",
       steps: ["Get a free Unique Entity ID at SAM.gov (needs the legal business name and address).", "Complete the entity registration (NAICS codes, tax details, bank details for payment).", "Wait for approval; this can take a couple of weeks, so start early."] },
-    { id: "tx", label: "Texas", reg: "Texas Centralized Master Bidders List (CMBL)",
+    { id: "tx", label: "Texas CMBL / ESBD (Texas)", reg: "Centralized Master Bidders List",
       url: "https://comptroller.texas.gov/purchasing/vendor/cmbl/",
       steps: ["Register on the Texas Comptroller's Centralized Master Bidders List.", "Pick the product classes (commodity codes) you sell so you are notified of matching bids.", "Bids themselves are posted on the Texas ESBD (txsmartbuy.gov/esbd)."] },
-    { id: "pa", label: "Pennsylvania", reg: "PA Supplier Portal / eMarketplace",
+    { id: "pa", label: "PA eMarketplace (Pennsylvania)", reg: "supplier account",
       url: "https://www.emarketplace.state.pa.us/",
       steps: ["Create a supplier account on the PA eMarketplace.", "Add your commodity codes and contact details.", "Check each bid for any extra vendor requirements."] },
-    { id: "nyc", label: "New York City", reg: "NYC PASSPort",
+    { id: "nyc", label: "NYC PASSPort (New York City)", reg: "vendor account",
       url: "https://www.nyc.gov/site/mocs/passport/about-passport.page",
       steps: ["Create a PASSPort account for your company.", "Complete the vendor profile (ownership, tax, and so on).", "Add the commodity categories you sell so you can respond to solicitations."] },
-    { id: "other", label: "Other states", reg: "Each state's own portal",
-      url: "", steps: ["Registration differs by state. Open a bid from that state and follow its own portal link."] }
   ];
+  // One entry per state portal the tracker reads: [bid-feed code, portal, jurisdiction].
+  [["AK", "Alaska IRIS VSS", "Alaska"], ["AR", "Arkansas Procurement", "Arkansas"], ["CO", "Colorado VSS", "Colorado"], ["DE", "Delaware Bids", "Delaware"],
+   ["FL", "MyFloridaMarketPlace", "Florida"], ["HI", "HANDS", "Hawaii"], ["ID", "Idaho Purchasing", "Idaho"], ["IL", "BidBuy", "Illinois"],
+   ["IN", "IDOA Procurement", "Indiana"], ["IA", "Iowa Bid Opportunities", "Iowa"], ["KS", "Kansas eSupplier", "Kansas"], ["LA", "LaPAC", "Louisiana"],
+   ["MA", "COMMBUYS", "Massachusetts"], ["MS", "Mississippi Bid Search", "Mississippi"], ["MO", "MissouriBUYS", "Missouri"], ["NE", "Nebraska DAS Bids", "Nebraska"],
+   ["NV", "NevadaEPro", "Nevada"], ["NJ", "NJSTART", "New Jersey"], ["NY", "NY State Contract Reporter", "New York State"], ["OK", "Oklahoma Supplier Portal", "Oklahoma"],
+   ["OR", "OregonBuys", "Oregon"], ["RI", "Rhode Island Purchasing", "Rhode Island"], ["SC", "SCEIS Solicitations", "South Carolina"],
+   ["SD", "SD Posting Board", "South Dakota"], ["TXDOT", "TxDOT Lettings", "Texas"], ["VT", "Vermont Bid Opportunities", "Vermont"],
+   ["WV", "wvOASIS", "West Virginia"], ["WY", "Wyoming Public Purchase", "Wyoming"]
+  ].forEach(function (x) { SOURCES.push({ id: x[0].toLowerCase(), label: x[1] + " (" + x[2] + ")", reg: "", url: "", steps: ["Open a bid from this portal and follow its own registration link."] }); });
 
   // Bid value choices, shared with the main page's "Bid value" filter. [min, max] in dollars (null = open-ended).
   var VALUE_OPTS = [["under50", "Under $50K"], ["mid", "$50K to $500K"], ["over500", "Over $500K"], ["over1m", "Over $1M"], ["over5m", "Over $5M"],
@@ -57,7 +65,13 @@
     else { var r = RANGES[k]; if (!r) return true; lo = r[0]; hi = r[1]; }
     return v != null && (lo == null || v >= lo) && (hi == null || v <= hi);
   }
-  function load() { try { var p = JSON.parse(localStorage.getItem(KEY)); return p && typeof p === "object" ? p : null; } catch (e) { return null; } }
+  function load() { try { var p = JSON.parse(localStorage.getItem(KEY)); if (!p || typeof p !== "object") return null; if (Array.isArray(p.reg)) p.reg = migrateReg(p.reg); return p; } catch (e) { return null; } }
+  // Older saved profiles ticked one lumped "other" entry; expand it to every state portal.
+  function migrateReg(reg) {
+    if (reg.indexOf("other") < 0) return reg.slice();
+    var base = { fed: 1, tx: 1, pa: 1, nyc: 1 };
+    return reg.filter(function (r) { return r !== "other"; }).concat(SOURCES.map(function (x) { return x.id; }).filter(function (i) { return !base[i] && reg.indexOf(i) < 0; }));
+  }
   function save(p) { try { localStorage.setItem(KEY, JSON.stringify(p)); } catch (e) {} }
 
   // ---------- matching ----------
@@ -152,9 +166,9 @@
     var cur = load() || {};
     // Only real bid categories ("c:..." ids) are listed. Older saves held the retired "My products" ids; those, or no save at all,
     // mean "start from the categories that apply to Discover Group".
-    var oldCats = cur.cats || [], pend = !oldCats.length || oldCats.some(function (i) { return String(i).slice(0, 2) !== "c:"; }); // a saved empty list (older "all categories" save) also starts from the defaults
+    var oldCats = cur.cats || [], pend = !cur.catsV || oldCats.some(function (i) { return String(i).slice(0, 2) !== "c:"; }); // only saves from before catsV (or none) start from the defaults; a newer save, even an empty "all categories" one, is kept as it was
     var d = { cats: oldCats.filter(function (i) { return String(i).slice(0, 2) === "c:"; }), extra: cur.extra || "",
-      src: (cur.src || SOURCES.map(function (s) { return s.id; })).slice(), value: toArr(cur.value), aside: toArr(cur.aside), vmin: cur.vmin || "", vmax: cur.vmax || "" };
+      src: (cur.src || SOURCES.map(function (s) { return s.id; })).slice(), reg: migrateReg(cur.reg || []), value: toArr(cur.value), aside: toArr(cur.aside), vmin: cur.vmin || "", vmax: cur.vmax || "" };
     close();
     back = document.createElement("div"); back.className = "wz-back";
     document.body.insertBefore(back, document.body.firstChild); document.body.classList.add("wz-open"); window.scrollTo(0, 0);
@@ -210,7 +224,7 @@
     }
     // Step 2: which jurisdictions. Everything is ticked by default; all ticked is saved as "no restriction".
     var step = 1, J = [];
-    if (saved && saved.step >= 1 && saved.step <= 3 && saved.d) { Object.keys(saved.d).forEach(function (k) { d[k] = saved.d[k]; }); step = saved.step; pend = false; }
+    if (saved && saved.step >= 1 && saved.step <= 4 && saved.d) { Object.keys(saved.d).forEach(function (k) { d[k] = saved.d[k]; }); step = saved.step; pend = false; }
     function loadJ() { try { J = window.RFQJurisdictions ? window.RFQJurisdictions() : []; } catch (e) { J = []; } }
     var openJ = false;
     function jLabel() { return d.where.length ? d.where.length + " of " + J.length + " selected" : "All locations"; }
@@ -219,7 +233,7 @@
       if (!d.where) d.where = (cur.where || []).slice();
       var gs = [], idx = {};
       J.forEach(function (o) { if (!(o.group in idx)) { idx[o.group] = gs.length; gs.push({ name: o.group, items: [] }); } gs[idx[o.group]].items.push(o); });
-      back.innerHTML = "<div class='wz' role='dialog' aria-modal='true' aria-label='Setup'><p class='wz-step'>Step 2</p><h2>Which jurisdiction would you like to see?</h2>" +
+      back.innerHTML = "<div class='wz' role='dialog' aria-modal='true' aria-label='Setup'><p class='wz-step'>Step 3</p><h2>Which jurisdiction would you like to see?</h2>" +
         "<p class='wz-note'>Federal, city and state bids. Change them any time.</p>" +
         "<div class='wz-dd'><button type='button' class='wz-dd-btn' data-a='jtoggle' aria-expanded='" + openJ + "'><span>" + jLabel() + "</span><span>&#9662;</span></button>" +
         (openJ ? "<div class='wz-dd-list'><div class='wz-dd-tools'><button type='button' class='link' data-a='jnone'>" + ((J.length && d.where.length >= J.length) ? "Clear all" : "Select all") + "</button>" +
@@ -232,20 +246,32 @@
               return "<label class='wz-row'><input type='checkbox' data-jur='" + h(o.v) + "'" + (d.where.indexOf(o.v) >= 0 ? " checked" : "") + "> <span>" + h(o.label) + " <em class='wz-note'>(" + o.n + ")</em></span></label>";
             }).join("");
           }).join("") + "</div>" : "") + "</div>" +
-        "<div class='wz-btns'><button data-a='back'>&larr; Back</button><button class='pri' data-a='next3'>Next &rarr;</button></div></div>";
+        "<div class='wz-btns'><button data-a='prev'>&larr; Back</button><button class='pri' data-a='next'>Next &rarr;</button></div></div>";
     }
-    // Step 3: which eligibility would you like to see? Which set-aside / eligibility group the vendor belongs to.
+    // Step 4: which eligibility would you like to see? Which set-aside / eligibility group the vendor belongs to.
     var openA = false;
     function multiLabel(opts, sel, none) { var o = opts.filter(function (x) { return sel.indexOf(x[0]) >= 0; }); return !o.length ? none : o.length === 1 ? o[0][1] : o.length + " selected"; }
     function aLabel() { return multiLabel(ASIDE_OPTS, d.aside, "Anyone"); }
     function drawA() {
-      back.innerHTML = "<div class='wz' role='dialog' aria-modal='true' aria-label='Setup'><p class='wz-step'>Step 3</p><h2>Which eligibility criteria would you like to see?</h2>" +
+      back.innerHTML = "<div class='wz' role='dialog' aria-modal='true' aria-label='Setup'><p class='wz-step'>Step 4</p><h2>Which eligibility criteria would you like to see?</h2>" +
         "<p class='wz-note'>Some bids are reserved for certain businesses. Pick the eligibility you want to see. Change it any time.</p>" +
         "<div class='wz-dd'><button type='button' class='wz-dd-btn' data-a='atoggle' aria-expanded='" + openA + "'><span>" + h(aLabel()) + "</span><span>&#9662;</span></button>" +
         (openA ? "<div class='wz-dd-list'><div class='wz-dd-tools'><button type='button' class='link' data-a='anone'>" + ((d.aside.length >= ASIDE_OPTS.length) ? "Clear all" : "Select all") + "</button></div>" + ASIDE_OPTS.map(function (o) {
           return "<label class='wz-row'><input type='checkbox' data-apick='" + h(o[0]) + "'" + (d.aside.indexOf(o[0]) >= 0 ? " checked" : "") + "> <span>" + h(o[1]) + "</span></label>";
         }).join("") + "</div>" : "") + "</div>" +
-        "<div class='wz-btns'><button data-a='back3'>&larr; Back</button><button class='pri' data-a='finish'>Show me my RFQs</button></div></div>";
+        "<div class='wz-btns'><button data-a='prev'>&larr; Back</button><button class='pri' data-a='finish'>Show me my RFQs</button></div></div>";
+    }
+    // Step 2: which entities (registrations) the vendor holds. Nothing ticked = no restriction.
+    var openR = false;
+    function rLabel() { var o = SOURCES.filter(function (x) { return d.reg.indexOf(x.id) >= 0; }); return !o.length ? "Not registered / show all" : o.length === 1 ? o[0].label : o.length + " selected"; }
+    function drawR() {
+      back.innerHTML = "<div class='wz' role='dialog' aria-modal='true' aria-label='Setup'><p class='wz-step'>Step 2</p><h2>Which entities are you registered with?</h2>" +
+        "<p class='wz-note'>Pick the portals where your company is already registered as a vendor. Bids from those sources are shown. Leave empty to see every source. Change it any time.</p>" +
+        "<div class='wz-dd'><button type='button' class='wz-dd-btn' data-a='rtoggle' aria-expanded='" + openR + "'><span>" + h(rLabel()) + "</span><span>&#9662;</span></button>" +
+        (openR ? "<div class='wz-dd-list'><div class='wz-dd-tools'><button type='button' class='link' data-a='rnone'>" + (d.reg.length >= SOURCES.length ? "Clear all" : "Select all") + "</button></div>" + SOURCES.map(function (o) {
+          return "<label class='wz-row'><input type='checkbox' data-rpick='" + h(o.id) + "'" + (d.reg.indexOf(o.id) >= 0 ? " checked" : "") + "> <span>" + h(o.label) + " " + (o.reg ? "<em class='wz-note'>(" + h(o.reg) + ")</em>" : "") + "</span></label>";
+        }).join("") + "</div>" : "") + "</div>" +
+        "<div class='wz-btns'><button data-a='prev'>&larr; Back</button><button class='pri' data-a='next'>Next &rarr;</button></div></div>";
     }
     function collectJ() {
       var boxes = back.querySelectorAll("[data-jur]");
@@ -256,15 +282,16 @@
       drawStep();
     }
     function drawStep() {
-      if (step === 3) return drawA();
-      if (step === 2) return drawJ();
+      if (step === 4) return drawA();
+      if (step === 3) return drawJ();
+      if (step === 2) return drawR();
       if (!openDd) loadAll(); // pick up bid categories that arrived after the page loaded (live data)
       back.innerHTML = "<div class='wz' role='dialog' aria-modal='true' aria-label='Setup'><p class='wz-step'>Step 1</p><h2>Which request categories would you like to see?</h2>" +
         "<p class='wz-note'>Every category is listed; the ones that apply to Discover Group, Inc. are pre-selected. Change them any time.</p>" +
         "<div class='wz-dd'><button type='button' class='wz-dd-btn' data-a='toggle' aria-expanded='" + openDd + "'><span>" + label() + "</span><span>&#9662;</span></button>" +
         (openDd ? "<div class='wz-dd-list'><div class='wz-dd-tools'><button type='button' class='link' data-a='none'>" + ((d.cats.length >= ALL.length) ? "Clear all" : "Select all") + "</button></div>" +
           listHtml() + "</div>" : "") + "</div>" +
-        "<div class='wz-btns'><button class='pri' data-a='done'>Next &rarr;</button></div></div>";
+        "<div class='wz-btns'><button class='pri' data-a='next'>Next &rarr;</button></div></div>";
     }
     function collect() {
       var boxes = back.querySelectorAll("[data-cat]");
@@ -280,6 +307,10 @@
         d.aside = Array.prototype.map.call(back.querySelectorAll("[data-apick]:checked"), function (el) { return el.dataset.apick; });
         var ab = back.querySelector(".wz-dd-btn span"); if (ab) ab.textContent = aLabel();
       }
+      else if (t.dataset.rpick != null) {
+        d.reg = Array.prototype.map.call(back.querySelectorAll("[data-rpick]:checked"), function (el) { return el.dataset.rpick; });
+        var rb = back.querySelector(".wz-dd-btn span"); if (rb) rb.textContent = rLabel();
+      }
       else if (t.dataset.jur) { collectJ(); var jl = back.querySelector(".wz-dd-btn span"); if (jl) jl.textContent = jLabel(); }
     });
     back.addEventListener("click", function (e) {
@@ -292,18 +323,20 @@
     onPop = function (ev) {
       var s = ev.state && ev.state.wz;
       if (!s) { close(); return; } // Back past step 1: leave the wizard
-      if (step === 2) collectJ(); else if (step === 1) collect();
-      step = s; openJ = openA = false; draw();
+      if (step === 3) collectJ(); else if (step === 1) collect();
+      step = s; openJ = openA = openR = false; draw();
     };
     window.addEventListener("popstate", onPop);
     back.addEventListener("click", function (e) {
       var a = e.target.closest("[data-a]"); if (!a) return;
       var act = a.dataset.a;
-      if (step === 2) collectJ(); else if (step === 1) collect();
-      if (pushed && (act === "back" || act === "back3")) { history.back(); return; }
+      if (step === 3) collectJ(); else if (step === 1) collect();
+      if (pushed && act === "prev") { history.back(); return; }
       var before = step;
       if (act === "toggle") openDd = !openDd;
       else if (act === "none") d.cats = d.cats.length >= ALL.length ? [] : ALL.map(function (o) { return o.v; });
+      else if (act === "rtoggle") openR = !openR;
+      else if (act === "rnone") d.reg = d.reg.length >= SOURCES.length ? [] : SOURCES.map(function (o) { return o.id; });
       else if (act === "jtoggle") openJ = !openJ;
       else if (act === "atoggle") openA = !openA;
       else if (act === "anone") d.aside = d.aside.length >= ASIDE_OPTS.length ? [] : ASIDE_OPTS.map(function (o) { return o[0]; });
@@ -313,15 +346,11 @@
         var allOn = gv.every(function (x) { return d.where.indexOf(x) >= 0; });
         d.where = d.where.filter(function (x) { return gv.indexOf(x) < 0; }).concat(allOn ? [] : gv);
       }
-      else if (act === "back") { step = 1; openJ = false; }
-      else if (act === "back3") { step = 2; openJ = false; }
-      else if (act === "next3") { step = 3; openA = false; }
-      else if (act === "done") {
-        step = 2; openJ = false;
-      }
+      else if (act === "prev") { step = Math.max(1, step - 1); openJ = openA = openR = false; }
+      else if (act === "next") { step = Math.min(4, step + 1); openJ = openA = openR = false; }
       else if (act === "finish") {
         var every = !d.where.length || (J.length && J.every(function (o) { return d.where.indexOf(o.v) >= 0; }));
-        save({ cats: d.cats, where: every ? [] : d.where, value: d.value, aside: d.aside, vmin: d.vmin, vmax: d.vmax, extra: d.extra.trim(), src: d.src, saved: new Date().toISOString() });
+        save({ catsV: 2, cats: d.cats, where: every ? [] : d.where, value: d.value, aside: d.aside, reg: d.reg.length >= SOURCES.length ? [] : d.reg, vmin: d.vmin, vmax: d.vmax, extra: d.extra.trim(), src: d.src, saved: new Date().toISOString() });
         try { localStorage.removeItem(SKIP); } catch (x) {}
         // Show a "working" message, let it paint, then do the (possibly slow) list compile.
         back.innerHTML = "<div class='wz' role='status' aria-live='polite' style='text-align:center'><div class='wz-spin'></div><h2>Compiling your RFQ list&hellip;</h2><p class='wz-note'>Matching bids to your choices. This can take a moment.</p></div>";
@@ -337,9 +366,9 @@
 
   // Which source a bid belongs to.
   function sourceFor(level, code) {
-    return level === "Federal" ? "fed" : code === "TX" ? "tx" : code === "PA" ? "pa" : code === "NYC" ? "nyc" : "other";
+    return level === "Federal" ? "fed" : String(code || "").toLowerCase();
   }
-  window.RFQProfile = { get: load, match: match, categories: categories, catHits: catHits, open: open, sourceFor: sourceFor, valueOpts: VALUE_OPTS, asideOpts: ASIDE_OPTS, valueOk: valueOk };
+  window.RFQProfile = { get: load, match: match, categories: categories, catHits: catHits, open: open, sourceFor: sourceFor, valueOpts: VALUE_OPTS, asideOpts: ASIDE_OPTS, valueOk: valueOk, regOpts: SOURCES.map(function (x) { return [x.id, x.label]; }) };
   // First visit: offer the setup once. (Skipping is remembered; the toolbar button reopens it.)
   // Opened immediately (not on window "load") so the main page never paints before the wizard hides it.
   // The bid-category list comes from home.js, which loads after this file, so wait until every script has run.
