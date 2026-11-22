@@ -82,7 +82,6 @@
 </main>
 <script src="facts.js?v=20261122c"></script>
 <script src="sample-data.js"></script>
-<script src="quote-ui.js?v=2"></script>
 <script src="shared.js?v=20261122b"></script>
 <script>
 (function () {
@@ -168,7 +167,6 @@
     if (where.length) h += '<div class="where">' + where.map(function (w) { return "<span>&#128205; " + esc(w) + "</span>"; }).join("") + "</div>";
 
     h += "<!--GLANCE-->";
-    h += '<section id="quotehelper"></section>';
 
     // RFQ documents: the posting plus any attachments found
     var docs = [];
@@ -349,7 +347,6 @@
 
     h += '<div class="foot">ID ' + esc(r.id) + " · first seen " + esc(mdy(r.firstSeen)) + " · last updated " + esc(mdy(r.updatedAt)) + "</div>";
     $.innerHTML = h;
-    if (window.QuoteHelper) try { window.QuoteHelper.mount(document.getElementById("quotehelper"), { id: String(r.id), demo: demo }); } catch (e) {}
   }
 })();
 </script>
