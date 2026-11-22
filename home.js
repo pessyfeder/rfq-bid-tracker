@@ -6,7 +6,7 @@
   var $app = document.getElementById("app");
   if (!$app) return;
   var DAY = 86400000, PAGE = /\.github\.io$/.test(location.hostname) ? 100 : 25; // the hosted demo lists more results per page
-  var st = { view: (function () { try { return localStorage.getItem("rfq-view") === "grid" ? "grid" : "list"; } catch (e) { return "list"; } })(), kw: "", cats: [], where: [], close: [], posted: [], value: [], vmin: "", vmax: "", aside: [], reg: [], sort: "new", shown: PAGE, dd: null, more: false, openG: { "My products": true } };
+  var st = { view: (function () { try { return localStorage.getItem("rfq-view") === "grid" ? "grid" : "list"; } catch (e) { return "list"; } })(), kw: "", cats: [], where: [], close: [], posted: [], value: [], vmin: "", vmax: "", aside: [], reg: [], sort: "new", shown: PAGE, dd: null, openG: { "My products": true } };
 
   var css = document.createElement("style");
   css.textContent =
@@ -37,7 +37,6 @@
     ".hm-dd-list{max-height:320px;overflow:auto;padding:4px 0}.hm-grp{padding:6px 12px 2px;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#64748b}" +
     ".hm-gh{display:flex;align-items:center;gap:8px;padding:5px 12px;border-bottom:1px solid #eef1f5}.hm-gh input{width:16px;height:16px;accent-color:#4338ca;flex:none;margin:0}.hm-gt{flex:1;cursor:pointer;font-weight:600;font-size:13px;color:#1f2937}.hm-gt em{font-style:normal;font-weight:400;font-size:12px;color:#64748b;margin-left:6px}.hm-arr{display:inline-block;width:14px;color:#64748b}.hm-kids{padding-left:16px}.hm-kids[hidden]{display:none}" +
     ".hm-opt{display:flex;gap:10px;align-items:center;padding:4px 12px;cursor:pointer;color:#1f3347;margin:0;font-size:13px}.hm-opt:hover{background:#eef0ff}.hm-opt input{width:16px;height:16px;accent-color:#4338ca;flex:none;margin:0}.hm-opt span{flex:1;min-width:0}.hm-opt em{font-style:normal;color:#94a3b8;font-size:12px}" +
-    ".hm-morerow{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:12px}.hm-morerow .hm-field{flex:none}" +
     ".hm-tog{border:0;background:none;color:#4338ca;font-weight:600;text-decoration:underline;padding:10px 0 0}" +
     /* filtered by */
     ".hm-filt{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:14px 0 0;min-height:34px}.hm-filt b{font-weight:600;color:#1f3a56}" +
@@ -50,7 +49,6 @@
     ".hm-ic{width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:#6b7683;color:#fff}.hm-ic svg{width:15px;height:15px}" +
     ".hm-item h3{margin:0;font-size:13.5px;font-weight:500;line-height:1.3}.hm-item h3 a{color:#1d2b3a;text-decoration:none}.hm-item h3 a:hover{text-decoration:underline}.hm-val{color:#1b7a34;font-weight:700;margin-left:6px;white-space:nowrap}.hm-val.none{font-weight:400}.hm-sub{color:#6b7280;font-size:12px;margin-top:1px}" +
     ".hm-dates{display:grid;grid-template-columns:auto auto;gap:2px 12px;font-size:12px;align-content:center;min-width:170px;color:#2a3644}.hm-dates div{display:flex;align-items:center;gap:7px}.hm-dates svg{color:#7b8794;flex:none;width:15px;height:15px}.hm-dates b{font-weight:600}.hm-dates .hm-left{color:#c62828;font-weight:600;white-space:nowrap}" +
-    ".hm-more{border:0;background:none;color:#4338ca;font-weight:500;text-decoration:underline;padding:2px 8px}" +
     ".hm-go{display:inline-block;background:#4338ca;color:#fff;border:0;border-radius:6px;padding:6px 12px;font-weight:500;font-size:13px}" +
     ".hm-empty{text-align:center;padding:48px 16px;border:1px solid #d9dfe7;border-top:0}.hm-empty h3{margin:0 0 6px}" +
     ".hm-showmore{display:block;margin:14px auto 60px;border:1px solid #4338ca;background:#fff;color:#4338ca;border-radius:6px;padding:7px 22px;font-weight:600;font-size:13px}" +
@@ -95,7 +93,6 @@
   function safeUrl(u) { return /^https:\/\//i.test(String(u)) ? String(u) : ""; }
   function pDate(s) { var p = String(s).split("-"); return new Date(+p[0], p[1] - 1, +p[2]); }
   function mdy(s) { s = String(s || "").slice(0, 10).split("-"); return s.length === 3 ? s[1] + "/" + s[2] + "/" + s[0] : "Unknown"; }
-  function money(n) { return n >= 1e6 ? "$" + +(n / 1e6).toFixed(1) + " million" : n >= 1e3 ? "$" + Math.round(n / 1e3) + "K" : "$" + n; }
   function nice(t) { // ALL-CAPS titles become readable
     t = String(t || "").replace(/[\u0000-\u001f]+/g, " ").trim();
     if (t.length > 8 && t === t.toUpperCase()) t = t.toLowerCase().replace(/(^|[.:\-]\s*)([a-z])/g, function (m, a, b) { return a + b.toUpperCase(); });
@@ -103,7 +100,9 @@
   }
 
   var today = new Date(); today = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  var cut = new Date(); cut.setFullYear(cut.getFullYear() + 3); var cutStr = cut.toISOString().slice(0, 10); var todayStr = new Date().toISOString().slice(0, 10);
+  // "Today" in US Eastern (en-CA formats as YYYY-MM-DD), matching how due dates are stored; UTC would roll over at 8pm ET.
+  var todayStr = new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+  var cutStr = (parseInt(todayStr.slice(0, 4), 10) + 3) + todayStr.slice(4);
   var rows = null;
   // A posted date that is missing or in the future is not real (older data copied the due date into it): treat as unknown.
   function realPosted(p) { p = String(p || ""); return p && p.slice(0, 10) <= todayStr ? p : ""; }
@@ -405,7 +404,7 @@
   }
   function ctxNow() { return { words: st.kw.toLowerCase().split(/\s+/).filter(Boolean), cats: selCats() }; }
 
-  function resetFilters(keepCats) { st.kw = ""; st.cats = []; st.where = []; st.close = []; st.posted = []; st.value = []; st.vmin = ""; st.vmax = ""; st.aside = []; st.reg = []; st.shown = PAGE; }
+  function resetFilters(keepCats) { st.kw = ""; if (!keepCats) st.cats = []; st.where = []; st.close = []; st.posted = []; st.value = []; st.vmin = ""; st.vmax = ""; st.aside = []; st.reg = []; st.shown = PAGE; }
   function lab(key, v) { var o = OPTS[key].filter(function (o) { return o[0] === v; })[0]; return o ? o[1] : v; }
   function money(x) { x = +x; return x >= 1e6 ? "$" + +(x / 1e6).toFixed(2) + "M" : x >= 1e3 ? "$" + +(x / 1e3).toFixed(1) + "K" : "$" + x; }
   function customLabel() {
@@ -478,6 +477,7 @@
       var gb = gh.querySelector("[data-mgrp]"); gb.checked = n === kids.length; gb.indeterminate = n > 0 && n < kids.length;
       gh.querySelector("em").textContent = n + "/" + kids.length;
     });
+  }
   function syncAllBoxes(key) { // keep the dropdown's "Select all" / "All cities" / "All states" boxes in step with the ticked options
     var f = $app.querySelector('.hm-field[data-k="' + key + '"]'); if (!f) return;
     Array.prototype.forEach.call(f.querySelectorAll("[data-all]"), function (b) {
@@ -487,7 +487,6 @@
       else return;
       b.checked = vals.length > 0 && vals.every(function (x) { return sel.indexOf(x) >= 0; });
     });
-  }
   }
   function ddHtml(key, label, opts, sel, topLinks, cls, grouped) {
     var list = "", grp = null;
@@ -535,14 +534,11 @@
     var all = v.every(function (x) { return st.where.indexOf(x) >= 0; });
     return '<label class="hm-all"><input type="checkbox" data-all="where-' + id + '"' + (all ? " checked" : "") + "> All " + id + "</label>";
   }
-  var MORE_KEYS = ["value", "aside"], SIMPLE = ["reg", "close", "posted", "value", "aside"];
+  var SIMPLE = ["reg", "close", "posted", "value", "aside"];
   function fieldsHtml() {
     return ddHtml("cats", "Category", catOpts(), selCats(), tog("cats-none", selCats().length >= catOpts().length), "", true) +
       ddHtml("where", "Jurisdiction", whereOpts(), st.where, tog("where-none", st.where.length >= whereOpts().length) + grpTog("City", "cities") + grpTog("States", "states"), "") +
       selectHtml("posted") + selectHtml("close") + selectHtml("value") + selectHtml("aside");
-  }
-  function moreHtml() {
-    return "";
   }
 
   function VIEW_HTML() {
@@ -577,7 +573,7 @@
       '<button class="hm-btn" data-a="refresh">Refresh</button></div></div>' +
       '<div class="hm-in"><div class="hm-title"><h1>View Open Bids &amp; RFQs</h1><p id="hm-stats"></p></div>' +
       '<form class="hm-bar" data-form><label class="hm-kw"><input type="search" data-kw placeholder="Search by keyword or bid title" aria-label="Keyword" value="' + esc(st.kw) + '">' + ICON_SEARCH + '</label>' + VIEW_HTML() + '<div class="hm-fields" id="hm-fields"></div></form>' +
-      '<div id="hm-more"></div><div class="hm-cols"><div class="hm-side" id="hm-side"></div><div class="hm-main"><div id="hm-res"></div></div></div></div></div>';
+      '<div class="hm-cols"><div class="hm-side" id="hm-side"></div><div class="hm-main"><div id="hm-res"></div></div></div></div></div>';
     watchRefresh(); syncRefresh();
     fields();
   }
@@ -589,7 +585,6 @@
     var dds = el.querySelectorAll(".hm-field.dd"); if (dds.length) dds[dds.length - 1].classList.add("rt");
     var nl = el.querySelector(".hm-field.open .hm-dd-list"); if (nl) nl.scrollTop = top;
     var sd = document.getElementById("hm-side"); if (sd) sd.innerHTML = selectHtml("reg");
-    var m = document.getElementById("hm-more"); if (m) m.innerHTML = moreHtml();
   }
 
   function results() {
@@ -795,7 +790,6 @@
     if (d.a === "profile") { window.location.href = "/profile.html"; return; }
     if (d.a === "refresh") { var rb = document.getElementById("refreshBtn"); if (rb) rb.click(); syncRefresh(); return; } // the observer keeps the label in step afterwards
     if (d.a === "clear") { resetFilters(false); clearKw(); return refreshAll(); }
-    if (d.a === "more-filters") { st.more = !(st.more || MORE_KEYS.some(function (k) { return st[k].length; })); if (!st.more) { MORE_KEYS.forEach(function (k) { st[k] = []; }); } return refreshAll(); }
     if (d.a === "cats-none") st.cats = selCats().length >= catOpts().length ? [] : catOpts().map(function (c) { return c.v; });
     else if (d.a === "where-none") st.where = st.where.length >= whereOpts().length ? [] : whereOpts().map(function (o) { return o.v; });
     else if (d.a && d.a.slice(-5) === "-none" && SIMPLE.indexOf(d.a.slice(0, -5)) >= 0) {
@@ -832,13 +826,13 @@
     }
     if (t.dataset.sel) { st[t.dataset.sel] = t.value; st.shown = PAGE; return results(); } // the sort order stays a single choice
     if (t.dataset.ms) {
-      syncAllBoxes(key);
       var key = t.dataset.ms, ids = Array.prototype.slice.call($app.querySelectorAll('input[data-ms="' + key + '"]')).filter(function (i) { return i.checked; }).map(function (i) { return i.value; });
       if (key === "cats") st.cats = ids; else st[key] = ids;
       var lbl = $app.querySelector('.hm-field[data-k="' + key + '"] [data-lbl]');
       if (lbl) lbl.parentNode.classList.toggle("on", ids.length > 0);
       if (key === "value" && (ids.indexOf("custom") >= 0) !== !!$app.querySelector("[data-vc]")) { st.shown = PAGE; return refreshAll(); } // show / hide the custom amount boxes
       if (key === "cats") syncGroups();
+      syncAllBoxes(key);
       st.shown = PAGE; results();
     }
   });
