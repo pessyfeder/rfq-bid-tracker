@@ -77,6 +77,7 @@
   <div id="page">Loading&hellip;</div>
 </main>
 <script src="facts.js"></script>
+<script src="chips.js"></script>
 <script>
 (function () {
   var id = new URLSearchParams(location.search).get("id") || "";
@@ -186,9 +187,9 @@
 
     // 4b. details from the original table: region, restriction, amended, requirement chips
     var dets = [];
-    if (r.restriction) dets.push('<span class="chip gate" style="cursor:default">Restricted: ' + esc(r.restriction) + "</span>");
-    if (r.amended) dets.push('<span class="chip cost" style="cursor:default">Amended</span>');
-    (r.requirements || []).forEach(function (q) { dets.push('<span class="chip info" style="cursor:default">' + esc(q) + "</span>"); });
+    if (r.restriction) dets.push('<span class="chip gate">Restricted: ' + esc(r.restriction) + "</span>");
+    if (r.amended) dets.push('<span class="chip cost">Amended</span>');
+    (r.requirements || []).forEach(function (q) { dets.push('<span class="chip info">' + esc(q) + "</span>"); });
     h += "<section><h2>Details</h2>" +
       (r.region ? '<div style="margin-bottom:' + (dets.length ? "8px" : "0") + '"><b>Region:</b> ' + esc(r.region) + "</div>" : "") +
       (dets.length ? '<div class="chips">' + dets.join("") + "</div>" : (r.region ? "" : '<span class="na">None listed</span>')) + "</section>";

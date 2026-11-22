@@ -73,6 +73,63 @@
     });
     return out;
   }
+  // Plain-language meaning of each chip, for the click popover. Keyed by FACT_RULES label.
+  var EXPLAIN = {
+    "TSA-checked workers": "Workers must pass a federal transportation security check (TSA/TWIC) before they can work on site, usually at airports, ports or similar sites. Getting these takes time and money.",
+    "Security clearance": "Staff need a government security clearance or similar vetting. If your people do not already have one, you probably cannot bid.",
+    "Background checks / fingerprinting": "Your workers must pass background checks or be fingerprinted before getting on site. Plan for the time and cost.",
+    "License / certification": "You need a specific trade license or certification (for example electrician, plumber or OSHA training) to bid or do the work.",
+    "Minimum experience required": "The buyer requires a minimum number of years of experience. Without it, your bid may be rejected.",
+    "Bid bond / bid guarantee": "You must put up a guarantee with your bid (a bond or a deposit, often 5% of the bid). It protects the buyer if you win and then walk away.",
+    "Bonding capacity minimum": "You need a surety company willing to back you for a set dollar amount of bonds. Small or new companies often cannot qualify.",
+    "Performance / payment bond": "If you win, you must buy a bond from a surety that guarantees you will finish the job and pay your suppliers. It adds to your cost.",
+    "Insurance minimums": "You must carry a minimum amount of insurance (such as liability or workers' compensation). Check that your policy is large enough.",
+    "Prevailing / living wage": "You must pay workers at least a government-set wage rate, which is often higher than your normal pay. This raises your labor cost.",
+    "Mandatory site visit / pre-bid": "You must attend a visit to the site or a pre-bid meeting. If you miss it, your bid can be thrown out.",
+    "24/7 or after-hours": "The work may need nights, weekends or on-call response. That means extra staffing and overtime cost.",
+    "Domestic-content rule (Buy America / TAA)": "Materials or products must be made in the USA (or in approved trade-deal countries). Imported goods may not be allowed.",
+    "Retainage or slow payment terms": "The buyer may hold back part of your pay until the job is done, or pay late (45 to 90 days). Expect slower cash flow.",
+    "Liquidated damages for late work": "You pay a set penalty for each day the work is late.",
+    "Delivery terms (FOB / inside delivery)": "There are specific delivery rules, such as who pays freight, or delivery inside the building. These can add shipping cost.",
+    "Escorted or restricted site access": "The site is secured, so you may need an escort or a badge to get in. Work can be slower and need more planning.",
+    "Drug testing of workers": "Your workers must pass drug tests, or you must run a drug-free workplace program.",
+    "Certified payroll / compliance reporting": "You must file regular payroll or compliance reports to prove you follow wage and workforce rules. This means extra paperwork.",
+    "Permits and fees on the contractor": "You are responsible for getting and paying for permits, so add them to your price.",
+    "Hazardous materials handling": "The job involves hazardous materials such as asbestos or lead paint. Special training, handling and disposal are likely needed.",
+    "Fixed price, no escalation": "Your price is locked in. If material or labor costs rise, you absorb the increase.",
+    "Warranty requirement": "You must stand behind the work or product for a set period and fix defects at your own cost.",
+    "Brand-name / \"or equal\" spec": "The buyer names a specific brand. You can offer an equal product, but you must show it matches.",
+    "Owner can terminate for convenience": "The buyer can cancel the contract at any time, even if you did nothing wrong. You are usually paid only for work done so far.",
+    "Submittals / samples for approval": "You must send samples or documents for approval before starting or ordering. This can slow the schedule.",
+    "Local / in-state preference": "The buyer may favor local or in-state businesses. Outside bidders can be at a disadvantage.",
+    "Past performance / references": "The buyer will check your past jobs or references. Have similar projects and contacts ready.",
+    "Multi-year / renewal term": "The contract can run several years or be renewed. That is steady work, but your price is held for a long time."
+  };
+  function explainFact(label) {
+    label = String(label || "");
+    if (EXPLAIN[label]) return EXPLAIN[label];
+    var l = label.toLowerCase();
+    if (/set-aside|only$/.test(l) || /\b(sdvosb|vosb|wosb|edwosb|hubzone|8\(a\)|small business|mbe|wbe|dbe|mwbe|sdvob)\b/.test(l)) {
+      var s = [];
+      if (/small business|\bsb\b/.test(l)) s.push("small businesses");
+      if (/sdvosb|sdvob/.test(l)) s.push("service-disabled veteran-owned businesses");
+      else if (/\bvosb\b/.test(l)) s.push("veteran-owned businesses");
+      if (/edwosb/.test(l)) s.push("economically disadvantaged women-owned businesses");
+      else if (/wosb/.test(l)) s.push("women-owned businesses");
+      if (/hubzone/.test(l)) s.push("businesses in federally designated HUBZone areas");
+      if (/8\(a\)/.test(l)) s.push("firms in the SBA 8(a) program");
+      if (/mbe|minority/.test(l)) s.push("minority-owned businesses");
+      if (/wbe/.test(l) && !/wosb/.test(l)) s.push("women-owned businesses");
+      if (/dbe/.test(l)) s.push("disadvantaged businesses");
+      var who = s.length ? s.join(", ") : "certain types of businesses";
+      if (/subcontracting|goals/.test(l)) return "The winner is expected to give part of the work to " + who + " (shown as goals). Check whether you qualify or can team up with one.";
+      return "Only " + who + " can bid. If your company is not certified as one, you cannot win this.";
+    }
+    if (/optional pre-bid/.test(l)) return "There is a pre-bid meeting, but you do not have to attend. It is still a good chance to ask questions.";
+    if (/eligibility not checked/.test(l)) return "The notice documents were not read, so we do not know who is allowed to bid. Open the notice to check.";
+    return "";
+  }
+  root.explainFact = explainFact;
   root.computeFacts = keyFacts;
-  if (typeof module !== "undefined" && module.exports) module.exports = { computeFacts: keyFacts };
+  if (typeof module !== "undefined" && module.exports) module.exports = { computeFacts: keyFacts, explainFact: explainFact };
 })(typeof window !== "undefined" ? window : globalThis);

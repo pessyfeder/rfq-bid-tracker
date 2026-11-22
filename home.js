@@ -604,8 +604,8 @@
       return !toks.some(function (b, j) { return j !== i && Object.keys(b).length > a.length && a.every(function (w) { return b[w]; }); });
     });
     var h = "";
-    if (raw.requires == null && !raw.aiRead) h += '<span class="hm-flag unclear" title="The notice documents were not read, so eligibility is unknown">Eligibility not checked</span>';
-    out.slice(0, FLAG_MAX).forEach(function (f) { h += '<span class="hm-flag ' + f.cls + '"' + (f.why ? ' title="' + esc(f.why) + '"' : "") + ">" + esc(f.label) + "</span>"; });
+    if (raw.requires == null && !raw.aiRead) h += '<span class="hm-flag unclear" role="button" tabindex="0" data-why="">Eligibility not checked</span>';
+    out.slice(0, FLAG_MAX).forEach(function (f) { h += '<span class="hm-flag ' + f.cls + '" role="button" tabindex="0" data-why="' + esc(f.why) + '">' + esc(f.label) + "</span>"; });
     if (out.length > FLAG_MAX) h += '<span class="hm-flag more" title="' + esc(out.slice(FLAG_MAX).map(function (f) { return f.label; }).join("; ")) + '">+' + (out.length - FLAG_MAX) + " more</span>";
     return h ? '<div class="hm-flags">' + h + "</div>" : "";
   }
@@ -634,6 +634,40 @@
   document.addEventListener("click", function (e) { if (st.dd && !e.target.closest(".hm-field.dd")) { st.dd = null; syncOpen(); } });
   document.addEventListener("keydown", function (e) { if (e.key === "Escape" && st.dd) { st.dd = null; syncOpen(); } });
   function clearKw() { var k = $app.querySelector("[data-kw]"); if (k) k.value = ""; }
+
+  // ---------- chip explanation: click a coloured chip for a plain-language meaning ----------
+  (function () {
+    var css = document.createElement("style");
+    css.textContent = ".hm-flag{cursor:pointer}.hm-flag.sel{outline:2px solid currentColor}" +
+      "#hm-pop{position:absolute;z-index:900;max-width:320px;background:#fff;border:1px solid #cfd5de;border-radius:8px;box-shadow:0 6px 24px rgba(15,23,42,.2);padding:12px 14px;font:13px/1.45 Roboto,system-ui,sans-serif;color:#2d3a48}" +
+      "#hm-pop b{display:block;margin-bottom:4px;color:#1f3a56}#hm-pop small{display:block;margin-top:8px;padding-top:6px;border-top:1px dashed #e4e4f0;color:#64748b;font-size:12px}";
+    document.head.appendChild(css);
+    var pop = null, cur = null;
+    function close() { if (pop) { pop.remove(); pop = null; } if (cur) { cur.classList.remove("sel"); cur = null; } }
+    function open(chip) {
+      var same = cur === chip; close(); if (same) return;
+      var label = chip.textContent, more = chip.classList.contains("more");
+      var text = more ? "More factors on this bid: " + (chip.getAttribute("title") || "") : (window.explainFact ? window.explainFact(label) : "");
+      var why = chip.getAttribute("data-why");
+      pop = document.createElement("div"); pop.id = "hm-pop";
+      pop.innerHTML = "<b>" + esc(label) + "</b>" + esc(text || "This is a condition found in the notice. Open the details to read the exact wording.") +
+        (why && why !== "Who can bid" ? "<small>From the notice: " + esc(why) + "</small>" : "");
+      document.body.appendChild(pop);
+      var r = chip.getBoundingClientRect(), x = Math.max(8, Math.min(r.left + window.scrollX, window.scrollX + document.documentElement.clientWidth - pop.offsetWidth - 8));
+      pop.style.left = x + "px"; pop.style.top = (r.bottom + window.scrollY + 6) + "px";
+      chip.classList.add("sel"); cur = chip;
+    }
+    document.addEventListener("click", function (e) {
+      var c = e.target.closest && e.target.closest(".hm-flag");
+      if (c) { e.preventDefault(); e.stopPropagation(); open(c); return; }
+      if (pop && !e.target.closest("#hm-pop")) close();
+    }, true);
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") close();
+      else if ((e.key === "Enter" || e.key === " ") && e.target.classList && e.target.classList.contains("hm-flag")) { e.preventDefault(); open(e.target); }
+    });
+    window.addEventListener("scroll", close, { passive: true });
+  })();
 
   // ---------- details side panel: slides in from the right, blurs the page behind ----------
   (function () {
