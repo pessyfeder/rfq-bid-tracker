@@ -194,4 +194,4 @@ async function readNotice(url, r) {
   return { text: got.docs.join("\n\n") + "\n\n" + text, pdfs: got.pdfs, docs };
 }
 
-module.exports = { readNotice, attachmentLinks };
+module.exports = { readNotice, attachmentLinks, absorb };

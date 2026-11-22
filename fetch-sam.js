@@ -114,6 +114,9 @@ function restrictionsFromText(text) {
   }
   return out;
 }
+// Attachment download links from a search result (resourceLinks). Only SAM.gov's own hosts are ever sent the API key.
+const SAM_HOST = /^https:\/\/([\w-]+\.)*sam\.gov\//i;
+const attachmentLinksOf = (o) => (Array.isArray(o.resourceLinks) ? o.resourceLinks : []).filter((u) => typeof u === "string" && SAM_HOST.test(u)).slice(0, 6);
 const code0 = (o) => (o.typeOfSetAside || "").trim() && !SET_ASIDE[(o.typeOfSetAside || "").trim()];
 
 // ---- Quota-aware, incremental fetching ----------------------------------------------------------
@@ -220,13 +223,15 @@ function takeLock() {
   if (healed) console.log(`${healed} already-read notices are missing their description or AI read; they are re-read in this run.`);
   if (!AI_KEY) console.log("ANTHROPIC_API_KEY not set: skipping AI reading (requires/scope/key points stay as basic values).");
   console.log(`SAM.gov budget: ${BUDGET}/day, ${quota.used} used so far today (UTC).`);
-  let stopped = null, added = 0, described = 0, aiOk = 0;
+  let stopped = null, added = 0, described = 0, aiOk = 0, attRead = 0;
 
   try {
     // 1. Search for postings since the last completed search. Uses at most a quarter of the day's remaining
     //    budget (at least one request) so descriptions, which carry the detail, are not starved.
     const searchCap = Math.max(1, Math.floor(left() / 4));
-    const from = cache.resume ? cache.resume.from : cache.searchedThrough
+    // Notices cached before attachment links were kept need one search over the whole window to pick the links up
+    // (cache.linksBackfilled). It resumes across days like any other search.
+    const from = cache.resume ? cache.resume.from : cache.searchedThrough && cache.linksBackfilled
       ? new Date(Date.parse(cache.searchedThrough) - 86400000).toISOString().slice(0, 10) // 1 day overlap: catches late postings
       : new Date(Date.now() - DAYS * 86400000).toISOString().slice(0, 10);
     let offset = cache.resume ? cache.resume.offset : 0, pages = 0, finished = false;
@@ -240,7 +245,7 @@ function takeLock() {
           if (!r) continue;
           const old = notices[r.id];
           if (!old) {
-            notices[r.id] = { rfq: r, descUrl: typeof o.description === "string" && o.description.startsWith(BASE + "/") ? o.description : null, descDone: false, tries: 0, raw: { typeOfSetAside: o.typeOfSetAside || "" } };
+            notices[r.id] = { rfq: r, descUrl: typeof o.description === "string" && o.description.startsWith(BASE + "/") ? o.description : null, descDone: false, tries: 0, raw: { typeOfSetAside: o.typeOfSetAside || "", links: attachmentLinksOf(o) } };
             added++;
           } else if (r.dueTime === "No time given" && /^(7:00 PM EST|8:00 PM EDT)$/.test(old.rfq.dueTime || "")
             && old.rfq.due === new Date(Date.parse(r.due) - 864e5).toISOString().slice(0, 10)) { // cached by the old date-only bug: correct silently
@@ -248,10 +253,11 @@ function takeLock() {
           } else if (old.rfq.due !== r.due || old.rfq.dueTime !== r.dueTime) { // deadline moved = amended
             Object.assign(old.rfq, { due: r.due, dueTime: r.dueTime }); old.rfq.details.amended = true;
           }
+          if (old && !old.raw.links) old.raw.links = attachmentLinksOf(o); // cached before attachments were read
           if (old && !old.rfq.details.contact && r.details.contact) old.rfq.details.contact = r.details.contact; // cached before contacts were collected
         }
         offset += 100;
-        if (items.length < 100 || offset >= (page.totalRecords || 0)) { finished = true; cache.searchedThrough = today; cache.resume = null; }
+        if (items.length < 100 || offset >= (page.totalRecords || 0)) { finished = true; cache.searchedThrough = today; cache.resume = null; cache.linksBackfilled = true; }
         else cache.resume = { from, offset }; // pick up at the next page if this run dies, runs out of budget or hits --max
         writeJson(CACHE_FILE, cache); // saved per page: a crash or timeout keeps the pages already paid for
         if (finished) break;
@@ -262,8 +268,11 @@ function takeLock() {
     //    The daily cap cannot cover every notice, so spend it where waiting would lose the notice: those closing soonest.
     const pending = Object.values(notices).filter((n) => !n.descDone && n.descUrl && n.rfq.due >= today)
       .sort((a, b) => (a.rfq.due || "").localeCompare(b.rfq.due || "") || (b.rfq.posted || "").localeCompare(a.rfq.posted || ""));
+    // Attachments carry the real detail, so part of the day's budget is kept for them while any are waiting.
+    const attWaiting = Object.values(notices).some((n) => AI_KEY && n.raw && n.raw.links && n.raw.links.length && !n.attDone && n.rfq.due >= today);
+    const reserve = attWaiting ? Math.floor(BUDGET * 0.4) : 0;
     for (const n of pending) {
-      if (left() <= 0) break;
+      if (left() <= reserve) break;
       try {
         const res = await samGet(n.descUrl + (n.descUrl.includes("?") ? "&" : "?") + "api_key=" + encodeURIComponent(KEY));
         const dj = res.ok ? await res.json().catch(() => null) : null;
@@ -282,6 +291,46 @@ function takeLock() {
       }
       writeJson(CACHE_FILE, cache); // saved per notice: a kill keeps the requests and AI calls already spent
     }
+
+    // 3. Attachments (the RFQ document itself): PDFs go to the model as they are, Word files become text. Soonest deadline first.
+    //    Each download counts against the same daily budget. Needs the AI key (a PDF cannot be read without it).
+    if (AI_KEY) {
+      const att = require("./attachment-reader");
+      const queue = Object.values(notices).filter((n) => n.descDone && n.raw && n.raw.links && n.raw.links.length && !n.attDone && n.rfq.due >= today)
+        .sort((a, b) => (a.rfq.due || "").localeCompare(b.rfq.due || ""));
+      for (const n of queue) {
+        if (left() <= 0) break;
+        const got = att.newBag();
+        let failed = 0;
+        for (const link of n.raw.links) {
+          if (att.full(got) || left() <= 0) break;
+          try {
+            att.absorb(await att.download(link + (link.includes("?") ? "&" : "?") + "api_key=" + encodeURIComponent(KEY), { fetchFn: (u) => samGet(u) }), link, got);
+          } catch (e) {
+            if (e instanceof QuotaHit) throw e;
+            failed++; // a restricted (login-only) or missing file: skip it, the others may still read
+          }
+        }
+        if (left() <= 0 && !att.asRead(got) && failed < n.raw.links.length) break; // budget ran out before this notice got a fair try: leave it for tomorrow
+        const read = att.asRead(got);
+        let ok = false;
+        if (read) {
+          try {
+            const text = read.text + "\n\n" + [n.rfq.title, n.rfq.scope].filter(Boolean).join("\n");
+            const ai = await require("./notice-reader").readText(text, AI_KEY, read.pdfs);
+            if (require("./notice-reader").applyRead(n.rfq, ai, { mergeRequires: true, statedFields: true })) { n.rfq.attRead = true; ok = true; attRead++; }
+            if (n.rfq.value == null && !n.rfq.valueEst) {
+              const a = require("./stated-amount").statedAmount(read.text);
+              if (a) n.rfq.valueEst = { kind: "stated", amount: a.amount, quote: a.quote };
+            }
+            const found = restrictionsFromText(read.text);
+            if (found.length) n.rfq.requires = Array.from(new Set((n.rfq.requires || []).concat(found)));
+          } catch (e) { console.error("Attachment AI read failed for one notice: " + e.message); }
+        }
+        if (ok || ++n.attTries >= 2) n.attDone = true; // two goes, then stop: most failures are files that need a login
+        writeJson(CACHE_FILE, cache);
+      }
+    }
   } catch (e) {
     if (e instanceof QuotaHit) stopped = e.message;
     else { try { writeJson(CACHE_FILE, cache); } catch (_) { /* best effort */ } throw e; }
@@ -293,7 +342,8 @@ function takeLock() {
   const open = Object.values(notices).filter((n) => n.rfq.due >= today);
   // Values are never inferred from other agencies' awards: drop any such estimate left in the cache from earlier runs.
   for (const n of open) if (n.rfq.valueEst && n.rfq.valueEst.kind === "similar") delete n.rfq.valueEst;
-  if (AI_KEY && described) { console.log(`AI read ${aiOk} of ${described} new descriptions.`); require("./ai-extract").reportUsage("SAM.gov refresh"); }
+  if (attRead) console.log(`Read the attached documents of ${attRead} notices.`);
+  if (AI_KEY && (described || attRead)) { console.log(`AI read ${aiOk} of ${described} new descriptions.`); require("./ai-extract").reportUsage("SAM.gov refresh"); }
 
   writeJson(CACHE_FILE, cache);
   const rfqs = open.map((n) => n.rfq);

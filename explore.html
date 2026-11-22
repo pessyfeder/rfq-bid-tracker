@@ -181,8 +181,8 @@
     if (other.length) tg += "<h3>Other</h3>" + list(other);
     // full description first
     h += "<h2>Description</h2>";
-    h += !restates ? '<p class="text">' + esc(desc) + "</p>" + (r.aiRead ? '<p class="small">AI-read, verify against the notice.</p>' : "")
-      : '<p class="na">' + (r.aiRead ? "None stated." : "No description in the source data. See the RFQ document.") + "</p>";
+    h += !restates ? '<p class="text">' + esc(desc) + "</p>" + (r.aiRead ? '<p class="small">AI-read' + (r.attRead ? " from the notice and its attached documents" : "") + ", verify against the notice.</p>" : "")
+      : '<p class="na">' + (r.attRead ? "No description in the notice text; the summary and key points were AI-read from its attached documents." : r.aiRead ? "None stated." : "No description in the source data. See the RFQ document.") + "</p>";
     h += contactHtml +
       (tg || '<p class="na">' + (r.aiRead || r.scope ? "None found in the notice text." : "Not checked: the notice was not read.") + "</p>");
 

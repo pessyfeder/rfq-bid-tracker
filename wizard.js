@@ -368,7 +368,7 @@
   function sourceFor(level, code) {
     return level === "Federal" ? "fed" : String(code || "").toLowerCase();
   }
-  window.RFQProfile = { get: load, match: match, categories: categories, catHits: catHits, open: open, sourceFor: sourceFor, valueOpts: VALUE_OPTS, asideOpts: ASIDE_OPTS, valueOk: valueOk, regOpts: SOURCES.map(function (x) { return [x.id, x.label]; }) };
+  window.RFQProfile = { get: load, match: match, categories: categories, catHits: catHits, open: open, sourceFor: sourceFor, sourceInfo: function (id) { for (var i = 0; i < SOURCES.length; i++) if (SOURCES[i].id === id) return SOURCES[i]; return null; }, valueOpts: VALUE_OPTS, asideOpts: ASIDE_OPTS, valueOk: valueOk, regOpts: SOURCES.map(function (x) { return [x.id, x.label]; }) };
   // First visit: offer the setup once. (Skipping is remembered; the toolbar button reopens it.)
   // Opened immediately (not on window "load") so the main page never paints before the wizard hides it.
   // The bid-category list comes from home.js, which loads after this file, so wait until every script has run.

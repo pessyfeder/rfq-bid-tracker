@@ -175,14 +175,31 @@ async function inBatches(items, size, fn) {
     // which feed the Bid factors chips (TSA/background checks, bonds, licenses, site visits...).
     const { readInto } = require("./notice-reader");
     let read = 0;
+    // The City Record has no attachment fields: the solicitation documents sit in PASSPort, a login-free but script-driven portal
+    // with no public download API. What can be read is a document the notice text links to directly (a .pdf/.docx/.zip on an
+    // nyc.gov site), so those are downloaded and read with the text.
+    const att = require("./attachment-reader");
+    const nycHost = (u) => { try { return /(^|\.)nyc\.gov$/i.test(new URL(u).hostname); } catch { return false; } };
+    let withDocs = 0;
     await inBatches(rfqs, 5, async (r) => {
       const o = byId.get(r.id);
+      const text = [o.short_title, o.additional_description_1, o.other_info_1].filter(Boolean).join("\n");
       try {
+        const got = att.newBag();
+        for (const u of att.linksInText(text, nycHost).slice(0, 4)) {
+          if (att.full(got)) break;
+          try { att.absorb(await att.download(u), u, got); } catch (e) { /* a dead or oversized link: read the notice without it */ }
+        }
+        const files = att.asRead(got);
         // too little text: readInto returns false and the record is left as is
-        if (await readInto(r, [o.short_title, o.additional_description_1, o.other_info_1].filter(Boolean).join("\n"), apiKey, { statedFields: true })) read++;
+        const opts = { statedFields: true, pdfs: files && files.pdfs };
+        let ok;
+        try { ok = await readInto(r, (files ? files.text + "\n\n" : "") + text, apiKey, opts); }
+        catch (e) { if (!files) throw e; ok = await readInto(r, text, apiKey, { statedFields: true }); } // e.g. a PDF over the page limit: fall back to the notice text
+        if (ok) { read++; if (files) { r.attRead = true; withDocs++; } }
       } catch (e) { console.warn("AI read failed for " + r.id + ": " + e.message); }
     });
-    console.log(`AI read ${read} of ${rfqs.length} notices`);
+    console.log(`AI read ${read} of ${rfqs.length} notices (${withDocs} with a linked document)`);
     require("./ai-extract").reportUsage("NYC refresh");
   } else {
     console.log("ANTHROPIC_API_KEY not set: skipping stated-amount extraction");

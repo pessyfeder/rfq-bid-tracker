@@ -400,7 +400,7 @@
     if (st.posted.length) { var age = r.posted ? (today - new Date(r.posted.slice(0, 10) + "T00:00:00")) / DAY : null; if (age == null || !st.posted.some(function (k) { return age <= +k; })) return false; }
     if (st.value.length && window.RFQProfile && !window.RFQProfile.valueOk({ value: st.value, vmin: st.vmin, vmax: st.vmax }, r.value)) return false;
     if (st.reg.length && window.RFQProfile && st.reg.indexOf(window.RFQProfile.sourceFor(r.level, r.code)) < 0) return false;
-    if (st.aside.length && !st.aside.some(function (k) { return k === "open" ? r.aside.any : r.aside[k]; })) return false;
+    if (st.aside.length && !st.aside.some(function (k) { return k === "open" ? !r.aside.any : r.aside[k]; })) return false;
     return true;
   }
   function ctxNow() { return { words: st.kw.toLowerCase().split(/\s+/).filter(Boolean), cats: selCats() }; }
@@ -548,6 +548,7 @@
     $app.innerHTML = '<div class="hm"><div class="hm-nav"><div class="hm-in"><span class="hm-logo">Bid<i>.</i>Finder <span style="white-space:nowrap">– Discover Group, Inc.</span></span>' +
       '<button class="hm-btn" data-a="selection" title="Change which categories you see">&larr; Back to selection</button>' +
       // Profile button hidden for now: '<button class="hm-btn" data-a="profile">' + (prof ? "Edit my profile" : "Set up my profile") + '</button>' +
+      '<button class="hm-btn" data-a="mybids" title="Bids you are tracking: checklist, notes and closing-date reminders">My bids<span id="hm-mb"></span></button>' +
       '<button class="hm-btn" data-a="refresh">Refresh</button></div></div>' +
       '<div class="hm-in"><div class="hm-title"><h1>View Open Bids &amp; RFQs</h1><p id="hm-stats"></p></div>' +
       '<form class="hm-bar" data-form><label class="hm-kw"><input type="search" data-kw placeholder="Search by keyword or bid title" aria-label="Keyword" value="' + esc(st.kw) + '">' + ICON_SEARCH + '</label>' + VIEW_HTML() + '<div class="hm-fields" id="hm-fields"></div></form>' +
@@ -590,7 +591,7 @@
       var asideTag = r.aside.any ? '<span class="hm-tag aside">' + esc(r.aside.small ? "Small business set-aside" : r.aside.vet ? "Veteran-owned set-aside" : r.aside.women ? "Women-owned set-aside" : "Set-aside") + "</span>" : "";
       var closing = r.days == null ? "No firm deadline" : mdy(r.due);
       h += '<div class="hm-item">' + mapIcon(r) + '<div><h3><a href="explore.html?id=' + encodeURIComponent(r.id) + '">' + esc(r.title) + "</a>" + valueTag(r) + "</h3>" +
-        '<div class="hm-sub">' + esc(stateName(r.code)) + " &middot; " + esc(r.ck ? r.ck.slice(2) || "No category" : "No category") + "</div></div>" +
+        '<div class="hm-sub">' + esc(stateName(r.code)) + " &middot; " + esc(r.ck ? r.ck.slice(2) || "No category" : "No category") + "</div>" + trackBtn(r.id) + "</div>" +
         '<div class="hm-dates"><div>' + ICON_CAL + "<b>Published</b></div><div>" + esc(r.posted ? mdy(r.posted) : "Unknown") + "</div><div>" + ICON_CLOCK + "<b>Closing</b></div><div>" + esc(closing) + (r.days != null && r.days >= 0 ? ' <span class="hm-left">' + (r.days === 0 ? "today" : r.days === 1 ? "tomorrow" : r.days + " days") + "</span>" : "") + "</div></div>" +
         flagsHtml(r.raw) + "</div>";
     });
@@ -636,6 +637,18 @@
     return ' <span class="hm-val none">' + (r.raw && r.raw.aiRead ? "Value not specified" : "Couldn't determine value") + "</span>";
   }
 
+  // "Track this bid": starts a checklist, notes and a closing-date reminder in My bids (mybids.js).
+  function trackBtn(id) {
+    var on = window.RFQBids && window.RFQBids.has(id);
+    return window.RFQBids ? '<button type="button" class="hm-track' + (on ? " on" : "") + '" data-a="track" data-id="' + esc(id) + '" aria-pressed="' + !!on + '">' + (on ? "&#10003; Tracking this bid" : "&#9734; Track this bid") + "</button>" : "";
+  }
+  function mbBadge() {
+    var el = document.getElementById("hm-mb"); if (!el || !window.RFQBids) return;
+    var n = window.RFQBids.count(), due = window.RFQBids.dueSoon(3).length;
+    el.innerHTML = n ? '<span class="hm-badge' + (due ? " due" : "") + '" title="' + (due ? due + " closing within 3 days" : n + " being prepared") + '">' + n + "</span>" : "";
+  }
+  window.addEventListener("rfqbidschange", function () { mbBadge(); if (rows && document.getElementById("hm-res")) results(); });
+
   function stats() {
     var el = document.getElementById("hm-stats"); if (!el) return;
     var soon = rows.filter(function (r) { return r.days != null && r.days <= 14; }).length, codes = {}; rows.forEach(function (r) { codes[r.code] = 1; });
@@ -645,7 +658,7 @@
   function render() {
     if (!window.RFQS) return;
     if (!rows) prep();
-    shell(); stats(); results();
+    shell(); stats(); results(); mbBadge();
   }
   function refreshAll() { fields(); results(); }
 
@@ -745,6 +758,13 @@
     var b = e.target.closest("button"); if (!b) return;
     var d = b.dataset;
     if (d.a === "selection") { if (window.RFQProfile) window.RFQProfile.open(); return; }
+    if (d.a === "mybids") { if (window.RFQBids) window.RFQBids.open(); return; }
+    if (d.a === "track") {
+      var tr = rows.filter(function (r) { return r.id === d.id; })[0];
+      if (tr && window.RFQBids && window.RFQBids.has(tr.id) && !window.confirm("Stop tracking this bid? Its checklist and notes will be deleted.")) return;
+      if (tr && window.RFQBids) window.RFQBids.toggle({ id: tr.id, title: tr.title, agency: tr.agency, where: stateName(tr.code), due: tr.noDue ? "" : tr.due, url: tr.url });
+      return;
+    }
     if (d.a === "profile") { window.location.href = "/profile.html"; return; }
     if (d.a === "refresh") { var rb = document.getElementById("refreshBtn"); if (rb) rb.click(); b.textContent = "Refreshing…"; return; }
     if (d.a === "clear") { resetFilters(false); clearKw(); return refreshAll(); }

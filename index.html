@@ -104,6 +104,8 @@
   .chip.caveat { background: #f4f5f7; color: #555; border: 1px dashed #b8bcc4; } /* data warning: grey and dashed, so it does not read as an amendment */
   .dlist { margin: 0 0 8px; padding-left: 16px; font-size: 13px; }
   .dlist li { margin-bottom: 3px; }
+  .howbid { margin: 6px 0 8px; padding: 6px 8px; border-left: 3px solid var(--accent, #2a6df4); background: rgba(42,109,244,.06); font-size: 13px; }
+  .howbid .dlist { margin: 3px 0 0; }
   .dlist + .dlist { margin-top: -5px; }
   .dlist li b { color: var(--muted); font-weight: 600; }
   .dlist .chip { margin: 0 4px 2px 0; }
@@ -252,7 +254,7 @@
 <script src="sample-data.js?v=20261121b"></script>
 <script src="facts.js?v=20261121b"></script>
 <script src="chips.js?v=3"></script>
-<script src="wizard.js?v=20261121a"></script>
+<script src="wizard.js?v=20261122c"></script>
 <script src="live-sam.js?v=20261121a" onerror="void 0"></script>
 <script src="live-nyc.js?v=20261121a" onerror="void 0"></script>
 <script src="live-states.js?v=20261121a" onerror="void 0"></script>
@@ -1138,9 +1140,32 @@
   function glossHtml(text) { // text is raw; returns safe HTML with <abbr> hovers
     return esc(text).replace(GLOSS_RE, function (m, pre, k) { return pre + '<abbr class="gloss" title="' + esc(GLOSSARY[k]) + '">' + k + "</abbr>"; });
   }
+  // "How to bid": where the notice is posted (and where to register), how the notice says to submit, and the deadline.
+  // Submission is only quoted when the notice states it; otherwise it points at the documents instead of guessing.
+  var SUBMIT_RE = /\b(submit|submitted|submission|upload|uploaded|e-?mail(?:ed)?|deliver(?:ed)? to|sealed|hard ?copy|via|through)\b/i;
+  function submitText(r) {
+    var pool = (r.shall || []).map(function (s) { return s.text; }).concat(decodeText(r.scope || "").split(/(?<=[.!?])\s+/));
+    for (var i = 0; i < pool.length; i++) {
+      var t = String(pool[i] || "").replace(/\s+/g, " ").trim();
+      if (SUBMIT_RE.test(t) && /\b(bid|bids|proposal|proposals|quote|quotes|offer|offers|response)\b/i.test(t) && !/addend|question/i.test(t) && t.length < 400) return clip(t, 220);
+    }
+    return "";
+  }
+  function howToBidHtml(r) {
+    var P = window.RFQProfile, src = P && P.sourceInfo ? P.sourceInfo(P.sourceFor(r.level, r.code || String(r.id).split("-")[0])) : null, h = "";
+    if (src) {
+      var reg = src.url ? '<a href="' + esc(safeUrl(src.url)) + '" target="_blank" rel="noopener">Register or sign in</a>' : "registration is through the portal (open the posting)";
+      h += detailRow("Posted on", esc(src.label) + " &middot; " + reg);
+    }
+    var sub = submitText(r);
+    h += detailRow("Submit", sub ? esc(sub) : '<span style="color:var(--muted)">Not stated here. Check the documents.</span>');
+    if (!r.noDue) h += detailRow("Deadline", esc(fmtDate(r.due)) + (r.dueTime && !/no data/i.test(r.dueTime) ? " " + esc(r.dueTime) : ""));
+    h += detailRow("Documents", '<a href="' + esc(safeUrl(r.rfqUrl)) + '" target="_blank" rel="noopener">Open the posting</a>');
+    return '<div class="howbid"><b>How to bid</b><ul class="dlist">' + h + "</ul></div>";
+  }
   function scopeHtml(r, open) {
     // Contact information always closes the bullet list.
-    var contact = '<ul class="dlist">' + detailRow("Contact information", contactHtml(r.details && r.details.contact) || '<span style="color:var(--muted)">None stated</span>') + "</ul>";
+    var contact = '<ul class="dlist">' + detailRow("Contact information", contactHtml(r.details && r.details.contact) || '<span style="color:var(--muted)">None stated</span>') + "</ul>" + howToBidHtml(r);
     if (!r.scope) return '<div class="scope"><span class="na">' + esc(r.details && r.details.readWhy ? "Not checked: " + r.details.readWhy + ". The source data has no description." : (r.aiRead ? "None stated" : "Not checked")) + "</span></div>" + contact;
     // An AI-read notice gets its plain-English one-liner (buyer, work, place) in full; other notices keep the extracted key points.
     var lead = r.aiRead && r.scope.length <= 300 ? '<ul class="dlist"><li>' + glossHtml(sentence(decodeText(r.scope))) + "</li></ul>" : "";
@@ -1769,6 +1794,7 @@
   poll(); setInterval(poll, 5000);
 })();
 </script>
-<script src="home.js?v=20261121e"></script>
+<script src="mybids.js?v=20261122a"></script>
+<script src="home.js?v=20261122d"></script>
 </body>
 </html>
