@@ -58,6 +58,7 @@
     ".hm-item{grid-template-columns:auto minmax(0,1fr) auto}.hm-map{display:flex;align-items:center;justify-content:center}.hm-item,.hm-item:nth-child(even){background:#fff;border:1px solid #e4e4f0;border-left:4px solid #4338ca;border-radius:10px;box-shadow:0 1px 2px rgba(49,46,129,.06);padding:10px 16px 10px 12px;min-height:60px}.hm-item:hover{box-shadow:0 4px 12px rgba(49,46,129,.12)}.hm-item:last-child{border-bottom:1px solid #e4e4f0}" +
     ".hm-ic{width:auto;height:auto;min-height:40px;padding:6px 8px;border-radius:8px;background:#eef0ff;color:#4338ca;font-size:11px;font-weight:600;line-height:1.2;text-align:center;overflow-wrap:anywhere}.hm-item h3{font-weight:600;font-size:14px}.hm-item h3 a{color:#27264f}" +
     ".hm-bar{position:relative}.hm-view{position:absolute;right:0;top:0;display:inline-flex;height:30px;border:1px solid #d9dee5;border-radius:999px;overflow:hidden;background:#fff}.hm-vb{display:flex;align-items:center;justify-content:center;width:40px;border:0;background:#fff;color:#7b8794;padding:0}.hm-vb.on{background:#1b2540;color:#fff}" +
+    ".hm-flags{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:5px;padding-top:6px;margin-top:4px;border-top:1px dashed #e4e4f0}.hm-flag{font-size:11.5px;font-weight:600;line-height:1.3;padding:2px 8px;border-radius:10px;background:#e8eefc;color:#1f3a8a;cursor:help}.hm-flag.elig{background:#e0e7ff;color:#3730a3}.hm-flag.hard{background:#fdecea;color:#b3261e}.hm-flag.cost{background:#fff3cd;color:#7a5b00}.hm-flag.info{background:#e8eef7;color:#44546a}.hm-flag.unclear{background:#efe6f8;color:#5a2d82}.hm-flag.more{background:#f1f2f4;color:#555}" +
     ".hm-list.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.hm-list.grid .hm-item{grid-template-columns:minmax(0,1fr);align-content:start}.hm-list.grid .hm-map{display:none}.hm-list.grid .hm-dates{grid-column:1;min-width:0;justify-content:start}" +
     ".hm-title h1{font-weight:700;letter-spacing:-.02em}.hm-showmore,.hm-btn,.hm-go{border-radius:999px}.hm-chip{background:#eef0ff;border-color:#c7caf5}" +
     /* portal layout: one flat row, wide search box with icon at right, then white bordered dropdowns; chips row below */
@@ -508,11 +509,38 @@
       h += '<div class="hm-item">' + mapIcon(r) + '<div><h3><a href="explore.html?id=' + encodeURIComponent(r.id) + '">' + esc(r.title) + "</a>" + valueTag(r) + "</h3>" +
         '<div class="hm-sub">' + esc(stateName(r.code)) + " &middot; " + esc(r.ck ? r.ck.slice(2) || "No category" : "No category") + "</div></div>" +
         '<div class="hm-dates"><div>' + ICON_CAL + "<b>Published</b></div><div>" + esc(r.posted ? mdy(r.posted) : "Unknown") + "</div><div>" + ICON_CLOCK + "<b>Closing</b></div><div>" + esc(closing) + (r.days != null && r.days >= 0 ? ' <span class="hm-left">' + (r.days === 0 ? "today" : r.days === 1 ? "tomorrow" : r.days + " days") + "</span>" : "") + "</div></div>" +
-        "</div>";
+        flagsHtml(r.raw) + "</div>";
     });
     h += "</div>";
     if (list.length > st.shown) h += '<button class="hm-showmore" data-a="more">Show more (' + (list.length - st.shown).toLocaleString() + " left)</button>";
     host.innerHTML = h;
+  }
+
+  // At-a-glance chips along the bottom of each card. Colour = type:
+  // indigo = who may bid (set-asides, eligibility), red = hard gate (licence, bond, clearance...), amber = adds cost/effort,
+  // slate = good to know, purple = eligibility not checked.
+  var FLAG_MAX = 6;
+  function flagsHtml(raw) {
+    var out = [], seen = {};
+    function add(label, cls, why) {
+      var k = String(label).toLowerCase(); if (!label || seen[k]) return; seen[k] = 1;
+      out.push({ label: String(label), cls: cls, why: why || "" });
+    }
+    (raw.requires || []).forEach(function (q) { add(q, /unless waived/i.test(q) ? "cost" : "elig", "Who can bid"); });
+    var rs = raw.details && raw.details.restriction; if (rs) add(rs, "elig", "Who can bid");
+    var facts = raw.facts || (window.computeFacts ? (function () { try { return window.computeFacts(raw); } catch (e) { return []; } })() : []);
+    facts.forEach(function (f) { add(f.label, f.sev === "hard" ? "hard" : f.sev === "cost" ? "cost" : "info", f.why); });
+    // Merge near-duplicates: a chip whose words are all contained in another chip's words is dropped (keeps the more specific one).
+    var toks = out.map(function (f) { var o = {}; f.label.toLowerCase().replace(/[^a-z0-9 ]+/g, " ").split(/\s+/).forEach(function (w) { if (w && w !== "required") o[w] = 1; }); return o; });
+    out = out.filter(function (f, i) {
+      var a = Object.keys(toks[i]); if (!a.length) return true;
+      return !toks.some(function (b, j) { return j !== i && Object.keys(b).length > a.length && a.every(function (w) { return b[w]; }); });
+    });
+    var h = "";
+    if (raw.requires == null && !raw.aiRead) h += '<span class="hm-flag unclear" title="The notice documents were not read, so eligibility is unknown">Eligibility not checked</span>';
+    out.slice(0, FLAG_MAX).forEach(function (f) { h += '<span class="hm-flag ' + f.cls + '"' + (f.why ? ' title="' + esc(f.why) + '"' : "") + ">" + esc(f.label) + "</span>"; });
+    if (out.length > FLAG_MAX) h += '<span class="hm-flag more" title="' + esc(out.slice(FLAG_MAX).map(function (f) { return f.label; }).join("; ")) + '">+' + (out.length - FLAG_MAX) + " more</span>";
+    return h ? '<div class="hm-flags">' + h + "</div>" : "";
   }
 
   // Bid value in green after the title: the amount, "Not specified" (notice read, none given) or "Couldn't determine" (notice not read).
@@ -566,6 +594,7 @@
       var a = e.target.closest && e.target.closest(".hm-item h3 a");
       if (!a || e.ctrlKey || e.metaKey || e.shiftKey || e.button) return;
       e.preventDefault();
+      dp.querySelector("#dp-full").href = a.getAttribute("href");
       fr.src = a.getAttribute("href") + "&embed=1";
       back.classList.add("on"); dp.classList.add("on");
     });
@@ -588,7 +617,6 @@
     var b = e.target.closest("button"); if (!b) return;
     var d = b.dataset;
     if (d.a === "selection") { if (window.RFQProfile) window.RFQProfile.open(); return; }
-      dp.querySelector("#dp-full").href = a.getAttribute("href");
     if (d.a === "profile") { window.location.href = "/profile.html"; return; }
     if (d.a === "refresh") { var rb = document.getElementById("refreshBtn"); if (rb) rb.click(); b.textContent = "Refreshing…"; return; }
     if (d.a === "clear") { resetFilters(false); clearKw(); return refreshAll(); }
