@@ -108,10 +108,15 @@
     if (ex.length) out.push({ id: "extra", label: "My own keywords", kw: ex });
     return out;
   }
-  var hitCache = { key: "", defs: [] };
+  // The profile is only re-parsed when its stored text changes (a raw getItem is cheap; JSON.parse per notice per category was not).
+  var hitCache = { raw: undefined, key: "", defs: [] };
   function catHits(r) {
-    var cats = categories(), key = cats.map(function (c) { return c.id + ":" + c.kw.length; }).join("|") + (load() || {}).extra;
-    if (hitCache.key !== key) hitCache = { key: key, defs: cats.map(function (c) { return { id: c.id, res: c.kw.map(function (k) { return { k: k, re: new RegExp("\\b" + esc(k).replace(/\s+/g, "\\s+") + "(?:s|es)?\\b", "i") }; }) }; }) };
+    var raw; try { raw = localStorage.getItem(KEY); } catch (e) { raw = null; }
+    if (hitCache.raw !== raw) {
+      var cats = categories(), key = cats.map(function (c) { return c.id + ":" + c.kw.length; }).join("|") + (load() || {}).extra;
+      hitCache = { raw: raw, key: key, defs: cats.map(function (c) { return { id: c.id, res: c.kw.map(function (k) { return { k: k, re: new RegExp("\\b" + esc(k).replace(/\s+/g, "\\s+") + "(?:s|es)?\\b", "i") }; }) }; }) };
+    }
+    var key = hitCache.key;
     if (r._ch && r._ch.k === key) return r._ch.m;
     var text = [r.title, r.plainTitle, r.scope, r.category].filter(Boolean).join(" \n "), m = {};
     hitCache.defs.forEach(function (d) { var hit = d.res.filter(function (x) { return x.re.test(text); }).map(function (x) { return x.k; }); if (hit.length) m[d.id] = hit; });
