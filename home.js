@@ -256,6 +256,8 @@
       .replace(/,\s*[A-Z][\w.' -]{2,50}\s+(?:Health Care|Healthcare|VA|Veterans)\s+(?:System|Network|Medical Center|VISN)\s*$/i, "")
       .replace(/,\s*(?:VISN\s*\d+|[A-Z][\w.' -]{2,40}\s+(?:VA Medical Center|VAMC|Air Force Base|AFB|Naval Station|Army Depot))\s*$/i, "");
     t = t.replace(/(?<=\S{4,}.{8,}),\s*(?:[A-Z][\w.&']*\s+){1,4}(?:Port District|Commission|Authority)$/, "");   // buyer named at the tail
+    // requirement phrases glued onto the title ("- Site Visit Required", "- 100% Small Business Set-Aside"): shown as chips instead
+    t = t.replace(/\s*[-–,|]\s*(?:(?:mandatory\s+)?(?:pre-?bid\s+)?site\s+(?:visit|walk-?through)s?(?:\s+(?:is\s+)?(?:required|mandatory))?|(?:total\s+|partial\s+)?(?:\d+%\s*)?(?:small business|sdvosb|vosb|wosb|edwosb|hubzone|8\(a\))(?:\s+set[- ]?aside)?)(?=\s*[-–,|]|\s*$)/gi, "");
     t = stripNoise(t);
     t = t.replace(/\s*(?:\.{2,}|…)+\s*$/, "");   // headlines never end in a trailing "..." (the dangling "for the" is dropped below)
     t = t.replace(/\s+([,.;:])/g, "$1").replace(/(^|\s)[,;:]+\s*/g, "$1").replace(/\s{2,}/g, " ").replace(/(?:\s+(?:for|in|at|of|the|and|to|by|with|-|–))+\s*$/i, "").replace(/[,;:\s-]+$/, "").trim();
@@ -528,6 +530,10 @@
     }
     (raw.requires || []).forEach(function (q) { add(q, /unless waived/i.test(q) ? "cost" : "elig", "Who can bid"); });
     var rs = raw.details && raw.details.restriction; if (rs) add(rs, "elig", "Who can bid");
+    var ttl = String(raw.title || "");   // requirements written into the title become chips
+    if (/site\s+(?:visit|walk-?through)s?\s+(?:is\s+)?(?:required|mandatory)|(?:required|mandatory)\s+site\s+(?:visit|walk)/i.test(ttl)) add("Site visit required", "cost", "Stated in the notice title");
+    var tm = /(?:(\d+)%\s*)?(small business|sdvosb|vosb|wosb|edwosb|hubzone|8\(a\))\s*set[- ]?aside/i.exec(ttl);
+    if (tm) add((tm[1] ? tm[1] + "% " : "") + (/small business/i.test(tm[2]) ? "Small business" : tm[2].toUpperCase()) + " set-aside", "elig", "Who can bid");
     var facts = raw.facts || (window.computeFacts ? (function () { try { return window.computeFacts(raw); } catch (e) { return []; } })() : []);
     facts.forEach(function (f) { add(f.label, f.sev === "hard" ? "hard" : f.sev === "cost" ? "cost" : "info", f.why); });
     // Merge near-duplicates: a chip whose words are all contained in another chip's words is dropped (keeps the more specific one).
