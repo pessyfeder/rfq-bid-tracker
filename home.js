@@ -6,7 +6,7 @@
   var $app = document.getElementById("app");
   if (!$app) return;
   var DAY = 86400000, PAGE = /\.github\.io$/.test(location.hostname) ? 100 : 25; // the hosted demo lists more results per page
-  var st = { view: (function () { try { return localStorage.getItem("rfq-view") === "grid" ? "grid" : "list"; } catch (e) { return "list"; } })(), kw: "", cats: [], where: [], close: [], posted: [], value: [], vmin: "", vmax: "", aside: [], sort: "new", shown: PAGE, dd: null, more: false, openG: { "My products": true } };
+  var st = { view: (function () { try { return localStorage.getItem("rfq-view") === "grid" ? "grid" : "list"; } catch (e) { return "list"; } })(), kw: "", cats: [], where: [], close: [], posted: [], value: [], vmin: "", vmax: "", aside: [], reg: [], sort: "new", shown: PAGE, dd: null, more: false, openG: { "My products": true } };
 
   var css = document.createElement("style");
   css.textContent =
@@ -81,6 +81,9 @@
     ".hm-face{position:absolute;left:8px;right:22px;top:0;bottom:0;display:flex;align-items:center;pointer-events:none;font-size:11.5px;font-weight:500;color:#4a5562;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}" +
     ".hm-field select[data-sel]{color:transparent}.hm-field select[data-sel] option{color:#1f3347}" +
     ".hm-dd-btn.on,.hm-field select.on{color:#4a5562;box-shadow:inset 0 0 0 1px #0e5a73}.hm-dd-btn.on span{color:#4a5562}" +
+    ".hm-cols{position:relative;margin-top:12px}.hm-side{position:absolute;top:0;right:100%;margin-right:12px;width:140px}.hm-side .hm-field{width:100%!important;flex:none!important}" +
+    "@media(min-width:1251px){.hm-side{width:calc((100% - 30px) / 6)}}" + /* same width as one of the 6 filter columns above */
+    "@media(max-width:1250px){.hm-side{position:static;width:100%;margin:0 0 8px}}" +
     /* search box ends where the Jurisdiction filter ends: 2 of the 6 equal filter columns */
     "@media(min-width:1101px){.hm-fields{grid-template-columns:repeat(6,minmax(0,1fr))}.hm-kw{width:calc((100% - 30px) / 3 + 6px)}}" +
     "@media(max-width:1100px){.hm-bar{flex-wrap:wrap}.hm-kw{flex:1 1 100%!important;max-width:calc(100% - 100px)}.hm-fields{flex:1 1 100%!important;flex-wrap:wrap}.hm-field{flex:1 1 calc(25% - 6px)!important;min-width:110px}.hm-field.rt .hm-dd-panel{left:auto;right:0}.hm-item{grid-template-columns:minmax(0,1fr)}.hm-map{display:none}.hm-dates{grid-column:1;min-width:0;grid-template-columns:auto auto;justify-content:start}}" +
@@ -381,9 +384,10 @@
   var POSTED_OPT = [["3", "Last 3 days"], ["7", "Last 7 days"], ["30", "Last 30 days"]];
   var VALUE_OPT = window.RFQProfile ? window.RFQProfile.valueOpts.slice() : [];
   var ASIDE_OPT = [["open", "Open to all (no set-aside found)"], ["small", "Small business set-aside"], ["vet", "Veteran-owned (SDVOSB)"], ["women", "Women-owned (WOSB)"], ["other", "HUBZone, 8(a), minority-owned"]];
+  var REG_OPT = window.RFQProfile ? window.RFQProfile.regOpts.slice() : [];
   var SORT_OPT = [["new", "Newest first"], ["soon", "Closing date (soonest first)"], ["value", "Value (biggest first)"]];
-  var SELECTS = { close: "Status", posted: "Published", value: "Bid value", aside: "Who can bid" };
-  var OPTS = { close: CLOSE_OPT, posted: POSTED_OPT, value: VALUE_OPT, aside: ASIDE_OPT, sort: SORT_OPT };
+  var SELECTS = { close: "Status", posted: "Published", value: "Bid value", aside: "Who can bid", reg: "Registered with" };
+  var OPTS = { close: CLOSE_OPT, posted: POSTED_OPT, value: VALUE_OPT, aside: ASIDE_OPT, reg: REG_OPT, sort: SORT_OPT };
 
   function passes(r, ctx) {
     var i;
@@ -394,12 +398,13 @@
     if (st.close.length && !st.close.some(function (k) { return k === "none" ? r.days == null : r.days != null && r.days <= +k; })) return false;
     if (st.posted.length) { var age = r.posted ? (today - new Date(r.posted.slice(0, 10) + "T00:00:00")) / DAY : null; if (age == null || !st.posted.some(function (k) { return age <= +k; })) return false; }
     if (st.value.length && window.RFQProfile && !window.RFQProfile.valueOk({ value: st.value, vmin: st.vmin, vmax: st.vmax }, r.value)) return false;
+    if (st.reg.length && window.RFQProfile && st.reg.indexOf(window.RFQProfile.sourceFor(r.level, r.code)) < 0) return false;
     if (st.aside.length && !st.aside.some(function (k) { return k === "open" ? r.aside.any : r.aside[k]; })) return false;
     return true;
   }
   function ctxNow() { return { words: st.kw.toLowerCase().split(/\s+/).filter(Boolean), cats: selCats() }; }
 
-  function resetFilters(keepCats) { st.kw = ""; st.cats = []; st.where = []; st.close = []; st.posted = []; st.value = []; st.vmin = ""; st.vmax = ""; st.aside = []; st.shown = PAGE; }
+  function resetFilters(keepCats) { st.kw = ""; st.cats = []; st.where = []; st.close = []; st.posted = []; st.value = []; st.vmin = ""; st.vmax = ""; st.aside = []; st.reg = []; st.shown = PAGE; }
   function lab(key, v) { var o = OPTS[key].filter(function (o) { return o[0] === v; })[0]; return o ? o[1] : v; }
   function money(x) { x = +x; return x >= 1e6 ? "$" + +(x / 1e6).toFixed(2) + "M" : x >= 1e3 ? "$" + +(x / 1e3).toFixed(1) + "K" : "$" + x; }
   function customLabel() {
@@ -411,7 +416,7 @@
     if (st.kw.trim()) out.push(["kw", "“" + st.kw.trim() + "”"]);
     if (cats.length) out.push(["cats", "Category: " + (cats.length === 1 ? (cl.filter(function (c) { return c.v === cats[0]; })[0] || {}).label : st.cats === null ? "my products (" + cats.length + ")" : cats.length + " selected")]);
     if (st.where.length) out.push(["where", st.where.length === 1 ? stateName(st.where[0]) : st.where.length + " jurisdictions"]);
-    ["close", "posted", "value", "aside"].forEach(function (k) {
+    ["reg", "close", "posted", "value", "aside"].forEach(function (k) {
       if (!st[k].length) return;
       var names = st[k].map(function (v) { return k === "value" && v === "custom" ? customLabel() : lab(k, v); });
       out.push([k, SELECTS[k] + ": " + (names.length <= 2 ? names.join(", ") : names.length + " selected")]);
@@ -519,7 +524,7 @@
     var all = v.every(function (x) { return st.where.indexOf(x) >= 0; });
     return '<label class="hm-all"><input type="checkbox" data-all="where-' + id + '"' + (all ? " checked" : "") + "> All " + id + "</label>";
   }
-  var MORE_KEYS = ["value", "aside"], SIMPLE = ["close", "posted", "value", "aside"];
+  var MORE_KEYS = ["value", "aside"], SIMPLE = ["reg", "close", "posted", "value", "aside"];
   function fieldsHtml() {
     return ddHtml("cats", "Category", catOpts(), selCats(), tog("cats-none", selCats().length >= catOpts().length), "", true) +
       ddHtml("where", "Jurisdiction", whereOpts(), st.where, tog("where-none", st.where.length >= whereOpts().length) + grpTog("City", "cities") + grpTog("States", "states"), "") +
@@ -545,7 +550,7 @@
       '<button class="hm-btn" data-a="refresh">Refresh</button></div></div>' +
       '<div class="hm-in"><div class="hm-title"><h1>View Open Bids &amp; RFQs</h1><p id="hm-stats"></p></div>' +
       '<form class="hm-bar" data-form><label class="hm-kw"><input type="search" data-kw placeholder="Search by keyword or bid title" aria-label="Keyword" value="' + esc(st.kw) + '">' + ICON_SEARCH + '</label>' + VIEW_HTML() + '<div class="hm-fields" id="hm-fields"></div></form>' +
-      '<div id="hm-more"></div><div id="hm-res"></div></div></div>';
+      '<div id="hm-more"></div><div class="hm-cols"><div class="hm-side" id="hm-side"></div><div class="hm-main"><div id="hm-res"></div></div></div></div></div>';
     fields();
   }
   function fields() {
@@ -555,6 +560,7 @@
     // right-align the last two dropdown panels so they stay on screen
     var dds = el.querySelectorAll(".hm-field.dd"); if (dds.length) dds[dds.length - 1].classList.add("rt");
     var nl = el.querySelector(".hm-field.open .hm-dd-list"); if (nl) nl.scrollTop = top;
+    var sd = document.getElementById("hm-side"); if (sd) sd.innerHTML = selectHtml("reg");
     var m = document.getElementById("hm-more"); if (m) m.innerHTML = moreHtml();
   }
 
@@ -793,11 +799,12 @@
   function profWhere() { var p = P(); return p && p.where && p.where.length ? p.where.slice() : []; } // [] = every jurisdiction
   function profList(v, opts) { return (Array.isArray(v) ? v : v && v !== "any" ? [v] : []).filter(function (x) { return opts.some(function (o) { return o[0] === x; }); }); } // older saves held one string
   function profValue() { var p = P(); return p ? profList(p.value, VALUE_OPT) : []; }
+  function profReg() { var p = P(); return p ? profList(p.reg, REG_OPT) : []; }
   function profAside() { var p = P(); return p ? profList(p.aside, ASIDE_OPT) : []; }
   function profRange() { var p = P() || {}; st.vmin = st.value.indexOf("custom") >= 0 ? p.vmin || "" : ""; st.vmax = st.value.indexOf("custom") >= 0 ? p.vmax || "" : ""; }
   // Apply every wizard choice to the page's filters. st.cats = null means "the categories saved in the wizard".
   function applyProfile() {
-    st.cats = P() ? null : []; st.where = profWhere(); st.value = profValue(); st.aside = profAside(); profRange();
+    st.cats = P() ? null : []; st.where = profWhere(); st.value = profValue(); st.aside = profAside(); st.reg = profReg(); profRange();
     st.kw = ""; st.close = []; st.posted = []; st.shown = PAGE;
   }
   applyProfile();
