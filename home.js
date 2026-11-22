@@ -478,6 +478,16 @@
       var gb = gh.querySelector("[data-mgrp]"); gb.checked = n === kids.length; gb.indeterminate = n > 0 && n < kids.length;
       gh.querySelector("em").textContent = n + "/" + kids.length;
     });
+  function syncAllBoxes(key) { // keep the dropdown's "Select all" / "All cities" / "All states" boxes in step with the ticked options
+    var f = $app.querySelector('.hm-field[data-k="' + key + '"]'); if (!f) return;
+    Array.prototype.forEach.call(f.querySelectorAll("[data-all]"), function (b) {
+      var a = b.dataset.all, vals, sel = key === "cats" ? st.cats || [] : st[key] || [];
+      if (a === key) vals = key === "cats" ? catOpts().map(function (c) { return c.v; }) : key === "where" ? whereOpts().map(function (o) { return o.v; }) : simpleOpts(key).map(function (o) { return o.v; });
+      else if (a.indexOf("where-") === 0 && WHERE_GROUPS[a.slice(6)]) vals = grpVals(WHERE_GROUPS[a.slice(6)]);
+      else return;
+      b.checked = vals.length > 0 && vals.every(function (x) { return sel.indexOf(x) >= 0; });
+    });
+  }
   }
   function ddHtml(key, label, opts, sel, topLinks, cls, grouped) {
     var list = "", grp = null;
@@ -822,6 +832,7 @@
     }
     if (t.dataset.sel) { st[t.dataset.sel] = t.value; st.shown = PAGE; return results(); } // the sort order stays a single choice
     if (t.dataset.ms) {
+      syncAllBoxes(key);
       var key = t.dataset.ms, ids = Array.prototype.slice.call($app.querySelectorAll('input[data-ms="' + key + '"]')).filter(function (i) { return i.checked; }).map(function (i) { return i.value; });
       if (key === "cats") st.cats = ids; else st[key] = ids;
       var lbl = $app.querySelector('.hm-field[data-k="' + key + '"] [data-lbl]');
