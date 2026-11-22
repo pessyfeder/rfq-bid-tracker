@@ -57,6 +57,23 @@
     if (b < s.length) { var sp = s.lastIndexOf(" ", b); if (sp > a) b = sp; }
     return (a > 0 ? "…" : "") + s.slice(a, b).trim() + (b < s.length ? "…" : "");
   }
+  // First match of each rule across `src` (an array of strings) -> fact list.
+  function scan(src, kw) {
+    var out = [];
+    FACT_RULES.forEach(function (rule) {
+      for (var i = 0; i < src.length; i++) {
+        var m = rule.re.exec(src[i]);
+        if (m) { var f = { label: rule.label, sev: rule.sev, why: excerpt(src[i], m) }; if (rule.gate) f.gate = true; if (rule.note) f.note = true; if (kw) f.kw = true; out.push(f); return; }
+      }
+    });
+    return out;
+  }
+  // Facts from the full text of a notice and its readable attachments (HTML page text, Word files). Run at fetch time and
+  // saved on the record as docFacts. PDFs are read by the model only, so they reach the record through shall/requires.
+  function scanText(text) {
+    text = String(text || "").replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>/gi, " ").replace(/<[^>]*>/g, " ").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&");
+    return text.trim() ? scan([text], false) : [];
+  }
   function keyFacts(r) {
     var x = r.details || {};
     var src = [];
@@ -67,12 +84,10 @@
     (r.shall || []).forEach(function (s) { src.push(s.text); });
     (x.requirements || []).forEach(function (q) { src.push(q); });
     if (x.restriction) src.push(x.restriction);
-    var out = [];
-    FACT_RULES.forEach(function (rule) {
-      for (var i = 0; i < src.length; i++) {
-        var m = rule.re.exec(src[i]);
-        if (m) { var f = { label: rule.label, sev: rule.sev, why: excerpt(src[i], m) }; if (rule.gate) f.gate = true; if (rule.note) f.note = true; if (kw) f.kw = true; out.push(f); return; }
-      }
+    var out = scan(src, kw);
+    // Facts found in the attached documents' full text fill in what the short summary lines missed.
+    (r.docFacts || []).forEach(function (f) {
+      if (!out.some(function (o) { return o.label === f.label; })) out.push(f);
     });
     return out;
   }
@@ -141,5 +156,6 @@
   }
   root.explainFact = explainFact;
   root.computeFacts = keyFacts;
-  if (typeof module !== "undefined" && module.exports) module.exports = { computeFacts: keyFacts, explainFact: explainFact };
+  root.scanText = scanText;
+  if (typeof module !== "undefined" && module.exports) module.exports = { computeFacts: keyFacts, scanText: scanText, explainFact: explainFact };
 })(typeof window !== "undefined" ? window : globalThis);

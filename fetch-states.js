@@ -92,7 +92,7 @@ async function addDocumentReads(list, prevById, adapter, ctl) {
     if (amended) { newSig.set(r, r.aiSig); r.aiSig = p.aiSig; } // keep the old fingerprint until the re-read succeeds, so a failed one is retried next run
     // Version 4: shared-folder links (Box etc.) are now listed, so every read row without any saved document links is read once more.
     const stale = (p && p.requires == null && (p.docsV || 0) < DOCS_VERSION && REREAD_STATES.has(adapter.code)) || (p && p.aiRead && (p.docsV || 0) < DOCS_VERSION && !(p.docs && p.docs.length)) || amended;
-    if (p && p.aiRead) { r.requires = p.requires; r.scope = p.scope; r.shall = p.shall; if (p.naics) r.naics = p.naics; if (p.docDue) r.docDue = p.docDue; if (p.docs) r.docs = p.docs; r.aiRead = true; if (p.docsV) r.docsV = p.docsV; if (p.details && p.details.contact && !r.details.contact) r.details.contact = p.details.contact; } // a failed re-read keeps this
+    if (p && p.aiRead) { r.requires = p.requires; r.scope = p.scope; r.shall = p.shall; if (p.docFacts) r.docFacts = p.docFacts; if (p.naics) r.naics = p.naics; if (p.docDue) r.docDue = p.docDue; if (p.docs) r.docs = p.docs; r.aiRead = true; if (p.docsV) r.docsV = p.docsV; if (p.details && p.details.contact && !r.details.contact) r.details.contact = p.details.contact; } // a failed re-read keeps this
     if (p && p.aiRead && !stale) reused++;
     else if (stale) todo.push(r);
     else if (process.env.STATE_REREAD_ONLY && !(p && p.aiRead)) continue; // re-read only notices that were already read once
@@ -115,6 +115,7 @@ async function addDocumentReads(list, prevById, adapter, ctl) {
         // An amended notice's old restriction no longer applies, so an unclear new read must not keep it.
         require("./notice-reader").applyRead(r, res, { forceRequires: newSig.has(r) }); // NAICS comes from a regex below, not the model
         if (newSig.has(r)) r.aiSig = newSig.get(r);
+        require("./notice-reader").scanDocs(r, doc.text);
         if (doc.docs && doc.docs.length) r.docs = doc.docs;
         { const n = naicsIn(doc.text); if (n) r.naics = n; } // regex on the page/Word text, not the model (PDF text is not scanned)
         if (!r.details.contact) r.details.contact = require("./contacts").fromText(doc.text); // contact named in the page / Word text

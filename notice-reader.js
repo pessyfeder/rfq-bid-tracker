@@ -37,7 +37,16 @@ function applyRead(r, ai, options = {}) {
 }
 
 async function readInto(r, text, key, options = {}) {
+  scanDocs(r, text);
   return applyRead(r, await readText(text, key, options.pdfs), options);
 }
 
-module.exports = { readText, applyRead, readInto };
+// Scan the full text read for a notice (page text plus Word attachments) for bid factors and keep them on the record as
+// docFacts; computeFacts (facts.js) merges them in. An empty scan leaves an earlier docFacts alone.
+function scanDocs(r, text) {
+  const f = require("./facts").scanText(String(text || "").slice(0, 200000));
+  if (f.length) r.docFacts = f;
+  return f.length;
+}
+
+module.exports = { readText, applyRead, readInto, scanDocs };

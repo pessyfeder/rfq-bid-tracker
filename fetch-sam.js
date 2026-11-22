@@ -177,6 +177,7 @@ async function enrich(r, o, text, AI_KEY) {
     if (!a && AI_KEY) a = await require("./ai-extract").extractAmount(text, AI_KEY).catch(() => null);
     if (a) r.valueEst = { kind: "stated", amount: a.amount, quote: a.quote };
   }
+  require("./notice-reader").scanDocs(r, text);
   const ai = AI_KEY ? await require("./notice-reader").readText(text, AI_KEY) : null;
   if (require("./notice-reader").applyRead(r, ai, { mergeRequires: true, statedFields: true })) {
     if (!r.scope) r.scope = require("./plain-scope").plainScope(text);
@@ -317,6 +318,7 @@ function takeLock() {
         if (read) {
           try {
             const text = read.text + "\n\n" + [n.rfq.title, n.rfq.scope].filter(Boolean).join("\n");
+            require("./notice-reader").scanDocs(n.rfq, text);
             const ai = await require("./notice-reader").readText(text, AI_KEY, read.pdfs);
             if (require("./notice-reader").applyRead(n.rfq, ai, { mergeRequires: true, statedFields: true })) { n.rfq.attRead = true; ok = true; attRead++; }
             if (n.rfq.value == null && !n.rfq.valueEst) {
