@@ -164,8 +164,8 @@
     ".wz-side-sec>ul{max-height:7.8em;overflow-y:auto;overflow-x:hidden;padding-right:4px}" +
     ".wz-side-sel::-webkit-scrollbar,.wz-side-sec>ul::-webkit-scrollbar{width:10px}.wz-side-sel::-webkit-scrollbar-track,.wz-side-sec>ul::-webkit-scrollbar-track{background:#e5e9f0;border-radius:5px}.wz-side-sel::-webkit-scrollbar-thumb,.wz-side-sec>ul::-webkit-scrollbar-thumb{background:#8795a8;border-radius:5px;border:2px solid #e5e9f0}" +
     "@supports(-moz-appearance:none){.wz-side-sel,.wz-side-sec>ul{scrollbar-width:auto;scrollbar-color:#8795a8 #e5e9f0}}" +
-    ".bt-fab{position:fixed;right:22px;bottom:200px;z-index:20;display:flex;align-items:center;gap:8px;padding:10px 18px 10px 12px;border:0;border-radius:999px;background:#1e3a5f;color:#fff;font:600 14px system-ui,-apple-system,'Segoe UI',sans-serif;cursor:pointer;box-shadow:0 4px 14px rgba(15,39,66,.35)}.bt-fab:hover{background:#16304f}.bt-fab svg{width:30px;height:30px;flex:none}" +
-    ".bt-panel{position:fixed;right:22px;bottom:200px;z-index:21;width:360px;max-width:calc(100vw - 24px);max-height:calc(100vh - 102px);display:flex;flex-direction:column;background:#fff;color:#1f2937;border:1px solid #b8c2cf;border-radius:12px;box-shadow:0 8px 28px rgba(15,23,42,.28);font:14px/1.45 system-ui,-apple-system,'Segoe UI',sans-serif;overflow:hidden}" +
+    ".bt-fab{position:fixed;right:22px;top:70px;z-index:20;display:flex;align-items:center;gap:8px;padding:10px 18px 10px 12px;border:0;border-radius:999px;background:#1e3a5f;color:#fff;font:600 14px system-ui,-apple-system,'Segoe UI',sans-serif;cursor:pointer;box-shadow:0 4px 14px rgba(15,39,66,.35)}.bt-fab:hover{background:#16304f}.bt-fab svg{width:30px;height:30px;flex:none}" +
+    ".bt-panel{position:fixed;right:22px;top:70px;z-index:21;width:360px;max-width:calc(100vw - 24px);max-height:calc(100vh - 90px);display:flex;flex-direction:column;background:#fff;color:#1f2937;border:1px solid #b8c2cf;border-radius:12px;box-shadow:0 8px 28px rgba(15,23,42,.28);font:14px/1.45 system-ui,-apple-system,'Segoe UI',sans-serif;overflow:hidden}" +
     ".bt-head{display:flex;align-items:center;gap:10px;padding:10px 14px;background:#1e3a5f;color:#fff;font-weight:600}.bt-head svg{width:30px;height:30px;flex:none}.bt-head span{flex:1}.bt-head button{border:0;background:none;color:#fff;font-size:22px;line-height:1;cursor:pointer;padding:0 4px}" +
     ".bt-log{flex:1 1 auto;min-height:120px;overflow:auto;padding:8px 12px}.bt-form{padding:10px 12px;border-top:1px solid #e5e9f0;background:#f7f9fb}.bt-form label{display:block;font-size:12px;font-weight:600;color:#64748b;margin:0 0 3px}" +
     ".bt-row{display:flex;gap:6px;margin-bottom:8px}.bt-row input,.bt-form textarea{flex:1;min-width:0;font:inherit;padding:7px 9px;border:1px solid #c5cdd8;border-radius:6px;box-sizing:border-box}.bt-form textarea{width:100%;resize:vertical;margin-bottom:6px}.bt-row input:focus,.bt-form textarea:focus{outline:2px solid #1e3a5f33;border-color:#1e3a5f}" +
@@ -211,10 +211,7 @@
     function loadAll() {
       // Every bid category, in its own group; groups start collapsed so the long list stays usable.
       try { ALL = (window.RFQExtraCats ? window.RFQExtraCats() : []).map(function (o) { return { v: o.v, label: o.label, group: o.group }; }); } catch (e) { ALL = []; }
-      if (pend && ALL.length) { // first time the list is known: tick what applies to Discover Group and open those groups
-        ALL.forEach(function (o) { if (applies(o)) { if (d.cats.indexOf(o.v) < 0) d.cats.push(o.v); openG[o.group] = true; } });
-        pend = false;
-      }
+      if (pend && ALL.length) pend = false; // nothing is pre-selected; the user picks their own categories
     }
     loadAll();
     function label() { return d.cats.length ? d.cats.length + " of " + ALL.length + " selected" : "All categories"; }
@@ -486,7 +483,7 @@
       if (step === 2) return drawR();
       if (!openDd) loadAll(); // pick up bid categories that arrived after the page loaded (live data)
       back.innerHTML = "<div class='wz' role='dialog' aria-modal='true' aria-label='Setup'><p class='wz-step'>Step 1</p><h2>Which request categories would you like to see?</h2>" +
-        "<p class='wz-note'>Every category is listed; the ones that apply to Discover Group, Inc. are pre-selected. Change them any time.</p>" +
+        "<p class='wz-note'>Every category is listed. Pick the ones you want, or leave none selected to see all. Change them any time.</p>" +
         "<div class='wz-dd'><button type='button' class='wz-dd-btn' data-a='toggle' aria-expanded='" + openDd + "'><span>" + label() + "</span><span>&#9662;</span></button>" +
         (openDd ? "<div class='wz-dd-list'><div class='wz-dd-tools'><button type='button' class='link' data-a='none'>" + ((d.cats.length >= ALL.length) ? "Clear all" : "Select all") + "</button></div>" +
           listHtml() + "</div>" : "") + "</div>" +
