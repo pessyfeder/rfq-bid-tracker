@@ -154,6 +154,16 @@
     ".wz-grp{position:sticky;top:-6px;background:#fff;margin:8px 0 2px;padding:4px 2px;font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#64748b}" +
     ".wz-spin{width:34px;height:34px;margin:6px auto 14px;border:4px solid #e5e9f0;border-top-color:#1e3a5f;border-radius:50%;animation:wzspin .8s linear infinite}@keyframes wzspin{to{transform:rotate(360deg)}}" +
     ".wz-dd-tools{display:flex;gap:14px;padding:4px 2px}.wz .wz-dd-tools .link{margin:0;padding:2px 0}" +
+    ".wz-back{gap:20px;flex-wrap:wrap}.wz-back>.wz{flex:0 1 660px;width:auto;min-width:0}" +
+    ".wz-side{flex:0 0 280px;box-sizing:border-box;position:sticky;top:20px;background:#fff;color:#1f2937;border:1px solid #d9dfe7;border-radius:8px;padding:20px;box-shadow:0 1px 3px rgba(15,23,42,.08)}" +
+    ".wz-side h3{margin:0 0 12px;font-size:15px;font-weight:600;color:#0f2742}" +
+    ".wz-side-sec{padding:9px 10px;margin:0 -10px;border-left:3px solid transparent;border-radius:4px;font-size:13px}.wz-side-sec.cur{background:#f0f4f9;border-left-color:#1e3a5f}" +
+    ".wz-side-h{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#64748b;margin-bottom:4px}" +
+    ".wz-side ul{margin:0;padding-left:18px}.wz-side li{margin:1px 0}.wz-side-more{list-style:none;margin-left:-18px!important;color:#64748b}.wz-side-none{color:#64748b;font-style:italic}" +
+    ".wz-side-sel{margin-bottom:16px}.wz-bot{border-top:1px solid #e5e9f0;padding-top:14px}.wz-bot h3{margin:0 0 8px}.wz-bot-log{max-height:260px;overflow:auto;margin-bottom:8px}" +
+    ".wz-msg{background:#f0f4f9;border-radius:6px;padding:8px 10px;margin:6px 28px 6px 0;font-size:13px}.wz-msg.me{background:#1e3a5f;color:#fff;margin:6px 0 6px 28px}.wz-msg .pri{margin-top:6px;padding:4px 12px;font-size:13px}.wz-msg .wz-note{font-size:12px}" +
+    ".wz-bot textarea{font-size:13px;margin-bottom:6px;box-sizing:border-box}.wz-bot-go{width:100%}" +
+    "@media(max-width:1060px){.wz-side{flex:1 1 660px;position:static}}" +
     ".match-chip{display:inline-block;background:#e3f4ea;color:#1d7a46;border-radius:4px;padding:1px 6px;margin:0 6px 0 0;font-size:12px;font-weight:600;cursor:help}";
   document.head.appendChild(css);
 
@@ -285,7 +295,135 @@
     function draw() {
       try { sessionStorage.setItem(WZKEY, JSON.stringify({ step: step, d: d })); } catch (e) {}
       drawStep();
+      side();
     }
+    // Right-hand sidebar: what is selected on each step so far. Rebuilt after every redraw / tick.
+    function sideItems(ids, labelOf, none) {
+      var names = ids.map(labelOf).filter(Boolean);
+      if (!names.length) return "<span class='wz-side-none'>" + none + "</span>";
+      var shown = names.slice(0, 6).map(function (n) { return "<li>" + h(n) + "</li>"; }).join("");
+      return "<ul>" + shown + (names.length > 6 ? "<li class='wz-side-more'>+ " + (names.length - 6) + " more</li>" : "") + "</ul>";
+    }
+    function side() {
+      if (!back) return;
+      if (!J.length) loadJ();
+      var where = d.where || cur.where || [];
+      var items = [
+        ["Request categories", d.cats.length >= ALL.length && ALL.length ? "<span class='wz-side-none'>All categories</span>" : sideItems(d.cats, function (v) { for (var i = 0; i < ALL.length; i++) if (ALL[i].v === v) return ALL[i].label; return ""; }, "All categories")],
+        ["Registered entities", sideItems(d.reg, function (id) { var s = SOURCES.filter(function (x) { return x.id === id; })[0]; return s ? s.label : ""; }, "Not registered / show all")],
+        ["Jurisdictions", J.length && where.length >= J.length ? "<span class='wz-side-none'>All locations</span>" : sideItems(where, function (v) { for (var i = 0; i < J.length; i++) if (J[i].v === v) return J[i].label; return ""; }, "All locations")],
+        ["Eligibility", sideItems(d.aside, function (v) { for (var i = 0; i < ASIDE_OPTS.length; i++) if (ASIDE_OPTS[i][0] === v) return ASIDE_OPTS[i][1]; return ""; }, "Anyone")]
+      ];
+      var el = back.querySelector(".wz-side");
+      if (!el) {
+        el = document.createElement("aside"); el.className = "wz-side"; el.setAttribute("aria-label", "Your selections");
+        el.innerHTML = "<div class='wz-side-sel'></div>" +
+          "<div class='wz-bot'><h3>Helper bot</h3><div class='wz-bot-log' aria-live='polite'></div>" +
+          "<textarea rows='2' class='wz-bot-in' placeholder='e.g. We sell laptops and toner to schools in Texas. Veteran-owned.' aria-label='Describe your business'></textarea>" +
+          "<button type='button' class='pri wz-bot-go' data-b='ask'>Suggest options</button></div>";
+        back.appendChild(el); botLog();
+      }
+      el.querySelector(".wz-side-sel").innerHTML = "<h3>Your selections</h3>" + items.map(function (x, i) {
+        return "<div class='wz-side-sec" + (i + 1 === step ? " cur" : "") + "'><div class='wz-side-h'>Step " + (i + 1) + " &middot; " + x[0] + "</div>" + x[1] + "</div>";
+      }).join("");
+    }
+
+    // ---------- helper bot ----------
+    // Runs entirely in this browser: reads a plain-English description of the business and suggests categories,
+    // locations and eligibility. It only suggests; nothing changes until "Use these" is pressed.
+    var STOP = {}; "the and for our we you your with that this from are have has sell selling sale business company provide providing products product service services goods other supply work based also mostly mainly into like all any new".split(" ").forEach(function (w) { STOP[w] = 1; });
+    function stem(w) {
+      w = String(w).toLowerCase().replace(/[^a-z0-9]/g, "");
+      if (w.length > 4) { if (/ies$/.test(w)) w = w.slice(0, -3) + "y"; else if (/(ses|xes|ches|shes)$/.test(w)) w = w.slice(0, -2); else if (/s$/.test(w) && !/ss$/.test(w)) w = w.slice(0, -1); }
+      return w;
+    }
+    var SYN = [
+      [/food|cater|restaurant|grocer|meal|snack|beverage/, ["food", "meal", "beverage", "grocery"]],
+      [/construct|contractor|building|roof|plumb|electrician|hvac/, ["construction", "building", "repair", "electrical"]],
+      [/clean|janitor|custodial|sanitiz/, ["janitorial", "cleaning", "sanitation"]],
+      [/medical|health|pharma|clinic|hospital|nurs/, ["medical", "health", "pharmaceutical", "drug"]],
+      [/software|\bit\b|computer|cyber|tech|network|laptop|server/, ["computer", "software", "information", "technology", "network"]],
+      [/vehicle|truck|\bauto|\bcars?\b|fleet|tire/, ["vehicle", "automotive", "truck"]],
+      [/office|furniture|stationery|desk/, ["office", "furniture"]],
+      [/print|toner|\bink\b|copier/, ["printing", "printer", "toner"]],
+      [/uniform|clothing|apparel|textile|boots/, ["clothing", "uniform", "apparel", "textile"]],
+      [/security|guard|surveillance|alarm/, ["security", "safety", "surveillance"]],
+      [/landscap|lawn|grounds|\btrees?\b/, ["landscaping", "grounds", "lawn"]],
+      [/consult|training|staffing|professional/, ["consulting", "professional", "training", "management"]],
+      [/\broad|paving|highway|bridge|concrete|asphalt/, ["road", "highway", "paving", "bridge", "concrete"]],
+      [/tools?\b|hardware|fastener/, ["tools", "hardware"]]
+    ];
+    var ASIDE_RE = [["vet", /veteran|sdvosb|\bvosb\b/i], ["women", /\bwom[ae]n|\bwosb\b|female/i], ["small", /small business|\bsmb\b|small (company|shop|firm)/i], ["other", /hubzone|8\(a\)|\b8a\b|minority/i]];
+    var REG_RE = [["fed", /sam\.gov|\bsam\b/i], ["nyc", /passport/i], ["pa", /emarketplace/i], ["tx", /cmbl|\bcentralized master/i]];
+    function suggest(text) {
+      var low = text.toLowerCase(), terms = {}, s = { cats: [], where: [], aside: [], reg: [], all: false };
+      low.split(/[^a-z0-9]+/).forEach(function (w) { var t = stem(w); if (t.length > 2 && !STOP[t]) terms[t] = 1; });
+      SYN.forEach(function (x) { if (x[0].test(low)) x[1].forEach(function (w) { terms[stem(w)] = 1; }); });
+      CATS.forEach(function (c) {
+        if (c.kw.some(function (k) { return new RegExp("\\b" + esc(k).replace(/\s+/g, "\\s+") + "(?:s|es)?\\b").test(low); }))
+          c.kw.forEach(function (k) { k.split(" ").forEach(function (w) { var t = stem(w); if (!STOP[t]) terms[t] = 1; }); });
+      });
+      loadAll();
+      var hits = [];
+      ALL.forEach(function (o) {
+        var lt = {}, sc = 0; o.label.split(/[^A-Za-z0-9]+/).forEach(function (w) { lt[stem(w)] = 1; });
+        for (var t in terms) if (lt[t]) sc++;
+        if (sc) hits.push({ v: o.v, label: o.label, sc: sc });
+      });
+      hits.sort(function (a, b) { return b.sc - a.sc; });
+      s.cats = hits.slice(0, 40);
+      loadJ();
+      if (/nationwide|all states|anywhere|everywhere|across the (us|country)/.test(low)) s.all = true;
+      else J.forEach(function (o) {
+        var nm = String(o.label).replace(/\(.*?\)/g, "").trim().toLowerCase();
+        if (nm && new RegExp("\\b" + esc(nm) + "\\b").test(low) || (/federal/i.test(o.label) && /federal|sam\.gov|government/.test(low))) s.where.push(o);
+      });
+      ASIDE_RE.forEach(function (x) { if (x[1].test(text)) s.aside.push(x[0]); });
+      REG_RE.forEach(function (x) { if (x[1].test(text)) s.reg.push(x[0]); });
+      return s;
+    }
+    function names(arr, max) { var n = arr.length; return arr.slice(0, max).join(", ") + (n > max ? " and " + (n - max) + " more" : ""); }
+    var chat = [{ me: false, text: "Hi! Tell me what your business sells or does, and where you work. I'll suggest categories, locations and eligibility." }];
+    function botLog() {
+      var log = back && back.querySelector(".wz-bot-log"); if (!log) return;
+      log.innerHTML = chat.map(function (m, i) {
+        var body = m.html || h(m.text);
+        if (m.sug && !m.done) body += "<div><button type='button' class='pri' data-b='apply' data-m='" + i + "'>Use these</button></div>";
+        if (m.done) body += "<div class='wz-note'>Applied.</div>";
+        return "<div class='wz-msg" + (m.me ? " me" : "") + "'>" + body + "</div>";
+      }).join("");
+      log.scrollTop = log.scrollHeight;
+    }
+    function botAsk() {
+      var box = back.querySelector(".wz-bot-in"), text = (box.value || "").trim(); if (!text) return;
+      box.value = "";
+      chat.push({ me: true, text: text });
+      var s = suggest(text), lines = [];
+      if (s.cats.length) lines.push("<b>Categories (" + s.cats.length + "):</b> " + h(names(s.cats.map(function (o) { return o.label; }), 5)));
+      if (s.all) lines.push("<b>Locations:</b> all");
+      else if (s.where.length) lines.push("<b>Locations:</b> " + h(names(s.where.map(function (o) { return o.label; }), 5)));
+      if (s.aside.length) lines.push("<b>Eligibility:</b> " + h(names(s.aside.map(function (v) { for (var i = 0; i < ASIDE_OPTS.length; i++) if (ASIDE_OPTS[i][0] === v) return ASIDE_OPTS[i][1]; return v; }), 5)));
+      if (s.reg.length) lines.push("<b>Registered with:</b> " + h(names(s.reg.map(function (v) { var x = SOURCES.filter(function (o) { return o.id === v; })[0]; return x ? x.label : v; }), 5)));
+      if (lines.length) chat.push({ me: false, html: "Here is what I would suggest:<br>" + lines.join("<br>") + "<br><span class='wz-note'>You can still change everything in the steps.</span>", sug: s });
+      else chat.push({ me: false, text: "I could not match that to any category. Try naming the products or services you sell, for example: IT hardware and toner, Texas, veteran-owned." });
+      botLog();
+    }
+    function botApply(m) {
+      var s = chat[m] && chat[m].sug; if (!s) return;
+      if (step === 3) collectJ(); else if (step === 1) collect();
+      if (s.cats.length) d.cats = s.cats.map(function (o) { return o.v; });
+      if (s.all) d.where = []; else if (s.where.length) d.where = s.where.map(function (o) { return o.v; });
+      if (s.aside.length) d.aside = s.aside.slice();
+      if (s.reg.length) d.reg = s.reg.slice();
+      chat[m].done = true; botLog(); draw();
+    }
+    back.addEventListener("click", function (e) {
+      var b = e.target.closest("[data-b]"); if (!b) return;
+      if (b.dataset.b === "ask") botAsk(); else if (b.dataset.b === "apply") botApply(+b.dataset.m);
+    });
+    back.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" && !e.shiftKey && e.target.classList && e.target.classList.contains("wz-bot-in")) { e.preventDefault(); botAsk(); }
+    });
     function drawStep() {
       if (step === 4) return drawA();
       if (step === 3) return drawJ();
@@ -317,6 +455,7 @@
         var rb = back.querySelector(".wz-dd-btn span"); if (rb) rb.textContent = rLabel();
       }
       else if (t.dataset.jur) { collectJ(); var jl = back.querySelector(".wz-dd-btn span"); if (jl) jl.textContent = jLabel(); }
+      side();
     });
     back.addEventListener("click", function (e) {
       var g = e.target.closest("[data-g]"); if (!g) return;
