@@ -256,6 +256,7 @@ function takeLock() {
           }
           if (old && !old.raw.links) old.raw.links = attachmentLinksOf(o); // cached before attachments were read
           if (old && !old.rfq.details.contact && r.details.contact) old.rfq.details.contact = r.details.contact; // cached before contacts were collected
+          else if (old && old.rfq.details.contact && !old.rfq.details.contact.alt && r.details.contact && r.details.contact.alt) old.rfq.details.contact.alt = r.details.contact.alt; // cached before alternative contacts were collected
         }
         offset += 100;
         if (items.length < 100 || offset >= (page.totalRecords || 0)) { finished = true; cache.searchedThrough = today; cache.resume = null; cache.linksBackfilled = true; }
@@ -318,7 +319,7 @@ function takeLock() {
         if (read) {
           try {
             const text = read.text + "\n\n" + [n.rfq.title, n.rfq.scope].filter(Boolean).join("\n");
-            require("./notice-reader").scanDocs(n.rfq, text);
+            require("./notice-reader").scanDocs(n.rfq, text, read.pdfs);
             const ai = await require("./notice-reader").readText(text, AI_KEY, read.pdfs);
             if (require("./notice-reader").applyRead(n.rfq, ai, { mergeRequires: true, statedFields: true })) { n.rfq.attRead = true; ok = true; attRead++; }
             if (n.rfq.value == null && !n.rfq.valueEst) {

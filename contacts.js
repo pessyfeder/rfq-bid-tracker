@@ -13,13 +13,16 @@ const tidy = (s, max) => (typeof s === "string" ? s.replace(/\s+/g, " ").trim().
 // A person's name, not a sentence some agencies type into the name field ("Questions regarding this solicitation ...").
 const looksLikeName = (n) => n.length <= 60 && n.split(" ").length <= 5 && !/[@\d:;]/.test(n) && !/\b(questions?|regarding|solicitation|email|emailed|please|contact|listed|buyer|see|refer|n\/a|none|tbd)\b/i.test(n);
 
-function make(name, email, phone) {
+// alt = an alternative point of contact (same shape, no nested alt), kept when it has something to show.
+function make(name, email, phone, alt) {
   const c = {};
   const n0 = tidy(name, 400), n = looksLikeName(n0) ? n0 : "";
   const e = tidy(email, 120), p = tidy(phone, 40);
   if (n) c.name = n;
   if (/^[^\s@<>"]+@[^\s@<>"]+\.[A-Za-z]{2,}$/.test(e)) c.email = e;
   if (p && /\d{3}\D*\d{3}\D*\d{4}/.test(p)) c.phone = p;
+  const a = alt && make(alt.name, alt.email, alt.phone);
+  if (a) c.alt = a;
   return c.name || c.email || c.phone ? c : null;
 }
 
@@ -43,8 +46,10 @@ function fromText(text) {
 function fromSam(poc) {
   if (!Array.isArray(poc) || !poc.length) return null;
   const sorted = poc.slice().sort((a, b) => (a && a.type === "primary" ? 0 : 1) - (b && b.type === "primary" ? 0 : 1));
-  for (const p of sorted) { const c = p && make(p.fullName, p.email, p.phone); if (c) return c; }
-  return null;
+  const found = sorted.map((p) => p && make(p.fullName, p.email, p.phone)).filter(Boolean);
+  if (!found.length) return null;
+  if (found[1]) found[0].alt = found[1]; // SAM's secondary / alternative point of contact
+  return found[0];
 }
 
 module.exports = { make, fromText, fromSam };

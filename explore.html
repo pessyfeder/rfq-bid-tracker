@@ -190,7 +190,9 @@
       /^(?:Request (?:for|of) (?:Quote|Proposals?)|Invitation [Ff]or Bids?)\s+(?!for\b|to\b|of\b)[A-Z]/
     ];
     var restates = !desc || desc.length < 140 && (/^[A-Z0-9][A-Z0-9\-_.\/]*\s*\(.*\)\.?$/.test(desc) || PLACEHOLDER_SCOPE.some(function (p) { return p.test(desc); }) || desc.toLowerCase().indexOf(String(r.title || "").toLowerCase()) >= 0 && desc.length < String(r.title || "").length + 40);
-    var contact = r.contact ? { name: r.contact.name, email: r.contact.email, phone: r.contact.phone } : {};
+    var contact = r.contact ? { name: r.contact.name, email: r.contact.email, phone: r.contact.phone, alt: r.contact.alt } : {};
+    var okEmail = function (e) { return e && /^[^\s@<>"]+@[^\s@<>"]+$/.test(e); };
+    var altOf = function (c) { return c && (c.name || c.email || c.phone) ? c : null; };
     if (buyerM && !(contact.name || contact.email || contact.phone)) {
       var em = /[^\s,;<>"]+@[^\s,;<>"]+/.exec(buyerM[1]), ph = /\(?\d{3}\)?[-.\s]?\d{3}[-.\s]\d{4}/.exec(buyerM[1]);
       contact = { email: em && em[0].replace(/[.,;]+$/, ""), phone: ph && ph[0], name: buyerM[1].replace(em ? em[0] : "", "").replace(ph ? ph[0] : "", "").replace(/[\s,;]+$/, "").replace(/^[\s,;]+|[\s,;]+(?=[\s,;])/g, "").trim() };
@@ -202,6 +204,14 @@
     if (contact.email && /^[^\s@<>"]+@[^\s@<>"]+$/.test(contact.email)) cl.push('<li><b>Email:</b> <a href="mailto:' + esc(contact.email) + '">' + esc(contact.email) + "</a></li>");
     if (contact.phone) cl.push("<li><b>Phone:</b> " + esc(contact.phone) + "</li>");
     var contactHtml = "<h2>Contact Information</h2>" + (cl.length ? '<ul class="items">' + cl.join("") + "</ul>" : '<p class="na">None stated.</p>');
+    var apoc = altOf(contact.alt);
+    if (apoc) {
+      var al = [];
+      if (apoc.name) al.push("<li><b>Name:</b> " + esc(apoc.name) + "</li>");
+      if (okEmail(apoc.email)) al.push('<li><b>Email:</b> <a href="mailto:' + esc(apoc.email) + '">' + esc(apoc.email) + "</a></li>");
+      if (apoc.phone) al.push("<li><b>Phone:</b> " + esc(apoc.phone) + "</li>");
+      contactHtml += "<h2>Alternative Point of Contact</h2>" + '<ul class="items">' + al.join("") + "</ul>";
+    }
 
     // facts from the notice text (same rules as the table)
     var facts = [];
@@ -271,7 +281,22 @@
       if (contact.email && /^[^\s@<>"]+@[^\s@<>"]+$/.test(contact.email)) cb.push('<a href="mailto:' + esc(contact.email) + '">' + esc(contact.email) + "</a>");
       if (contact.phone) cb.push(esc(contact.phone));
       var cinfo = cb.length ? "<li>" + cb.join(" &middot; ") + "</li>" : "<li>No contact stated. Ask through the posting site.</li>";
-      if (!req) req = li(r.title || "Not stated in the notice.");
+      if (apoc) {
+        var ab = [];
+        if (apoc.name) ab.push(esc(apoc.name));
+        if (okEmail(apoc.email)) ab.push('<a href="mailto:' + esc(apoc.email) + '">' + esc(apoc.email) + "</a>");
+        if (apoc.phone) ab.push(esc(apoc.phone));
+        cinfo += "<li>Alternative: " + ab.join(" &middot; ") + "</li>";
+      }
+      if (!req || restates) {
+        // No real description in the notice: say what the record does state (what, who is buying, where, which category)
+        var tt = (r.plainTitle || r.title || "").replace(/\s+/g, " ").trim(), ag = nice(r.agency || ""), rg = nice(r.region || ""), cat = nice(r.category || "");
+        var fb = tt ? li(tt) : "";
+        if (ag) fb += li("Buyer: " + ag + (rg && ag.toLowerCase().indexOf(rg.toLowerCase()) < 0 ? " (" + rg + ")" : ""));
+        if (cat && !/^(no data|general|misc)/i.test(cat)) fb += li("Category: " + cat);
+        fb += li("The notice gives no further description" + (r.docAccess === "none" ? "; its documents could not be opened." : "."));
+        req = (fb || li("Not stated in the notice.")) + req;
+      }
       var g = '<section class="glance">' + (link ? '<a class="rfqdoc" href="' + esc(link) + '" target="_blank" rel="noopener">View RFQ doc &#8599;</a>' : "") + '<h2>At a glance</h2><ol class="g-list">' + row("Request + Description", req) + row("Who can bid", who) + row("Registration", reg) + row("Important Details", details) + row("Contact Information", cinfo) + "</ol>" +
         (!r.aiRead && !r.scope ? '<p class="small">The notice text was not read, so only what the posting itself states is shown.</p>' : "") + "</section>";
       h = h.replace("<!--GLANCE-->", g);
