@@ -258,9 +258,10 @@ function takeLock() {
       }
     }
 
-    // 2. Descriptions for notices that have not had one yet, newest first, while budget lasts.
+    // 2. Descriptions for notices that have not had one yet, soonest deadline first (newest posting breaks ties), while budget lasts.
+    //    The daily cap cannot cover every notice, so spend it where waiting would lose the notice: those closing soonest.
     const pending = Object.values(notices).filter((n) => !n.descDone && n.descUrl && n.rfq.due >= today)
-      .sort((a, b) => (b.rfq.posted || "").localeCompare(a.rfq.posted || ""));
+      .sort((a, b) => (a.rfq.due || "").localeCompare(b.rfq.due || "") || (b.rfq.posted || "").localeCompare(a.rfq.posted || ""));
     for (const n of pending) {
       if (left() <= 0) break;
       try {

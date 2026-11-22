@@ -120,6 +120,8 @@ async function addDocumentReads(list, prevById, adapter, ctl) {
         if (!r.details.contact) r.details.contact = require("./contacts").fromText(doc.text); // contact named in the page / Word text
         r.docsV = DOCS_VERSION; read++; // applyRead set r.aiRead
         if (r.details) delete r.details.readNote;
+        // Delaware's bid page carries only title, dates and contact; no attachments exist to read, so say why eligibility is blank.
+        if (adapter.code === "DE" && r.requires == null && !(doc.docs && doc.docs.length) && !doc.pdfs.length) r.details.readNote = "Delaware's bid page lists no documents, so eligibility is not stated there. Check the contact or the bid page.";
       } catch (e) {
         const st = /^BOTCHECK/.test(e.message) ? "bot check" : (/HTTP ([45][0-9][0-9])/.exec(e.message) || [])[1];
         if (st) {
