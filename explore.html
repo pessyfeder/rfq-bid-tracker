@@ -179,7 +179,11 @@
     });
     var other = rest.filter(function (f) { return !used[f.label]; });
     if (other.length) tg += "<h3>Other</h3>" + list(other);
-    h += contactHtml + "<h2>Important Details</h2>" +
+    // full description first
+    h += "<h2>Description</h2>";
+    h += !restates ? '<p class="text">' + esc(desc) + "</p>" + (r.aiRead ? '<p class="small">AI-read, verify against the notice.</p>' : "")
+      : '<p class="na">' + (r.aiRead ? "None stated." : "No description in the source data. See the RFQ document.") + "</p>";
+    h += contactHtml +
       (tg || '<p class="na">' + (r.aiRead || r.scope ? "None found in the notice text." : "Not checked: the notice was not read.") + "</p>");
 
     // 4. eligibility
@@ -191,11 +195,6 @@
     if (items.length || gl) h += '<ul class="items">' + items.join("") + gl + "</ul>";
     else if (r.requires == null) h += '<p class="na">Not checked: the notice documents were not read, so eligibility is unknown.</p>';
     else h += '<p class="na">No eligibility conditions found. Open to all, as far as the notice says.</p>';
-
-    // full description at the bottom
-    h += "<h2>Description</h2>";
-    h += !restates ? '<p class="text">' + esc(desc) + "</p>" + (r.aiRead ? '<p class="small">AI-read, verify against the notice.</p>' : "")
-      : '<p class="na">' + (r.aiRead ? "None stated." : "No description in the source data. See the RFQ document.") + "</p>";
 
     h += '<div class="foot">ID ' + esc(r.id) + " · first seen " + esc(mdy(r.firstSeen)) + " · last updated " + esc(mdy(r.updatedAt)) + "</div>";
     $.innerHTML = h;
