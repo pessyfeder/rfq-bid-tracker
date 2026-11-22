@@ -555,7 +555,7 @@
     document.head.appendChild(css);
     var back = document.createElement("div"); back.id = "dp-back";
     var dp = document.createElement("div"); dp.id = "dp";
-    dp.innerHTML = '<div class="dp-bar"><span>Request details</span><span><button id="dp-x" aria-label="Close">&times;</button></span></div><iframe title="Request details"></iframe>';
+    dp.innerHTML = '<div class="dp-bar"><span>Request details</span><span><a id="dp-full" href="#">Open full page &#8599;</a><button id="dp-x" aria-label="Close">&times;</button></span></div><iframe title="Request details"></iframe>';
     document.body.appendChild(back); document.body.appendChild(dp);
     var fr = dp.querySelector("iframe");
     function close() { back.classList.remove("on"); dp.classList.remove("on"); setTimeout(function () { if (!dp.classList.contains("on")) fr.removeAttribute("src"); }, 300); }
@@ -588,6 +588,7 @@
     var b = e.target.closest("button"); if (!b) return;
     var d = b.dataset;
     if (d.a === "selection") { if (window.RFQProfile) window.RFQProfile.open(); return; }
+      dp.querySelector("#dp-full").href = a.getAttribute("href");
     if (d.a === "profile") { window.location.href = "/profile.html"; return; }
     if (d.a === "refresh") { var rb = document.getElementById("refreshBtn"); if (rb) rb.click(); b.textContent = "Refreshing…"; return; }
     if (d.a === "clear") { resetFilters(false); clearKw(); return refreshAll(); }
