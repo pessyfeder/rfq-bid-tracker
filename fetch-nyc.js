@@ -50,8 +50,10 @@ function warnings(o) {
 function toRfq(o) {
   if (!o.due_date || !o.request_id) return null;
   const due = o.due_date.slice(0, 10);
-  const m = o.due_date.slice(11, 16).split(":").map(Number);
-  const time = new Date(2000, 0, 1, m[0], m[1]).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+  const tm = /^(\d{2}):(\d{2})$/.exec(o.due_date.slice(11, 16));
+  const time = tm && Number(tm[1]) < 24 && Number(tm[2]) < 60
+    ? new Date(2000, 0, 1, Number(tm[1]), Number(tm[2])).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
+    : null; // date-only (or malformed) value: no time stated
   const scope = stripHtml(o.additional_description_1);
   const requirements = [];
   if (o.selection_method_description) requirements.push(o.selection_method_description);
@@ -66,7 +68,7 @@ function toRfq(o) {
     posted: o.start_date ? o.start_date.slice(0, 10) : null,
     postedAt: o.start_date && o.start_date.length > 10 ? o.start_date.slice(0, 19) : undefined,
     due,
-    dueTime: time + " ET",
+    dueTime: time ? time + " ET" : "No time given",
     level: "Local",
     agency: o.agency_name || "NYC agency",
     value: o.contract_amount && Number(o.contract_amount) > 0 ? Number(o.contract_amount) : null,
