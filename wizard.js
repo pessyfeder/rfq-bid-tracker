@@ -208,7 +208,11 @@
       back.innerHTML = "<div class='wz' role='dialog' aria-modal='true' aria-label='Setup'><p class='wz-step'>Step 2</p><h2>Which jurisdiction would you like to see?</h2>" +
         "<p class='wz-note'>Federal, city and state bids. Change them any time.</p>" +
         "<div class='wz-dd'><button type='button' class='wz-dd-btn' data-a='jtoggle' aria-expanded='" + openJ + "'><span>" + jLabel() + "</span><span>&#9662;</span></button>" +
-        (openJ ? "<div class='wz-dd-list'><div class='wz-dd-tools'><button type='button' class='link' data-a='jnone'>" + ((J.length && d.where.length >= J.length) ? "Clear all" : "Select all") + "</button></div>" +
+        (openJ ? "<div class='wz-dd-list'><div class='wz-dd-tools'><button type='button' class='link' data-a='jnone'>" + ((J.length && d.where.length >= J.length) ? "Clear all" : "Select all") + "</button>" +
+          [["City", "cities", "jcity"], ["States", "states", "jstate"]].map(function (x) {
+            var v = J.filter(function (o) { return o.group === x[0]; });
+            return v.length ? "<button type='button' class='link' data-a='" + x[2] + "'>" + (v.every(function (o) { return d.where.indexOf(o.v) >= 0; }) ? "Clear " : "Select ") + "all " + x[1] + "</button>" : "";
+          }).join("") + "</div>" +
           gs.map(function (g) {
             return "<div class='wz-grp'>" + h(g.name) + "</div>" + g.items.map(function (o) {
               return "<label class='wz-row'><input type='checkbox' data-jur='" + h(o.v) + "'" + (d.where.indexOf(o.v) >= 0 ? " checked" : "") + "> <span>" + h(o.label) + " <em class='wz-note'>(" + o.n + ")</em></span></label>";
@@ -290,6 +294,11 @@
       else if (act === "atoggle") openA = !openA;
       else if (act === "anone") d.aside = d.aside.length >= ASIDE_OPTS.length ? [] : ASIDE_OPTS.map(function (o) { return o[0]; });
       else if (act === "jnone") d.where = d.where.length >= J.length ? [] : J.map(function (o) { return o.v; });
+      else if (act === "jcity" || act === "jstate") {
+        var gn = act === "jcity" ? "City" : "States", gv = J.filter(function (o) { return o.group === gn; }).map(function (o) { return o.v; });
+        var allOn = gv.every(function (x) { return d.where.indexOf(x) >= 0; });
+        d.where = d.where.filter(function (x) { return gv.indexOf(x) < 0; }).concat(allOn ? [] : gv);
+      }
       else if (act === "back") { step = 1; openJ = false; }
       else if (act === "back3") { step = 2; openJ = false; }
       else if (act === "next3") { step = 3; openA = false; }

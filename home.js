@@ -33,7 +33,7 @@
     ".hm-bar{flex-direction:column;align-items:stretch;gap:4px}.hm-kw{flex:0 0 auto!important;align-self:flex-end;width:220px;min-width:0}.hm-fields{flex:0 0 auto!important;width:100%}" +
     ".hm-dd-panel{display:none;position:absolute;z-index:30;left:0;top:100%;margin-top:4px;min-width:100%;width:340px;max-width:92vw;background:#fff;border:1px solid #c5cdd8;border-radius:6px;box-shadow:0 10px 30px rgba(15,23,42,.2)}" +
     ".hm-field.open .hm-dd-panel{display:block}.hm-field.rt .hm-dd-panel{left:auto;right:0}" +
-    ".hm-dd-top{display:flex;gap:14px;flex-wrap:wrap;padding:7px 12px;border-bottom:1px solid #e5e9f0;font-size:12px}.hm-dd-top button{border:0;background:none;color:#4338ca;text-decoration:underline;font-weight:500;padding:0}" +
+    ".hm-dd-top{display:flex;gap:14px;flex-wrap:wrap;padding:7px 12px;border-bottom:1px solid #e5e9f0;font-size:12px}.hm-all{display:flex;align-items:center;gap:8px;font-weight:600;font-size:13px;color:#1f2937;cursor:pointer}.hm-all input{width:16px;height:16px;accent-color:#4338ca;margin:0}.hm-dd-top button{border:0;background:none;color:#4338ca;text-decoration:underline;font-weight:500;padding:0}" +
     ".hm-dd-list{max-height:320px;overflow:auto;padding:4px 0}.hm-grp{padding:6px 12px 2px;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#64748b}" +
     ".hm-gh{display:flex;align-items:center;gap:8px;padding:5px 12px;border-bottom:1px solid #eef1f5}.hm-gh input{width:16px;height:16px;accent-color:#4338ca;flex:none;margin:0}.hm-gt{flex:1;cursor:pointer;font-weight:600;font-size:13px;color:#1f2937}.hm-gt em{font-style:normal;font-weight:400;font-size:12px;color:#64748b;margin-left:6px}.hm-arr{display:inline-block;width:14px;color:#64748b}.hm-kids{padding-left:16px}.hm-kids[hidden]{display:none}" +
     ".hm-opt{display:flex;gap:10px;align-items:center;padding:4px 12px;cursor:pointer;color:#1f3347;margin:0;font-size:13px}.hm-opt:hover{background:#eef0ff}.hm-opt input{width:16px;height:16px;accent-color:#4338ca;flex:none;margin:0}.hm-opt span{flex:1;min-width:0}.hm-opt em{font-style:normal;color:#94a3b8;font-size:12px}" +
@@ -438,7 +438,7 @@
 
   // The simple filters are multi-select dropdowns too: tick as many as you like (any one may match).
   // One toggle link per dropdown: "Select all" until everything is ticked, then "Clear all".
-  function tog(a, all) { return '<button type="button" data-a="' + a + '">' + (all ? "Clear all" : "Select all") + "</button>"; }
+  function tog(a, all) { return '<label class="hm-all"><input type="checkbox" data-all="' + a.replace(/-none$/, "") + '"' + (all ? " checked" : "") + "> Select all</label>"; }
   function selectHtml(key) {
     var cust = key === "value" && st.value.indexOf("custom") >= 0 ? '<span class="hm-cust"><input type="text" inputmode="numeric" data-vc="vmin" placeholder="Min $" aria-label="Minimum value" value="' + esc(st.vmin) + '"><input type="text" inputmode="numeric" data-vc="vmax" placeholder="Max $" aria-label="Maximum value" value="' + esc(st.vmax) + '"></span>' : "";
     return ddHtml(key, SELECTS[key], simpleOpts(key), st[key], tog(key + "-none", st[key].length >= simpleOpts(key).length), "") + cust;
@@ -509,10 +509,18 @@
       .forEach(function (c) { out.push({ v: c, label: stateName(c), n: n[c], group: "States" }); });
     return out;
   }
+  // "All cities" / "All states": tick or clear just that group of jurisdictions.
+  var WHERE_GROUPS = { cities: "City", states: "States" };
+  function grpVals(g) { return whereOpts().filter(function (o) { return o.group === g; }).map(function (o) { return o.v; }); }
+  function grpTog(g, id) {
+    var v = grpVals(g); if (!v.length) return "";
+    var all = v.every(function (x) { return st.where.indexOf(x) >= 0; });
+    return '<label class="hm-all"><input type="checkbox" data-all="where-' + id + '"' + (all ? " checked" : "") + "> All " + id + "</label>";
+  }
   var MORE_KEYS = ["value", "aside"], SIMPLE = ["close", "posted", "value", "aside"];
   function fieldsHtml() {
     return ddHtml("cats", "Category", catOpts(), selCats(), tog("cats-none", selCats().length >= catOpts().length), "", true) +
-      ddHtml("where", "Jurisdiction", whereOpts(), st.where, tog("where-none", st.where.length >= whereOpts().length), "") +
+      ddHtml("where", "Jurisdiction", whereOpts(), st.where, tog("where-none", st.where.length >= whereOpts().length) + grpTog("City", "cities") + grpTog("States", "states"), "") +
       selectHtml("posted") + selectHtml("close") + selectHtml("value") + selectHtml("aside");
   }
   function moreHtml() {
@@ -750,6 +758,18 @@
   });
   $app.addEventListener("change", function (e) {
     var t = e.target;
+    if (t.dataset.all) { // the dropdown's "Select all" box ticks / clears every option
+      var ak = t.dataset.all, on = t.checked;
+      if (ak === "cats") st.cats = on ? catOpts().map(function (c) { return c.v; }) : [];
+      else if (ak === "where") st.where = on ? whereOpts().map(function (o) { return o.v; }) : [];
+      else if (ak.indexOf("where-") === 0 && WHERE_GROUPS[ak.slice(6)]) {
+        var gv = grpVals(WHERE_GROUPS[ak.slice(6)]);
+        st.where = st.where.filter(function (x) { return gv.indexOf(x) < 0; }).concat(on ? gv : []);
+      }
+      else if (SIMPLE.indexOf(ak) >= 0) { st[ak] = on ? simpleOpts(ak).map(function (o) { return o.v; }) : []; if (!on && ak === "value") { st.vmin = ""; st.vmax = ""; } }
+      else return;
+      st.shown = PAGE; return refreshAll();
+    }
     if (t.dataset.mgrp != null) { // group box ticks / unticks every category in the group
       Array.prototype.forEach.call(t.parentNode.nextElementSibling.querySelectorAll("input[data-ms]"), function (i) { i.checked = t.checked; });
       t = t.parentNode.nextElementSibling.querySelector("input[data-ms]"); if (!t) return;
