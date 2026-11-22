@@ -218,6 +218,7 @@
     }
     // Step 3: which eligibility would you like to see? Which set-aside / eligibility group the vendor belongs to.
     var openA = false;
+    function multiLabel(opts, sel, none) { var o = opts.filter(function (x) { return sel.indexOf(x[0]) >= 0; }); return !o.length ? none : o.length === 1 ? o[0][1] : o.length + " selected"; }
     function aLabel() { return multiLabel(ASIDE_OPTS, d.aside, "Anyone"); }
     function drawA() {
       back.innerHTML = "<div class='wz' role='dialog' aria-modal='true' aria-label='Setup'><p class='wz-step'>Step 3</p><h2>Which eligibility criteria would you like to see?</h2>" +
