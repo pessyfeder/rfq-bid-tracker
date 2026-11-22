@@ -173,20 +173,13 @@ async function inBatches(items, size, fn) {
 
     // AI read of the notice text: fills requires[], a one-line scope and 3-5 key "shall" points,
     // which feed the Bid factors chips (TSA/background checks, bonds, licenses, site visits...).
-    const { extract } = require("./ai-extract");
+    const { readInto } = require("./notice-reader");
     let read = 0;
     await inBatches(rfqs, 5, async (r) => {
       const o = byId.get(r.id);
       try {
-        const ai = await extract([o.short_title, o.additional_description_1, o.other_info_1].filter(Boolean).join("\n"), apiKey);
-        if (!ai) return; // too little text: leave as is
-        if (ai.requires !== null) r.requires = ai.requires;
-        if (ai.scope) r.scope = ai.scope;
-        if (ai.shall.length) r.shall = ai.shall;
-        if (ai.naics) r.naics = ai.naics;
-        if (ai.dueDate) r.docDue = ai.dueDate;
-        r.aiRead = true;
-        read++;
+        // too little text: readInto returns false and the record is left as is
+        if (await readInto(r, [o.short_title, o.additional_description_1, o.other_info_1].filter(Boolean).join("\n"), apiKey, { statedFields: true })) read++;
       } catch (e) { console.warn("AI read failed for " + r.id + ": " + e.message); }
     });
     console.log(`AI read ${read} of ${rfqs.length} notices`);

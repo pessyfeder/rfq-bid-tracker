@@ -113,14 +113,12 @@ async function addDocumentReads(list, prevById, adapter, ctl) {
         const res = await ai.extractWithPdfs(doc.text, doc.pdfs, key);
         if (!res) { if (!doc.pdfs.length && ai.plainLength(doc.text) < 200) { if (!sample) sample = { id: r.id, raw: doc.text.length, text: doc.text.replace(/<[^>]*>/g, " ").replace(/[ \t\r\n]+/g, " ").trim().slice(0, 150) }; if (ai.plainLength(doc.text) === 0) emptyPage++; else shortPage++; } else noAnswer++; return; }
         // An amended notice's old restriction no longer applies, so an unclear new read must not keep it.
-        if (res.requires !== null || newSig.has(r)) r.requires = res.requires;
+        require("./notice-reader").applyRead(r, res, { forceRequires: newSig.has(r) }); // NAICS comes from a regex below, not the model
         if (newSig.has(r)) r.aiSig = newSig.get(r);
         if (doc.docs && doc.docs.length) r.docs = doc.docs;
-        if (res.scope) r.scope = res.scope;
-        if (res.shall.length) r.shall = res.shall;
         { const n = naicsIn(doc.text); if (n) r.naics = n; } // regex on the page/Word text, not the model (PDF text is not scanned)
         if (!r.details.contact) r.details.contact = require("./contacts").fromText(doc.text); // contact named in the page / Word text
-        r.aiRead = true; r.docsV = DOCS_VERSION; read++;
+        r.docsV = DOCS_VERSION; read++; // applyRead set r.aiRead
         if (r.details) delete r.details.readNote;
       } catch (e) {
         const st = /^BOTCHECK/.test(e.message) ? "bot check" : (/HTTP ([45][0-9][0-9])/.exec(e.message) || [])[1];

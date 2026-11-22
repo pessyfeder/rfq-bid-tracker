@@ -174,16 +174,8 @@ async function enrich(r, o, text, AI_KEY) {
     if (!a && AI_KEY) a = await require("./ai-extract").extractAmount(text, AI_KEY).catch(() => null);
     if (a) r.valueEst = { kind: "stated", amount: a.amount, quote: a.quote };
   }
-  const ai = AI_KEY ? await require("./ai-extract").extract(text, AI_KEY) : null;
-  if (ai) {
-    const base = r.requires || [];
-    if (ai.requires !== null) r.requires = Array.from(new Set(base.concat(ai.requires)));
-    else if (!base.length) r.requires = null;
-    if (ai.scope) r.scope = ai.scope;
-    if (ai.shall.length) r.shall = ai.shall;
-    if (ai.naics) r.naics = ai.naics;
-    if (ai.dueDate) r.docDue = ai.dueDate;
-    r.aiRead = true;
+  const ai = AI_KEY ? await require("./notice-reader").readText(text, AI_KEY) : null;
+  if (require("./notice-reader").applyRead(r, ai, { mergeRequires: true, statedFields: true })) {
     if (!r.scope) r.scope = require("./plain-scope").plainScope(text);
     return true;
   }
