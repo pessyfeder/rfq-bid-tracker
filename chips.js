@@ -3,16 +3,21 @@
   var SEL = ".fact, .elig.chip, .chips .chip";
   var css = document.createElement("style");
   css.textContent = SEL.split(",").map(function (s) { return s.trim() + "{cursor:pointer}"; }).join("") +
+    SEL.split(",").map(function (s) { s = s.trim(); return s + "{box-shadow:0 1px 2px rgba(15,23,42,.25),inset 0 -1px 0 rgba(15,23,42,.12);transition:transform .08s,box-shadow .08s,filter .08s;user-select:none}" +
+      s + ":hover{filter:brightness(.94);box-shadow:0 2px 5px rgba(15,23,42,.3),inset 0 -1px 0 rgba(15,23,42,.12);transform:translateY(-1px)}" +
+      s + ":active{transform:translateY(1px);box-shadow:inset 0 1px 3px rgba(15,23,42,.3)}" +
+      s + ":focus-visible{outline:2px solid #2563eb;outline-offset:2px}"; }).join("") +
     ".chip-sel{outline:2px solid currentColor}" +
     "#chip-pop{position:absolute;z-index:900;max-width:320px;background:#fff;border:1px solid #cfd5de;border-radius:8px;box-shadow:0 6px 24px rgba(15,23,42,.2);padding:12px 14px;font:13px/1.45 system-ui,sans-serif;color:#2d3a48;font-weight:400}" +
     "#chip-pop b{display:block;margin-bottom:4px;color:#1f3a56}#chip-pop small{display:block;margin-top:8px;padding-top:6px;border-top:1px dashed #e4e4f0;color:#64748b;font-size:12px}";
   document.head.appendChild(css);
   function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
   var pop = null, cur = null;
-  function close() { if (pop) { pop.remove(); pop = null; } if (cur) { cur.classList.remove("chip-sel"); cur = null; } }
+  function close() { if (pop) { pop.remove(); pop = null; } if (cur) { cur.classList.remove("chip-sel"); cur.setAttribute("title", TIP); cur = null; } }
   function open(chip) {
     var same = cur === chip; close(); if (same) return;
-    if (chip.hasAttribute("title")) { chip.setAttribute("data-why", chip.getAttribute("title")); chip.removeAttribute("title"); } // no double tooltip
+    if (chip.hasAttribute("title") && !chip.hasAttribute("data-why") && chip.getAttribute("title") !== TIP) chip.setAttribute("data-why", chip.getAttribute("title"));
+    chip.removeAttribute("title"); // no tooltip while the explanation is open
     var label = chip.textContent.replace(/^\s*[⚑⚠]\s*/, "").replace(/^Possible: /, "").trim();
     var key = label.replace(/^Must provide (\w)/, function (m, c) { return c.toUpperCase(); });
     var text = window.explainFact ? (window.explainFact(key) || window.explainFact(label)) : "";
@@ -28,11 +33,28 @@
     pop.style.top = (r.bottom + scrollY + 6) + "px";
     chip.classList.add("chip-sel"); cur = chip;
   }
+  var TIP = "Click for explanation";
+  function tag(root) {
+    (root.matches && root.matches(SEL) ? [root] : []).concat([].slice.call(root.querySelectorAll ? root.querySelectorAll(SEL) : [])).forEach(function (el) {
+      if (el.closest("#chip-pop") || el === cur) return;
+      var t = el.getAttribute("title");
+      if (t && t !== TIP && !el.hasAttribute("data-why")) el.setAttribute("data-why", t);
+      if (t !== TIP) el.setAttribute("title", TIP);
+      if (!el.hasAttribute("role")) { el.setAttribute("role", "button"); el.setAttribute("tabindex", "0"); }
+    });
+  }
+  tag(document.body);
+  new MutationObserver(function (ms) {
+    ms.forEach(function (m) { [].forEach.call(m.addedNodes, function (n) { if (n.nodeType === 1) tag(n); }); });
+  }).observe(document.body, { childList: true, subtree: true });
   document.addEventListener("click", function (e) {
     var c = e.target.closest && e.target.closest(SEL);
     if (c && !c.closest("#chip-pop")) { e.preventDefault(); e.stopPropagation(); open(c); return; }
     if (pop && !e.target.closest("#chip-pop")) close();
   }, true);
-  document.addEventListener("keydown", function (e) { if (e.key === "Escape") close(); });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") close();
+    else if ((e.key === "Enter" || e.key === " ") && e.target.matches && e.target.matches(SEL) && e.target.getAttribute("role") === "button") { e.preventDefault(); open(e.target); }
+  });
   window.addEventListener("scroll", close, { passive: true });
 })();
